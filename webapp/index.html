@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tímaflakkarinn</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* Leave room for debug: 280px right panel, 180px bottom log */
+      width: calc(100vw - 280px);
+      height: calc(100vh - 180px);
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      width: 800px;
+      height: 600px;
+    }
+    #game-canvas {
+      display: block;
+      image-rendering: pixelated;
+      cursor: none;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #ccc;
+      font-family: serif;
+      font-size: 24px;
+      text-align: center;
+    }
+    #loading .bar {
+      width: 300px;
+      height: 8px;
+      background: #333;
+      margin: 16px auto;
+      border-radius: 4px;
+    }
+    #loading .bar-fill {
+      height: 100%;
+      background: #c8a040;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas" width="800" height="600"></canvas>
+    <div id="loading">
+      <div>Tímaflakkarinn</div>
+      <div class="bar"><div class="bar-fill" id="loading-bar"></div></div>
+      <div id="loading-text" style="font-size: 14px; margin-top: 8px;">Hleð inn...</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

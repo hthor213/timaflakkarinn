@@ -37,8 +37,16 @@ needed to make the flip.
 
 ## Who owns the original
 
-Tímaflakkarinn (Dímon) shipped in 1998, with a v1.1 following in 1999. It is
-co-owned by:
+Dímon was founded in **May 1998** and shipped Tímaflakkarinn in **November
+1998** — six months, with no AI assistance of any kind. The **1999 v1.1**
+release was bug fixes only; no features or content were added.
+
+That schedule is not trivia. It explains the dominant pattern in the codebase —
+engine capabilities built and then never authored into the content — which is
+catalogued in `specs/000-timaflakkarinn-vision.md` under "Built but never used."
+Recorded 2026-08-06 from Hjalti, who was there.
+
+It is co-owned by:
 
 - Hjalti (`hjalti@gmail.com`) — owner of this repository
 - Gudmundur Hafsteinsson
@@ -66,9 +74,63 @@ with the project as primary-source material — on the same footing as the asset
 already in `web_import/`. Record it in `web_import/PROVENANCE.md` when it lands.
 
 It is also the best available source for what the web mirror is missing: see
-`docs/project-state.md` for the three absent voice lines. And it holds the
-original build itself, the last remaining artifact of the lost Java
-implementation. Worth asking which disc it is when it arrives.
+`docs/project-state.md` for the three absent voice lines. Worth asking which
+disc it is when it arrives.
+
+The Java implementation is no longer lost: on 2026-08-06 Halldór pushed
+`origin/main`, carrying the CFR-decompiled sources (`src/`, `classes/`,
+`is.dimon` package) alongside a TypeScript port. The ISO would still hold the
+original *build*, which the decompilation cannot fully reconstruct.
+
+## The Völva puzzle — design intent
+
+Recorded 2026-08-06 from Hjalti, who was on the original team. None of this is
+recoverable from the code, and the port had already stubbed the puzzle out.
+
+In Kristnitaka the seeress asks the player her name (`s_ThuHeitir`,
+`kristnit.gml:4136`). The answer is **Erna** — hardcoded in the engine at
+`Timaflakkarinn.java:552` as `equalsIgnoreCase("erna")`, with `s_GuessCorrect`
+and `s_GuessWrong` as the two branches. It is an in-joke: Erna Geirsdottir
+**painted the backgrounds** for the original game and is a co-owner of the work
+(above).
+
+That authorship is not only historical. Any remaster that extends or reprocesses
+the background art carries her sign-off — approval, not authorship: the derived
+art is created by others and brought to her for review. See
+`specs/000-timaflakkarinn-vision.md`, D2.
+
+**The intended solution is visual, not textual.** A rune stone stands behind the
+seeress — its own scene, `s_ErnaRunir` (`kristnit.gml:719`), backed by
+`KRISTNIA/GRAPHIC/STORERNA.PNG` and reached from `t_HjaVolvul`. The inscription
+reads **ᛁ ᚱ ᚾ ᛅ**. The team's expectation was that a rune-to-Latin chart — the
+kind that hangs in every Icelandic classroom — made this routine.
+
+It did not. It became one of the game's hardest puzzles, and the reason is
+orthographic: Younger Futhark has no separate e-rune, so ís (ᛁ) writes both /i/
+and /e/. A correct chart lookup yields *IRNA*. The team's reasoning was that no
+Icelander is named Irna while Erna is common, so players would see the
+ambiguity and try the other reading. In practice many did not. One player
+reportedly solved it by spotting Erna's name in the credits and confirming the
+connection from public record, never touching the runes at all.
+
+Two mechanical traps compound it, both worth knowing before touching this code:
+
+- The comparison is exact. *irna* is rejected with no hint that the reading was
+  nearly right; `s_GuessWrong` says only *"Gettu betur"*.
+- `charNotAllowed` (`Timaflakkarinn.java:610`) admits `0x20`, and the comparison
+  never trims. `"erna "` fails identically to a wrong answer. **The port should
+  trim** — that accepts only input the original unambiguously intended to
+  accept, and preserving it would preserve a bug rather than a design decision.
+  Everything else stays exact.
+
+A second, unrelated rune stone exists at KristnarBudir — `s_Runir`,
+`RUNIR.PNG`, labelled *Steinristur*. It is not part of this puzzle.
+
+**Consequence for the rebuild:** the puzzle's only clue lives in a separate
+scene. An implementation of `GuessQuantum` is not done when the dialog accepts
+`erna` — it is done when the player can walk to the stone, read it, return,
+answer, and receive the Þórshamar. All three PNGs are present and intact in
+`web_import/`.
 
 ## Beyond Phase 1
 

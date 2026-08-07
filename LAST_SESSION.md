@@ -76,7 +76,31 @@ mounted read-only and verified bit-identical afterwards.
 Touch input (Pointer Events throughout), the `Pulser` remainder, the `Sequence`
 freeze escape, the cursor hotspot, measured dialogue hit boxes, bold-on-hover,
 the animation last-frame hold, scene jump, the Völva soft-lock, and the Irna
-near-miss response. Test suite went from 21 cases to **71 across 10 files**.
+near-miss response.
+
+Then, in the morning pass — four bugs where the *diagnosis* was the work:
+
+- **Boxless actors could not move at all.** Java validates a move only when the
+  state declares a collision box; the port tested the terrain unconditionally.
+  Ingólfur never walked onto the deck, so the öndvegissúlur throw happened
+  off-screen — the reported "missing animation" was never an animation bug. Nine
+  such walks across three chapters were frozen. Only Ingólfur is browser-verified.
+- **Chapter scoping.** 1999 emptied its container at every screen transition and
+  re-parsed; the port kept the container and dropped the clear. 111 keys are
+  shared across all four chapters and **90 differ once closed over the names they
+  reference** — `s_prepare` is spelt identically in all four and is a different
+  sequence in each. Two further `SaveSerializer` bugs fell out of it.
+- **Chroma-green subtitles.** The earlier fix guarded the `r/g/b` spelling but
+  not `color="green"`, which resolves to the same triple. Halldóra was flashing
+  green on all 19 of her lines in Tyrkjaránið, unreported.
+- **Green speckles.** Not anti-aliasing — 8-bit palette drift, 12 files and 116
+  pixels. Keyed at tolerance 16, chosen because distances 12–18 do not occur.
+
+Test suite went from 21 cases to **97 across 14 files**.
+
+**Tooling:** `tools/deploy.sh` landed complete, and a SIGPIPE race in its verify
+stage is fixed — it passed twice then failed three times running, which is the
+worst failure mode a deploy tool can have.
 
 ## The 2.8D prototype — read `specs/003` before deciding anything
 
@@ -98,11 +122,11 @@ Recommended camera budget: **±10cm lateral**, 16px differential parallax.
 1. **Decide D2** using `specs/003`. Everything in the art pipeline waits on it,
    and the falsifying test is named there (Vectorizer.AI on `HJAVOLVU.PNG`) if
    you want one more data point before committing.
-2. **Chapter container scoping.** Still the top *engine* item — it turns the
-   chapter URLs from bookmarks into navigation, and it is a real bug in play.
-3. **Audit the 23 authored terrains.** `t_HjaVolvul` ramps 1.031x where
+2. **Audit the 23 authored terrains.** `t_HjaVolvul` ramps 1.031x where
    perspective wants 1.63x, so the calibration problem is not only the 61
    missing ones.
+3. **Browser-verify the eight unwatched walks.** The Tyrkjaránið raiders
+   entering frame is the one to look at first — verified arithmetically only.
 4. CI running `npm run check` on push.
 
 ## Needs a human
@@ -127,4 +151,4 @@ Recommended camera budget: **±10cm lateral**, 16px differential parallax.
 `aidev check` is **red on one item**, deliberately: `lint_gml.py` reports 5
 issues, all pre-existing 1998/1999 content gaps, none introduced by the rebuild.
 Left red rather than relaxed — see the Done When note in `specs/001`.
-`npm run check` (typecheck + 71 cases across 10 files) is green.
+`npm run check` (typecheck + 97 cases across 14 files) is green.

@@ -324,3 +324,42 @@ thickens, which would otherwise cause a flicker at the edges.
 
 **To verify:** in the debug deployment, toggle the bounding-box overlay in the
 panel. Boxes should now sit tight around the glyphs instead of drifting.
+
+---
+
+## 7 — `port` · FIXED · One-shot animations snap back to their first frame
+
+**Reported by:** Hjalti, 2026-08-07 — the öndvegissúla is thrown overboard after
+Ingólfur speaks, but "there was animation where it falls over."
+
+**Cause.** `AnimatedActorFace.advanceFrame()` wrapped to frame 0 at the end of
+the final repetition and froze there. The 1999 engine instead detects the last
+frame of the last repetition and, on the next pulse, fires the finished event
+and **returns without advancing** — resting on the closing pose.
+
+So Ingólfur played all ten frames, tipped the pillar over the side, splashed —
+and then snapped back to frame 0: standing beside an upright pillar, held for
+the four-second pause before the fade. The throw visibly un-happened.
+
+**This affected every one-shot animation in the game**, not just this one: give,
+chop, sigh, the Völva's cross and dip, every `repeat="1"` face.
+
+**Second difference fixed at the same time:** the original's `dontAdvance` flag,
+set by `reset()`, gives frame 0 its full interval after a state change. The port
+advanced immediately, so every animation ran a frame ahead and its opening pose
+was never really seen.
+
+Both ported verbatim from `CelledAnimated2DActorFace.advanceFrame()`. Covered by
+six regression tests in `webapp/test/animation.test.mjs` — the behaviour is
+subtle enough that it would regress silently otherwise.
+
+---
+
+## 8 — `1998` · Walking into Hallveig, the player keeps walking
+
+**Reported by:** Hjalti, 2026-08-07. The player character walks into Hallveig and
+continues for a few seconds, as if trying to walk through her.
+
+Present in the original. **Deferred to Phase 2** — the proxy geometry and real
+ground plane give collision something truthful to work against, and fixing it
+before then would mean tuning against a stand-in.

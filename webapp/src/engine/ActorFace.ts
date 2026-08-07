@@ -152,6 +152,8 @@ export class AnimatedActorFace implements ActorFace, Pulsable {
 
   private _finished = false;
   private loading = false;
+  /** Set by reset(); makes the first pulse after a state change hold frame 0. */
+  private dontAdvance = true;
 
   constructor(name: string, imagePath: string, numFrames: number, speed: number, repeats: number) {
     this.name = name;
@@ -220,6 +222,7 @@ export class AnimatedActorFace implements ActorFace, Pulsable {
 
   reset(): void {
     this.currentFrame = 0;
+    this.dontAdvance = true;
     this.repsLeft = this.repeats;
     this._finished = false;
   }
@@ -249,20 +252,45 @@ export class AnimatedActorFace implements ActorFace, Pulsable {
     return this.speed;
   }
 
+  /**
+   * Mirrors Java `CelledAnimated2DActorFace.advanceFrame()`.
+   *
+   * Two behaviours here are load-bearing and were both missing:
+   *
+   * 1. **A finished one-shot holds its last frame.** The original detects the
+   *    final frame of the final repetition, then on the next pulse fires the
+   *    finished event and returns *without advancing* — so the face rests on
+   *    the closing pose. The port wrapped to frame 0 and froze there, which
+   *    un-did every one-shot action on screen: Ingólfur tipped the
+   *    öndvegissúla over the side and then snapped back to standing beside it,
+   *    upright, for the four seconds before the fade.
+   *
+   * 2. **`dontAdvance` gives frame 0 its full interval.** `reset()` sets it, so
+   *    the first pulse after a state change consumes the flag instead of
+   *    stepping. Without it every animation starts a frame early and the
+   *    opening pose is never really seen.
+   */
   private advanceFrame(): void {
+    if (this.repsLeft === 1 && this.currentFrame === this.numFrames - 1) {
+      this.repsLeft = 0;
+    }
     if (this.repsLeft === 0) {
       this.stopAnimation();
       this._finished = true;
       this.onAnimationFinished?.();
-      return;
+      return; // currentFrame deliberately left on the final frame
     }
     if (this.random) {
       this.currentFrame = Math.floor(Math.random() * this.numFrames);
     } else {
-      this.currentFrame++;
+      if (this.dontAdvance) {
+        this.dontAdvance = false;
+      } else {
+        this.currentFrame++;
+      }
       if (this.currentFrame >= this.numFrames) {
         this.currentFrame = 0;
-        if (this.repsLeft > 0) this.repsLeft--;
+        if (this.repsLeft !== -1) this.repsLeft--;
       }
     }
   }

@@ -18,7 +18,13 @@
 #                  recurring failure mode here is *silently stale*, not
 #                  *loudly broken*
 #
-# Usage:  tools/deploy.sh [--dry-run] [--host H] [--branch B] [--url U]
+# Usage:  tools/deploy.sh [--dry-run | --verify-only] [--host H] [--branch B]
+#                         [--url U]
+#
+#   --dry-run      show exactly what would happen; change nothing
+#   --verify-only  skip transport/build/publish and run only the verification
+#                  pass against whatever is live right now. Read-only. Use it
+#                  to answer "is the site still correct?" without deploying.
 #
 set -euo pipefail
 
@@ -37,6 +43,7 @@ WEB_ROOT="/srv/timaflakkarinn/web"
 BRANCH="feat/unify"
 BASE_URL="https://tt.spliffdonk.com"
 DRY_RUN=0
+VERIFY_ONLY=0
 
 usage() {
   sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//;$d'
@@ -46,6 +53,7 @@ usage() {
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
+    --verify-only) VERIFY_ONLY=1 ;;
     --host)    SSH_HOST="$2"; shift ;;
     --branch)  BRANCH="$2";   shift ;;
     --url)     BASE_URL="$2"; shift ;;
@@ -54,6 +62,9 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+[ "$DRY_RUN$VERIFY_ONLY" = "11" ] && {
+  echo '--dry-run and --verify-only are mutually exclusive' >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
 # Output helpers
@@ -68,6 +79,9 @@ fi
 
 WARNINGS=()
 CHECKS_RUN=0
+SCRATCH=()          # local temp files, removed however we exit
+cleanup() { [ "${#SCRATCH[@]}" -eq 0 ] || rm -f "${SCRATCH[@]}"; }
+trap cleanup EXIT
 
 step() { printf '\n%s==>%s %s\n' "$C_BLU" "$C_OFF" "$*"; }
 ok()   { CHECKS_RUN=$((CHECKS_RUN + 1)); printf '  %sok%s   %s\n' "$C_GRN" "$C_OFF" "$*"; }
@@ -192,7 +206,9 @@ info "server at ${REMOTE_SHA:0:7} on $REMOTE_BRANCH"
   "server checkout is on '$REMOTE_BRANCH', not '$BRANCH'." \
   "Switch it deliberately; this script will not change branches for you."
 
-if [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
+if [ "$VERIFY_ONLY" = 1 ]; then
+  info "verify-only: not comparing commits, checking whatever is live"
+elif [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
   info "server already at target commit — rebuilding and republishing anyway"
 else
   # Fast-forward only. A non-ff means the server has commits the laptop does
@@ -244,6 +260,10 @@ info "current assets/: $(printf '%s ' $PRE_ASSETS)"
 # ---------------------------------------------------------------------------
 # 3. Transport — fetch if the credential works, verified bundle if not
 # ---------------------------------------------------------------------------
+
+TRANSPORT="none (verify-only)"
+NEW_JS=""
+if [ "$VERIFY_ONLY" = 0 ]; then
 
 step "Transport"
 
@@ -300,9 +320,11 @@ else
   # this is kilobytes, not the whole history. `git bundle verify` on the SERVER
   # is the meaningful check -- it is where the prerequisites actually have to
   # exist. Verifying only locally would prove nothing.
-  BUNDLE_LOCAL="$(mktemp -t tt-deploy-bundle).bundle"
-  git bundle create "$BUNDLE_LOCAL" "$REMOTE_SHA..$BRANCH" >/dev/null 2>&1
-  git bundle verify "$BUNDLE_LOCAL" >/dev/null 2>&1 || die "locally generated bundle failed verification."
+  BUNDLE_LOCAL="$(mktemp)"; SCRATCH+=("$BUNDLE_LOCAL")
+  git bundle create "$BUNDLE_LOCAL" "$REMOTE_SHA..$BRANCH" >/dev/null \
+    || die "could not build a bundle for $REMOTE_SHA..$BRANCH."
+  git bundle verify "$BUNDLE_LOCAL" >/dev/null 2>&1 \
+    || die "locally generated bundle failed verification."
   ok "bundle built and locally verified ($(wc -c <"$BUNDLE_LOCAL" | tr -d ' ') bytes, prereq ${REMOTE_SHA:0:7})"
 
   BUNDLE_REMOTE="/tmp/tt-deploy-${LOCAL_SHA:0:12}.bundle"
@@ -315,11 +337,10 @@ else
     remote "cd $REMOTE_REPO && git bundle verify $BUNDLE_REMOTE" >/dev/null \
       || die "bundle failed verification ON THE SERVER — prerequisites missing or transfer corrupted."
     ok "bundle verified on the server"
-    remote "cd $REMOTE_REPO && git fetch '$BUNDLE_REMOTE' '$BRANCH:refs/deploy/incoming' && git merge --ff-only refs/deploy/incoming" >/dev/null
+    remote "cd $REMOTE_REPO && git fetch '$BUNDLE_REMOTE' '+$BRANCH:refs/deploy/incoming' && git merge --ff-only refs/deploy/incoming" >/dev/null
     remote "rm -f $BUNDLE_REMOTE"
     info "bundle applied and removed from the server"
   fi
-  rm -f "$BUNDLE_LOCAL"
 fi
 
 if [ "$DRY_RUN" = 0 ]; then
@@ -343,6 +364,18 @@ else
   remote "cd $REMOTE_REPO/webapp && npm ci --silent && npm run check && npm run build" \
     || die "server build failed. Serving root untouched."
   ok "npm ci && npm run check && npm run build"
+
+  # The publish step below runs rsync --delete against assets/. If the build
+  # produced an empty or missing assets/ -- a Vite config slip, a half-written
+  # dist -- --delete would empty the serving root and every visitor would get a
+  # blank page with a 404 on the bundle. Check the build before trusting it.
+  BUILT_JS="$(remote "cd $REMOTE_REPO/webapp/dist && ls assets/*.js 2>/dev/null | head -1 || true")"
+  [ -n "$BUILT_JS" ] || die \
+    "the build produced no webapp/dist/assets/*.js." \
+    "Refusing to rsync --delete an empty assets/ over the live one."
+  remote "grep -q \"$(basename "$BUILT_JS")\" $REMOTE_REPO/webapp/dist/index.html" \
+    || die "webapp/dist/index.html does not reference $(basename "$BUILT_JS") — the build is inconsistent."
+  ok "build produced $(basename "$BUILT_JS"), referenced by dist/index.html"
 fi
 
 # ---------------------------------------------------------------------------
@@ -387,6 +420,17 @@ $RS --delete web_import/gml/ $WEB_ROOT/gml/
 EOF
 )
 
+# Tripwire for whoever edits this script next. dist/GAME is the dereferenced
+# 1213-file master tree (668 WAVs, no .M4A) and dist/gml is a build-time
+# snapshot; naming either one here is the single most expensive mistake
+# available in this file. Fail loudly rather than let it through review.
+if printf '%s\n' "$PUBLISH_SCRIPT" | grep -v '^[[:space:]]*#' | grep -Eq 'dist/(GAME|gml)'; then
+  die "the publish list names dist/GAME or dist/gml." \
+      "dist/GAME is the raw master tree Vite produced by dereferencing the" \
+      "symlinks in webapp/public/ — copying it reintroduces 169 MiB of WAV and" \
+      "destroys the uppercase-.M4A hardlink overlay. gml comes from web_import/gml."
+fi
+
 if [ "$DRY_RUN" = 1 ]; then
   while IFS= read -r line; do
     case "$line" in ''|'#'*) continue ;; esac
@@ -415,6 +459,8 @@ else
   remote "$PUBLISH_SCRIPT"
   ok "assets/, index.html, _headers, video/, gml/ refreshed"
 fi
+
+fi   # end of the transport/build/publish block skipped by --verify-only
 
 # ---------------------------------------------------------------------------
 # 6. Verify — prove it, do not assume it
@@ -481,8 +527,7 @@ EOF
   [ -n "$NEW_JS" ] || die "no .js in the serving root's assets/ after publish."
 
   http() { curl -sS -o "$2" -w '%{http_code}' --max-time 30 -D "$3" "$BASE_URL$1"; }
-  TMPB="$(mktemp)"; TMPH="$(mktemp)"
-  trap 'rm -f "$TMPB" "$TMPH"' EXIT
+  TMPB="$(mktemp)"; TMPH="$(mktemp)"; SCRATCH+=("$TMPB" "$TMPH")
 
   code="$(http "/" "$TMPB" "$TMPH")"
   [ "$code" = 200 ] || die "GET / returned $code."
@@ -518,9 +563,12 @@ EOF
     "/gml/intro.gml is not served as ISO-8859-1 — Icelandic text will be mojibake."
   grep -qi 'cache-control:.*no-cache' "$TMPH" || warn \
     "/gml/* is not no-cache; filenames are not content-hashed so it must revalidate"
+  # Disk -> wire. (Laptop -> disk is what the md5 loop above already proved.)
   served_md5="$(md5 -q "$TMPB" 2>/dev/null || md5sum <"$TMPB" | cut -d' ' -f1)"
-  master_md5="$(md5 -q web_import/gml/intro.gml 2>/dev/null || md5sum <web_import/gml/intro.gml | cut -d' ' -f1)"
-  [ "$served_md5" = "$master_md5" ] || die "served /gml/intro.gml differs from the master."
+  master_md5="$(remote "md5sum <$REMOTE_REPO/web_import/gml/intro.gml | cut -d' ' -f1")"
+  [ "$served_md5" = "$master_md5" ] || die \
+    "served /gml/intro.gml differs from the master on disk." \
+    "Caddy is serving something other than the file we published."
   LC_ALL=C grep -q $'\r' "$TMPB" || die "served /gml/intro.gml has lost its CRLF line endings."
   ok "/gml/intro.gml 200, ISO-8859-1, no-cache, md5 == master, CRLF intact"
 
@@ -556,7 +604,6 @@ EOF
     "which turns every typo'd asset path into a silent, undebuggable failure."
   ok "missing asset 404s (fallback is not masking assets)"
 
-  rm -f "$TMPB" "$TMPH"; trap - EXIT
 fi
 
 # ---------------------------------------------------------------------------
@@ -575,12 +622,20 @@ warn "  hash the filename — out of scope for this script, which never touches 
 warn "_headers is published for documentation only; Caddy does not read it."
 
 step "Result"
-printf '  mode       %s\n' "$([ "$DRY_RUN" = 1 ] && echo 'DRY RUN — nothing changed' || echo 'deployed')"
+if   [ "$DRY_RUN"     = 1 ]; then MODE='DRY RUN — nothing changed'
+elif [ "$VERIFY_ONLY" = 1 ]; then MODE='VERIFY ONLY — nothing changed'
+else                              MODE='deployed'; fi
+printf '  mode       %s\n' "$MODE"
 printf '  host       %s\n' "$SSH_HOST"
 printf '  branch     %s\n' "$BRANCH"
-printf '  commit     %s -> %s  (%s)\n' "${REMOTE_SHA:0:7}" "${LOCAL_SHA:0:7}" "$LOCAL_SUBJECT"
+if [ "$VERIFY_ONLY" = 1 ]; then
+  printf '  commit     server %s (laptop %s)\n' "${REMOTE_SHA:0:7}" "${LOCAL_SHA:0:7}"
+else
+  printf '  commit     %s -> %s  (%s)\n' "${REMOTE_SHA:0:7}" "${LOCAL_SHA:0:7}" "$LOCAL_SUBJECT"
+fi
 printf '  transport  %s\n' "$TRANSPORT"
-[ "$DRY_RUN" = 1 ] || printf '  bundle     %s -> %s\n' "$(printf '%s ' $PRE_ASSETS)" "$NEW_JS"
+[ "$DRY_RUN" = 1 ] || printf '  bundle     %s%s\n' \
+  "$([ "$VERIFY_ONLY" = 1 ] && echo '' || printf '%s -> ' "$(printf '%s ' $PRE_ASSETS)")" "$NEW_JS"
 printf '  checks     %d passed\n' "$CHECKS_RUN"
 printf '  url        %s\n' "$BASE_URL"
 
@@ -591,6 +646,8 @@ fi
 
 if [ "$DRY_RUN" = 1 ]; then
   printf '\n%sDry run complete.%s Re-run without --dry-run to deploy.\n' "$C_GRN" "$C_OFF"
+elif [ "$VERIFY_ONLY" = 1 ]; then
+  printf '\n%sLive site verified.%s Nothing was deployed.\n' "$C_GRN" "$C_OFF"
 else
   printf '\n%sDeployed and verified.%s\n' "$C_GRN" "$C_OFF"
 fi

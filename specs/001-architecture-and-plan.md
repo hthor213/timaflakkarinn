@@ -109,6 +109,20 @@ would have shipped stale scene files and made a landed fix look broken. Making
 those copies symlinks into `web_import/gml` would remove the failure mode
 permanently; not yet done.
 
+**`webapp/public/_headers` is inert.** It is a Netlify/Cloudflare-Pages
+convention and Caddy never reads it. Every live cache and charset rule comes from
+`/etc/caddy/Caddyfile`; the file is published for documentation only. An earlier
+revision of this document said the gml charset was set "per `_headers`", which
+was wrong.
+
+**A git bundle cannot carry LFS blobs.** While the Forgejo credential is expired,
+transport falls back to a bundle — which carries git objects, but LFS content
+lives behind the same dead endpoint. So no commit touching an LFS-tracked path
+can be deployed until the credential is renewed; `tools/deploy.sh` refuses rather
+than checking out 130-byte pointers where art belongs. Text-only commits are
+fine. This becomes blocking the moment `tools/pipeline/` starts emitting derived
+art.
+
 **Cache headers must match how a file is named.** `/assets/*` is content-hashed,
 so `immutable` is correct. `/gml/*` is **not** hashed, so it revalidates
 (`no-cache` + ETag) — otherwise a browser runs a new bundle against an hour-old

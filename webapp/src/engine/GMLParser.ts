@@ -25,6 +25,35 @@ const NAMED_COLORS: Record<string, Color> = {
   black:   { r: 0,   g: 0,   b: 0   },
 };
 
+/**
+ * RGB(0,255,0) is the transparency key everywhere in this engine — see
+ * `AssetLoader.applyChromaKey`. Text authored in it was the 1998 way of hiding a
+ * text actor: it drew as nothing.
+ *
+ * The test is on the *resolved* colour, not on the attribute spelling, because
+ * the content writes the same colour two ways. `a_Karli_acc` (landnam.gml:1632)
+ * uses `r="0" g="255" b="0"`; `a_Halldora_acc` (tyrkran.gml:473) uses
+ * `color="green"`, and `NAMED_COLORS.green` is the identical triple. Keying off
+ * one syntax fixed Karli and left Halldóra flashing green on every line.
+ */
+export function isChromaKey(c: Color): boolean {
+  return c.r === 0 && c.g === 255 && c.b === 0;
+}
+
+/**
+ * Resolve a `<Text>` element's colour. A named `color=` wins over `r`/`g`/`b`,
+ * which default to white — the 1999 precedence. Exported so the regression
+ * guard can resolve the real content's colours with the engine's own table
+ * rather than a copy of it.
+ */
+export function resolveTextColor(
+  colorName: string,
+  r: number, g: number, b: number,
+): Color {
+  const named = colorName ? NAMED_COLORS[colorName] : undefined;
+  return named ? { ...named } : { r, g, b };
+}
+
 export interface GameContainer {
   objects: Map<string, any>;
   get(name: string): any;
@@ -291,27 +320,19 @@ export class GMLParser {
         const textFace = new TextActorFace(name + '_face');
         textFace.setText(attr(el, 'text'));
 
-        const colorName = attr(el, 'color', '');
-        if (colorName && NAMED_COLORS[colorName]) {
-          textFace.color = { ...NAMED_COLORS[colorName] };
-        } else {
-          const r = int(el, 'r', 255);
-          const g = int(el, 'g', 255);
-          const b = int(el, 'b', 255);
-          textFace.color = { r, g, b };
+        textFace.color = resolveTextColor(
+          attr(el, 'color', ''),
+          int(el, 'r', 255), int(el, 'g', 255), int(el, 'b', 255),
+        );
 
-          // Text authored in the chroma key colour was the 1998 way of hiding
-          // it: green is the transparency key everywhere else in this engine,
-          // so green text drew as nothing. Rendering it literally puts a green
-          // flash at the top of the screen on every line.
-          //
-          // Exactly one element in the shipped content does this —
-          // a_Karli_acc in landnam.gml — so Karli's dialogue was unsubtitled in
-          // 1999. Whether that was intended is a remaster question; see
-          // docs/known-issues.md. Faithful behaviour is invisible.
-          if (r === 0 && g === 255 && b === 0) {
-            textFace.transparent = true;
-          }
+        // Green text drew as nothing in 1999; painting it literally puts a green
+        // flash at the top of the screen on every line the speaker says. Two
+        // accumulators in the shipped content are chroma green — a_Karli_acc and
+        // a_Halldora_acc — so their dialogue was unsubtitled in 1999. Whether
+        // that was intended is a remaster question; see docs/known-issues.md.
+        // Faithful behaviour is invisible.
+        if (isChromaKey(textFace.color)) {
+          textFace.transparent = true;
         }
 
         textFace.highlighted = attr(el, 'hilite', 'true') === 'true';

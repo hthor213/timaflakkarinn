@@ -269,17 +269,51 @@ transparency key throughout this engine, so in 1999 text drawn in it rendered as
 nothing — it was how you hid a text actor. The port parses `r`/`g`/`b` into a
 literal colour and paints green text at the subtitle position, screen y≈30.
 
-**It is exactly one element in the whole game.** Every other accumulator —
-`a_Vifill_acc`, `a_Extra_acc` — uses `color="white"`. That is why only Karli
-does it.
-
 **Fix.** Text authored in the chroma key colour parses as transparent, matching
 1999.
 
-**Left open, tagged `1998`:** this means **Karli's dialogue was unsubtitled in
-the shipped game.** Whether that was deliberate or a typo for white is unknown,
-and it is an accessibility gap either way. Faithful behaviour is invisible;
-the remaster may want it white. Hjalti's call.
+### Correction, 2026-08-07: it was two elements, and the first fix only caught one
+
+This entry originally said "exactly one element in the whole game." That was
+wrong, and wrong in a way the fix inherited: the claim came from a grep for
+`g="255"`, so it could only ever find the elements written as `r`/`g`/`b`.
+
+`tyrkran.gml:473` writes the same colour the other way:
+
+```xml
+<Text name="a_Halldora_acc" terrain="t_Corners" text=" " color="green" hilite="false"/>
+```
+
+`NAMED_COLORS.green` is `(0,255,0)` — the identical triple — but it takes the
+named-colour branch, which the first fix did not guard. **Halldóra flashed green
+on all 19 of her lines in Tyrkjaránið**, exactly as Karli did in Landnám, and
+would have been reported as a new bug the moment the owner reached chapter 4.
+
+The check now runs on the **resolved** colour rather than on one authoring
+syntax (`isChromaKey`, `GMLParser.ts`). Full census of the shipped content: 146
+`<Text>` elements, 26 of them speech accumulators, exactly 2 chroma green —
+`a_Karli_acc` and `a_Halldora_acc`. Three others are genuinely green-ish and
+must keep painting (`a_Ymsir_acc` 74,156,14; `a_Oddur_acc` 8,168,56;
+`a_kristofer_acc` 10,146,90), so a tolerance-based key would be wrong here even
+though it is the right answer for the sprite art in issue #4.
+
+Covered by `webapp/test/chromatext.test.mjs` (7 cases), which walks every
+`<Text>` in all six chapters through the real parser and asserts nothing paints
+`rgb(0,255,0)`. Verified to fail on the previous code with
+`tyrkran.gml a_Halldora_acc paints chroma green`.
+
+**Left open, tagged `1998`:** this means **Karli's and Halldóra's dialogue was
+unsubtitled in the shipped game.** Faithful behaviour is invisible; the remaster
+may want it white. Hjalti's call.
+
+Two things now bear on that question that did not before. The same trick appears
+**twice, in two chapters, written two different ways** — which is a weak
+argument for a typo and a decent one for a known convention: you do not make the
+same mistake in two notations. And it collides with issue #0: Halldóra's
+`m_DetturEnginn` is one of the three lines that were never recorded, so the fix
+that restored its subtitle now renders that subtitle invisible. That line is
+currently neither spoken nor readable. If any part of this gets a white, it
+should be that one.
 
 ---
 

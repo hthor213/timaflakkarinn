@@ -12,6 +12,77 @@ remembering.
 
 ---
 
+## 0 — Three lines are displayed but never spoken
+
+**Reported by:** Hjalti, 2026-08-07, from memory of the original production —
+and confirmed against the disc the same day.
+
+**Status:** the 1999 behaviour is understood and was deliberate. **The port
+regresses it**, and that regression is unfixed.
+
+Three `SpeechActorMouth` elements reference WAV files that **do not exist on the
+retail disc**:
+
+| Mouth | Line | Speaker |
+|---|---|---|
+| `m_godraddyr` | *Nú eru góð ráð dýr. Hvernig eigum við að komast yfir þetta stórfljót?* | Vífill |
+| `m_afsakduhusbondi` | *Afsakaðu, húsbóndi!* | Vífill |
+| `m_DetturEnginn` | *Nei! Mér dettur bara enginn felustaður í hug einmitt núna.* | Halldóra |
+
+**This was never an archival loss.** Earlier docs recorded these as assets that
+"must come from the CD-ROM ISO." The ISO is now in hand and they are not on it:
+668 WAVs on the disc, 668 in the mirror, all byte-identical, nothing disc-only.
+They were never pressed.
+
+**Why, in Hjalti's words.** He oversaw the voice recordings, directed the
+actors, and edited the takes himself — listening through multiple readings of
+every sentence to pick the intonation. He did not finish. The master was being
+pressed by Sony in the UK and had to physically travel from Iceland, against a
+hard drop-dead date. The team accepted the defect knowingly: **three lines would
+display as subtitles and not be spoken.**
+
+That is a triage decision under an external constraint, not a mistake, and the
+distinction matters for how the remaster treats it.
+
+**The regression.** Both engines are pulse-driven, but they order the checks
+differently:
+
+- **Java** (`SpeechActorMouth.java:53`) calls `pulse(0L)` *synchronously inside*
+  `start()`. With `time=0 >= times[0]=0`, `setText(sentences[0])` fires before
+  audio state is consulted at all. The subtitle appears regardless.
+- **TypeScript** (`ActorMouth.ts`) checks `if (this.finished)` **first** in
+  `updateSpeech()` and clears the text — and `playNow()` sets `finished = true`
+  as soon as it finds no audio buffer. A prewarmed asset never renders the line
+  at all; a lazily-loaded one flashes it for one failed fetch.
+
+So the port converts *"displayed but not spoken"* into *"neither displayed nor
+spoken"*, and does it silently, because a missing asset is precisely the case
+that raises no error.
+
+**Fix.** Subtitles must not be gated on audio availability. `updateSpeech()`
+should advance the sentence timeline on its own clock and only clear on genuine
+completion — matching the Java, where the text is driven by `times[]` and the
+sound merely runs alongside it. For a line with no audio, hold the last sentence
+for a sensible duration rather than ending instantly.
+
+**Consequence for `tools/lint_gml.py`:** these three stop being "missing assets"
+and become known, accepted, permanently-absent content. They should be an
+explicit documented allowlist, not errors — the linter's red is currently
+reporting a 1998 decision as a defect.
+
+**Whether to record the three lines at last: TBD, deferred to the team.** The
+actors are still active, but they were in their thirties in 1998 and their
+voices have changed. That is not a scheduling objection, it is a remaster
+problem: the 1999 performances *are* the artifact, and the same performers
+today are different instruments. Recording them would produce three lines that
+are authentic in casting and audibly foreign in the middle of a 1998 cast.
+
+Not a blocker either way. **The port regression above should be fixed
+regardless**, because "displayed, not spoken" is the shipped behaviour and the
+port currently delivers neither.
+
+---
+
 ## 1 — Walking away looks like climbing a wall
 
 **Reported by:** Hjalti, 2026-08-06 — "when Hjalti is walking up the river there

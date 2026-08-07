@@ -12,11 +12,15 @@ import { SaveScene, type MenuResult } from './SaveScene';
 import { serialize as serializeSave, restore as restoreSave } from './SaveSerializer';
 import type { SaveData } from './SaveStore';
 import { prewarmChapter } from './AssetPrewarm';
+import { playBackstory } from './Backstory';
 
 import {
   INTRO, MAIN_MENU, LANDNAM, KRISTNITAKA, SIDASKIPTI, TYRKJARAN, EXTRO,
   CHAPTER_NAMES,
 } from './chapters';
+
+/** Web-playable derivative of the disc's INTRO.AVI (Cinepak won't decode in browsers). */
+const BACKSTORY_SRC = '/video/INTRO.mp4';
 
 // Re-exported so existing importers of this module keep working.
 export { INTRO, MAIN_MENU, LANDNAM, KRISTNITAKA, SIDASKIPTI, TYRKJARAN, EXTRO };
@@ -197,6 +201,11 @@ export class Timaflakkarinn {
     }
     skipBtn.remove();
 
+    // Baksaga — the 1999 disc's INTRO.AVI, which no GML references and which the
+    // web recreation therefore never played. Runs after the credits, before the
+    // menu. Never blocks: a missing or unplayable file just moves on.
+    await this.playBackstory();
+
     // Aðalvalmynd
     const choice = await this.openMenu('main');
     if (choice.kind === 'newGame') {
@@ -272,6 +281,23 @@ export class Timaflakkarinn {
 
     this.onLoadingProgress?.(`${name} hlaðið`, 100);
     this.parsed[screen] = true;
+  }
+
+  /**
+   * Play the backstory film. Audio from the game is stopped first so the
+   * film's own soundtrack is not competing with a lingering theme.
+   */
+  private async playBackstory(): Promise<void> {
+    const container = document.getElementById('game-container');
+    if (!container) return;
+
+    stopAllAudio();
+    const result = await playBackstory({
+      container,
+      src: BACKSTORY_SRC,
+      onUnavailable: why => gameLog('WARN', `backstory unavailable: ${why}`, this.world.pulser.elapsed),
+    });
+    gameLog('GAME', `backstory ${result}`, this.world.pulser.elapsed);
   }
 
   private getSequenceContext(): SequenceContext {

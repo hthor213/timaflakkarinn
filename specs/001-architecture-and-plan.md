@@ -182,8 +182,18 @@ classic in the same build, and does not look like a sticker on a painting.
 ### Phase 3 — Character remaster
 
 Rolling and incremental, one character at a time behind `ActorFace`. Order by
-screen time: HJALTI, SIGRUN, GISSUR, VIFILL, INGOLFUR — five characters are ~40%
-of all animation cells.
+screen time, which means **the four player characters first** — `SetPlayer`
+reassigns the protagonist per chapter, so there are four, not one:
+
+| Chapter | Player | Cells |
+|---|---|---|
+| Tyrkjaránið | `a_Sigrun` | 36 |
+| Siðaskipti | `a_Gissur` | 19 |
+| Kristnitaka | `a_Hjalti` (Hjalti Skeggjason) | 18 |
+| Landnám | `vifill` | 17 |
+
+90 cells, ~37% of the total, and all of the time the player spends looking at
+themselves. INGOLFUR (11) is the largest remaining NPC.
 
 - [ ] 3D toon pipeline seeded from the 1998 orthographic turnarounds
 - [ ] Rig + curves derived from the existing 8-frame cycles (preserves the

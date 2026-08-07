@@ -154,7 +154,18 @@ Already true and not to be rebuilt:
 | Backgrounds/props | ~304 PNGs | Depth decomposition + outpaint to 21:9 |
 
 Top-heavy and therefore front-loadable: SIGRUN 36, GISSUR 19, HJALTI 18,
-VIFILL 17, INGOLFUR 11 — five characters are ~40% of all cells. The tail is 2–8
+VIFILL 17, INGOLFUR 11 — five characters are ~40% of all cells.
+
+**There are four player characters, not one.** `SetPlayer` reassigns the
+protagonist each chapter: `vifill` in Landnám, `a_Hjalti` — the historical Hjalti
+Skeggjason — in Kristnitaka, `a_Gissur` in Siðaskipti, `a_Sigrun` in
+Tyrkjaránið. Denni, the boy in the intro storybook, is the framing device; the
+player inhabits a different historical figure in each era, which is what the
+title means.
+
+That is why those four carry the largest cell counts on the disc, and it sets the
+character-remaster order: they are ~37% of all animation cells and 100% of the
+time the player spends looking at themselves. The tail is 2–8
 cells each, mostly near-static stop/talk poses.
 
 **The 1999 art ships orthographic turnarounds.** HJALTI, GISSUR, VIFILL and

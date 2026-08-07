@@ -317,29 +317,83 @@ should be that one.
 
 ---
 
-## 4 — `1998-bug` · Green speckles on 13 sprites
+## 4 — `1998-bug` · PARTLY FIXED · Green speckles from palette drift
 
 **Reported by:** Hjalti, 2026-08-07 — "several places where the green chroma
-didn't work perfect."
+didn't work".
 
-**Confirmed by measurement, and it is in the disc art, not the port.** 118 pixels
-across 13 sprites sit one step off pure green, and the engine keys on *exactly*
-`RGB(0,255,0)`, so they survive as specks on moving characters:
+**Measured, 2026-08-07:** all 545 PNGs (78.2M pixels) scanned, then every number
+re-verified with an independent pure-JS PNG decoder inside the test. It is **12
+sprite sheets and 116 pixels**, not 13/118 — the 13th file is a *background*,
+and its pixels sit further out (see below). Only **two** off-key colours exist
+in the whole tree: `(4,252,4)` at Chebyshev distance 4, and `(4,244,4)` at 11.
 
-```
-41 px  TYRKJARA/ANIMATIA/BUNDNIRA/TALK.PNG
-24 px  TYRKJARA/ANIMATIA/TUNNALEA/TUNNALEA.PNG
-15 px  TYRKJARA/ANIMATIA/MAMMA/TALK.PNG
-11 px  KRISTNIA/ANIMATIA/HJALTI/FRONT.PNG
- 8 px  TYRKJARA/ANIMATIA/SIGRUN/FRONT.PNG
- …8 more, down to single pixels
-```
+**It is not anti-aliasing.** That was the working assumption and the measurement
+refuted it, which changed the fix:
 
-**Fix (not yet applied).** Key on a tolerance rather than an exact match, at
-build time in the asset pipeline. All 118 vanish and no legitimate art is at
-risk — no character sprite uses saturated green otherwise. Nobody is nostalgic
-for 118 stray pixels, so this is a `1998` entry whose answer is almost certainly
-"fix", but it is still a content change and gets recorded as one.
+- The 12 sheets expose 73,336 backing-boundary pixels; only 116 are near-green.
+  **0.16% coverage** — real AA would be near 100%.
+- **85%** of the specks do not touch the backing at all; their commonest
+  neighbour is `(4,4,4)`, the black outline. **66%** are isolated single pixels.
+- Zero exact-key pixels are isolated — the backing is one clean region.
+- **The tell:** 534 files are 8-bit indexed, and every channel value in them is
+  ≡ 0 mod 4 *except* the reserved 255. `(0,255,0)` is palette index 254;
+  `(4,244,4)` is index 212 — and **197 files carry index 212 with zero pixels
+  using it.** A shared export palette holding two near-identical greens.
+
+So these are stray chroma-green specks left in the 1998 artwork, which the
+quantiser snapped onto a ramp entry instead of the reserved key entry.
+
+**Binary tolerance, not feathering.** Feathering scales alpha by coverage and
+there is no coverage to scale: at distance 4 it leaves a pixel ~94% transparent,
+i.e. a residual speck rather than a removed one. It is also slower (147ms vs
+117ms across the tree). Wrong instrument.
+
+**Threshold = 16, chosen because 12–18 is an empty band.** The Chebyshev
+distances that actually occur in the tree are 4, 11, 19, 28, 35, 44, 51, 59, 60,
+67, 75, 76, 83, 84, 91, 92 — nothing between 12 and 18, so every value there
+produces byte-identical output. 16 is the middle of that gap. Painted green art
+(the `RUNNI.PNG` bush, `HJORLEIA` grass) first gets touched at **60**, a 3.75×
+margin. The test sweep pins the bracket empirically: it fails at ≤10 (drift
+survives) and at ≥19 (art eaten).
+
+**Cost: +10ms (+9%) one-time across the entire asset tree** (107→117ms), which
+is why the loop is written longhand rather than behind a per-pixel predicate
+(134ms). Crucially, **zero new `toDataURL()` round trips** — all 12 affected
+files already contained exact-key pixels, so the re-encode count stays at
+473/545. That re-encode, not the scan, is the dominant mobile cost.
+
+**SCOPE BOUNDARY — do not widen this to text.** `isChromaKey` in `GMLParser.ts`
+stays an exact match, deliberately: three speech accumulators are genuinely
+green-ish and must keep painting (`a_Ymsir_acc` 74,156,14; `a_Oddur_acc`
+8,168,56; `a_kristofer_acc` 10,146,90). See issue #3. A test asserts the text key
+did not widen.
+
+Covered by `webapp/test/chromakey.test.mjs` (7 cases), which carries its own PNG
+decoder so it walks the real 545 files rather than a fixture.
+
+### Still open — needs the owner, and probably Erna
+
+Two **backgrounds** carry the same defect further out, and I deliberately did
+not widen the threshold to reach them:
+
+- `SIDASKIA/GRAPHIC/SVEFNHEA.PNG` — 11 px at distances 19 and 35, plus 2
+  exact-key px the engine already punches out today.
+- `LANDNAM/GRAPHIC/HJORLEIA/HJORLEIA.PNG` — 2 px at distance 28, green dots on
+  the driftwood.
+
+The reason is stronger than the threshold: **`HJORLEIA.PNG` contains zero
+exact-key pixels** — independently confirmed — so it has no chroma backing at
+all. Keying anything in it punches a transparent hole in a painting rather than
+removing a backing. These want real art repair: repaint 13 pixels. That is
+derived art, so it is the Erna sign-off gate, not a threshold change.
+
+Repaired files need a home outside `web_import/`, which is read-only master.
+Proposal, not yet built: `art_repair/GAME/<same path>`, overlaid onto the served
+tree by the pipeline — master untouched, every repaired pixel a reviewable diff.
+
+**Not verified:** confirmed at pixel level and in tests; nobody has launched the
+game and looked at these sprites.
 
 ---
 

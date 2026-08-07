@@ -1,3 +1,44 @@
+/**
+ * How far a pixel may sit from RGB(0,255,0) and still count as backing,
+ * measured as Chebyshev distance: max(r, 255-g, b).
+ *
+ * The 1998 art carries stray chroma-green specks that the 8-bit palette export
+ * quantised onto a *second* near-green palette entry instead of the reserved
+ * key. Across the 545 shipped PNGs the drifted greens are (4,252,4) at distance
+ * 4 and (4,244,4) at distance 11 — 116 pixels in 12 sprite sheets. The next
+ * green of any kind anywhere in the tree is at distance 19, and the nearest
+ * green that is actually *painted* art (the bush in HJORLEIA/RUNNI.PNG) is at
+ * distance 60. So every value in 12..18 keys exactly the same pixels; 16 is
+ * the middle of that empty band.
+ *
+ * SCOPE: image pixels only. Subtitle colour resolution keys on an EXACT match
+ * (`isChromaKey` in GMLParser.ts) and must stay exact — three speech
+ * accumulators are authored a genuine dark green and have to keep painting.
+ * See docs/known-issues.md #3 and #4.
+ */
+export const CHROMA_TOLERANCE = 16;
+
+/**
+ * Punch out the chroma key in place. Returns true if anything changed.
+ *
+ * Exported so the tolerance can be tested against the real disc art rather
+ * than a fixture; the loop is written out longhand rather than calling a
+ * per-pixel predicate because it runs over ~78M pixels at load and the call
+ * costs ~25% of the scan (measured) where the compare itself costs ~9%.
+ */
+export function keyChromaPixels(data: Uint8ClampedArray): boolean {
+  const lo = CHROMA_TOLERANCE;
+  const hi = 255 - CHROMA_TOLERANCE;
+  let changed = false;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i] <= lo && data[i + 1] >= hi && data[i + 2] <= lo) {
+      data[i + 3] = 0;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 /** Loads and caches images and sounds from the game assets */
 export class AssetLoader {
   private imageCache = new Map<string, HTMLImageElement>();
@@ -128,7 +169,7 @@ export class AssetLoader {
     });
   }
 
-  /** Replace green (0,255,0) pixels with transparent */
+  /** Replace chroma-key green pixels with transparent. See CHROMA_TOLERANCE. */
   private applyChromaKey(img: HTMLImageElement): Promise<HTMLImageElement> {
     const w = img.naturalWidth;
     const h = img.naturalHeight;
@@ -141,15 +182,7 @@ export class AssetLoader {
     ctx.drawImage(img, 0, 0);
 
     const imageData = ctx.getImageData(0, 0, w, h);
-    const data = imageData.data;
-    let changed = false;
-
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] === 0 && data[i + 1] === 255 && data[i + 2] === 0) {
-        data[i + 3] = 0;
-        changed = true;
-      }
-    }
+    const changed = keyChromaPixels(imageData.data);
 
     if (!changed) return Promise.resolve(img);
 

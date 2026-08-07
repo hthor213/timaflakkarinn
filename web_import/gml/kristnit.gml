@@ -4242,7 +4242,7 @@
 </Sequence>
 <Reaction reactor="action_look" actor="a_Hjalti" seq="s_LookHjalti"/>
 <Reaction reactor="action_talk" actor="a_Hjalti" seq="s_LookHjalti"/>
-<Reaction reactor="action_take" actor="a_Hjalti" seq="s_LookHjalti"/>
+<Reaction reactor="action_take" actor="a_Hjalti" seq="s_randomTake"/>
 
 <Sequence name="s_LookGissurHviti">
 	<Quantum name="q_Freeze"/>
@@ -4264,11 +4264,11 @@
 </Sequence>
 <Reaction reactor="action_take" actor="a_GissurHviti" seq="s_TakeHuman"/>
 <Reaction reactor="action_take" actor="a_Volva" seq="s_TakeHuman"/>
-<Reaction reactor="action_take" actor="a_Hjalti" seq="s_TakeHuman"/>
+<Reaction reactor="action_take" actor="a_Hjalti" seq="s_randomTake"/>
 <Reaction reactor="action_take" actor="a_Toggi" seq="s_TakeHuman"/>
 <Reaction reactor="action_take" actor="a_HestaSveinn" seq="s_TakeHuman"/>
 <Reaction reactor="action_take" actor="a_Hallur" seq="s_TakeHuman"/>
-<Reaction reactor="action_take" actor="a_Hjalti" seq="s_TakeHuman"/>
+<Reaction reactor="action_take" actor="a_Hjalti" seq="s_randomTake"/>
 
 
 <!-- Miscellaneous reactions and Quanta-->

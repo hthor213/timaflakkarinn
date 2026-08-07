@@ -6090,7 +6090,7 @@
 	<Quantum name="q_Freeze"/>
 	<Quantum name="q_SigrunTied47377786"/>
 </Sequence>
-<Reaction reactor="action_take" actor="a_Sigrun" seq="s_UnDecided6"/>
+<Reaction reactor="action_take" actor="a_Sigrun" seq="s_randomTake"/>
 <Reaction reactor="action_look" actor="a_Sigrun" seq="s_UnDecided6"/>
 <Reaction reactor="action_talk" actor="a_Sigrun" seq="s_UnDecided6"/>
 <Reaction reactor="action_use" actor="a_Braud" actor2="a_Sigrun" seq="s_UnDecided7"/>
@@ -6233,7 +6233,7 @@
 	<Quantum name="q_SigrunTiedy767oo8"/>
 </Sequence>
 <Reaction reactor="action_look" actor="a_Sigrun" seq="s_LookSigrun"/>
-<Reaction reactor="action_take" actor="a_Sigrun" seq="s_LookSigrun"/>
+<Reaction reactor="action_take" actor="a_Sigrun" seq="s_randomTake"/>
 <Reaction reactor="action_talk" actor="a_Sigrun" seq="s_LookSigrun"/>
 
 <!-- Hotspot between Kot and UtanHusid -->

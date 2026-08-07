@@ -3440,7 +3440,7 @@
 	<Quantum name="q_stopvifill"/>
 	<Quantum name="q_looking"/> </Sequence>
 <Reaction reactor="action_look" actor="vifill" seq="s_LookVifill"/>
-<Reaction reactor="action_take" actor="vifill" seq="s_LookVifill"/>
+<Reaction reactor="action_take" actor="vifill" seq="s_randomTake"/>
 <Reaction reactor="action_talk" actor="vifill" seq="s_LookVifill"/>
 
 <!-- Take up Karli (Push)-->

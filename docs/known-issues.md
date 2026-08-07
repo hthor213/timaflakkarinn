@@ -11,21 +11,34 @@ there is a playable build: recall is triggered by playing, not by remembering.
 
 ## Tags
 
-Every entry carries an origin tag, because **only one class needs a decision**:
+Every entry carries an origin tag. The distinguishing question is **factual, not
+aesthetic**: *did the 1998 team consider this wrong at the time?*
 
 | Tag | Meaning | What happens |
 |---|---|---|
-| `1998` | Shipped in the original | **Needs a call: preserve or fix?** The remaster question |
-| `port` | Introduced by the reverse-engineering | Just fix. No decision to make |
-| `missing` | Content the port does not have | Just add |
-| `design` | Worked as built, but felt wrong | What the remaster is *for* |
+| `1998-bug` | Wrong against the original team's own intent — a shipped defect, **or** something they meant to do and never got to | **Fix it.** No preserve-or-fix debate: the authors already agreed it was wrong, so preserving it would preserve a mistake, not fidelity |
+| `port-bug` | Introduced by the reverse-engineering | Fix. The 1999 engine is the specification and the recreation is simply wrong |
+| `missing` | Content the port does not have | Add |
+| `design-improvement` | Worked exactly as intended in 1998; we want better now | Genuinely optional. This is what the remaster is *for* |
 
-A `port` entry is never a fidelity question — the original is the specification
-and the recreation is simply wrong. A `1998` entry always is.
+Two notes on using this well.
+
+**`1998-bug` covers unfinished intent, not just defects.** That is the dominant
+signature of this codebase — three voice lines cut for a pressing deadline, 60 of
+83 terrains never given their scaling calibration, `SetSpeedQuantum` built and
+wired and never once used, a sequence literally named `s_UnDecided6`. None of
+that is sloppiness; it is a six-month schedule, still visible in the archive.
+It needs *finishing*, not deciding.
+
+**The only entries that need a decision from the owner are the ones where we
+cannot tell whether something was intended.** Karli's subtitles being coloured
+with the chroma key is the live example: deliberate hiding, or a typo for white
+that went unnoticed because it rendered invisible? That question is answerable by
+the people who wrote it, and nobody else.
 
 ---
 
-## 0 — `1998`+`port` · Three lines are displayed but never spoken
+## 0 — `1998-bug` + `port-bug` · Three lines are displayed but never spoken
 
 **Reported by:** Hjalti, 2026-08-07, from memory of the original production —
 and confirmed against the disc the same day.
@@ -96,7 +109,7 @@ port currently delivers neither.
 
 ---
 
-## 1 — `1998` · Walking away looks like climbing a wall
+## 1 — `1998-bug` + `design-improvement` · Walking away looks like climbing a wall
 
 **Reported by:** Hjalti, 2026-08-06 — "when Hjalti is walking up the river there
 is no perspective and he doesn't get smaller … it looks like he's climbing a
@@ -198,7 +211,7 @@ wait for them.
 
 ---
 
-## 2 — `port` · FIXED · The ship appears ~1s before the opening scroll
+## 2 — `port-bug` · FIXED · The ship appears ~1s before the opening scroll
 
 **Reported by:** Hjalti, 2026-08-07, playing the build.
 
@@ -221,7 +234,7 @@ stays the business of `s_always` / `s_prepare` / `s_begin`, as in 1999.
 
 ---
 
-## 3 — `port` · FIXED · Green flash at the top when Karli speaks
+## 3 — `port-bug` · FIXED · Green flash at the top when Karli speaks
 
 **Reported by:** Hjalti, 2026-08-07 — "green blip when Karli starts to talk,
 like there is text at the top which is then suppressed." Every line, not just one.
@@ -251,7 +264,7 @@ the remaster may want it white. Hjalti's call.
 
 ---
 
-## 4 — `1998` · Green speckles on 13 sprites
+## 4 — `1998-bug` · Green speckles on 13 sprites
 
 **Reported by:** Hjalti, 2026-08-07 — "several places where the green chroma
 didn't work perfect."
@@ -286,7 +299,7 @@ with a skip button. See `tools/pipeline/make-video.sh`.
 
 ---
 
-## 6 — `port` · FIXED · Dialogue options are hard to click, and never highlight
+## 6 — `port-bug` · FIXED · Dialogue options are hard to click, and never highlight
 
 **Reported by:** Hjalti, 2026-08-07 — "it's like the mouse pointer is inaccurate…
 when there are short answers among the answers the clickable area gets smaller…
@@ -327,7 +340,7 @@ panel. Boxes should now sit tight around the glyphs instead of drifting.
 
 ---
 
-## 7 — `port` · FIXED · One-shot animations snap back to their first frame
+## 7 — `port-bug` · FIXED · One-shot animations snap back to their first frame
 
 **Reported by:** Hjalti, 2026-08-07 — the öndvegissúla is thrown overboard after
 Ingólfur speaks, but "there was animation where it falls over."
@@ -355,7 +368,7 @@ subtle enough that it would regress silently otherwise.
 
 ---
 
-## 8 — `1998` · Walking into Hallveig, the player keeps walking
+## 8 — `port-bug`? · Walking into Hallveig, the player keeps walking
 
 **Reported by:** Hjalti, 2026-08-07. The player character walks into Hallveig and
 continues for a few seconds, as if trying to walk through her.
@@ -366,7 +379,7 @@ before then would mean tuning against a stand-in.
 
 ---
 
-## 9 — `port` · FIXED · Cursor hotspot was 15px off
+## 9 — `port-bug` · FIXED · Cursor hotspot was 15px off
 
 **Reported by:** Hjalti, 2026-08-07, with two screenshots that pinned it exactly:
 approaching a menu item from **below**, it highlights while the cursor is
@@ -400,7 +413,7 @@ dialogue options feel arbitrary.
 
 ---
 
-## 10 — `port` · FIXED · The walker never re-aims, and wall-follows to a corner
+## 10 — `port-bug` · FIXED · The walker never re-aims, and wall-follows to a corner
 
 **Reported by:** Hjalti, 2026-08-07 — talking to Karli in Ingólfshöfði sends
 Vífill to the far right of the screen instead of stopping at his left.
@@ -451,3 +464,46 @@ code with `from 220,425 ended at 798,598`.
    the assumption it was original — it may well be `port`.**
 3. `SetDestinationQuantum.leap()` in Java has a 240s watchdog that force-sets the
    location. The port's `await` has no timeout.
+
+---
+
+## 11 — `1998-bug` · FIXED · Using the hand on yourself was inconsistent across chapters
+
+**Reported by:** Hjalti, 2026-08-07 — "I'm pretty sure there was some funny response
+when using hand on himself... now he just says sæll." Then, on being told the
+content did exactly that: *"but it's a bug :-) ... omission by us, the intent was
+always to answer with something from the random pool when trying to pick up
+yourself — we should have same behavior throughout the game."*
+
+**Filed first as not-a-bug, which was wrong.** The content did do what it said, so
+by mechanism nothing was broken. But the axis that matters is intent, and an
+omission the author can name is a defect. Corrected.
+
+**What each player character did.** `SetPlayer` makes the protagonist different
+per chapter, so this had to be checked four times:
+
+| Chapter | Player | Hand-on-self |
+|---|---|---|
+| Landnám | `vifill` | `s_LookVifill` — the greeting, identical to look and talk |
+| Kristnitaka | `a_Hjalti` | `s_TakeHuman` → *"Láttu ekki svona!"* |
+| Siðaskipti | `a_Gissur` | `s_LookGissur` — the greeting |
+| Tyrkjaránið | `a_Sigrun` | **`s_UnDecided6`**, then `s_LookSigrun` |
+
+One chapter in four had a take-specific response, and even that one was a single
+fixed line rather than the pool. **`s_UnDecided6` is named "undecided"** — a 1998
+TODO left in the content, and about as direct a confirmation of the stated intent
+as the archive could offer.
+
+`s_randomTake` — the 13-line refusal pool in `COMMON/MEDIA/TAKE/`, including
+*"Ég gæti aldrei haldið á þessu!"* — already existed in all four chapters. The
+intended behaviour was wired and simply never pointed at.
+
+**Fix.** Every `action_take` reaction on a player actor now targets
+`s_randomTake`. Seven reactions across four chapters.
+
+**Note on editing content.** `specs/001` treats the GML as sacred, edited only to
+fix authored defects. This qualifies, on the owner's explicit statement of
+original intent. The edit was made byte-wise: a first attempt through Python's
+text mode silently converted CRLF to LF across four files and was reverted.
+Any future content edit must read and write bytes — the files are ISO-8859-1 with
+CRLF and both are load-bearing.

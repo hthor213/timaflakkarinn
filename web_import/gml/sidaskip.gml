@@ -4721,7 +4721,7 @@
 	<Quantum name="q_Looking"/>
 </Sequence>
 <Reaction reactor="action_look" actor="a_Gissur" seq="s_LookGissur"/>
-<Reaction reactor="action_take" actor="a_Gissur" seq="s_LookGissur"/>
+<Reaction reactor="action_take" actor="a_Gissur" seq="s_randomTake"/>
 <Reaction reactor="action_talk" actor="a_Gissur" seq="s_LookGissur"/>
 
 

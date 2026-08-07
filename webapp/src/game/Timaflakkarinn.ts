@@ -201,7 +201,7 @@ export class Timaflakkarinn {
     }
     skipBtn.remove();
 
-    // Baksaga — the 1999 disc's INTRO.AVI, which no GML references and which the
+    // Kynning — the 1999 disc's INTRO.AVI, which no GML references and which the
     // web recreation therefore never played. Runs after the credits, before the
     // menu. Never blocks: a missing or unplayable file just moves on.
     await this.playBackstory();

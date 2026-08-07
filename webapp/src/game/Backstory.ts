@@ -44,7 +44,7 @@ export function playBackstory(opts: BackstoryOptions): Promise<'played' | 'skipp
     video.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000';
 
     const label = document.createElement('div');
-    label.textContent = 'Baksaga';
+    label.textContent = 'Kynning';
     label.style.cssText = [
       'position:absolute', 'top:12px', 'left:16px', 'color:#c8a040',
       'font:600 15px serif', 'letter-spacing:.08em', 'text-shadow:0 1px 3px #000',
@@ -52,7 +52,7 @@ export function playBackstory(opts: BackstoryOptions): Promise<'played' | 'skipp
     ].join(';');
 
     const skip = document.createElement('button');
-    skip.textContent = 'Sleppa baksögu';
+    skip.textContent = 'Sleppa kynningu';
     skip.style.cssText = [
       'position:absolute', 'top:10px', 'right:12px', 'z-index:201',
       'padding:8px 16px', 'font:14px serif', 'cursor:pointer',

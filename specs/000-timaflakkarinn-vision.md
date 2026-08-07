@@ -121,6 +121,30 @@ bank?" questions — not by handing her 304 depth maps to audit. Same informatio
 a fraction of her time, and it respects that reviewing is a pleasure for her only
 so long as it stays one.
 
+**D7 — Recreate per asset, not per scene. Characters and backgrounds are
+different problems.** Owner decision, 2026-08-07.
+
+The 1998 team already separated these, and that separation is what makes the
+remaster tractable:
+
+- **Characters are sprites**, composited at runtime at engine-controlled
+  coordinates. Redrawing one breaks no hotspot, no polygon, no scaling. Each is
+  done **once and reused in every scene** — ~46 characters, five of which carry
+  ~40% of all animation cells. **The binding constraint is likeness**: an
+  AI reimagining of the ship scene produced excellent water and a generic viking
+  rather than Karli. The disc's orthographic turnarounds — `FRONT`/`BACK`/`LEFT`/
+  `RIGHT` per character — are exactly the multi-view identity reference needed to
+  hold likeness, and are why this is solvable.
+- **Backgrounds carry geometry.** Every scene positions its objects against the
+  painting at exact pixel coordinates — `a_Sula` at `x="480" y="120"`, the
+  walkable polygon, `zmin`/`zmax`/`defaultscaling`. Regenerate freely and every
+  one of those is wrong, across 304 scenes. So backgrounds need
+  **structure-preserving** treatment and **depth preserved** (D2's proxy
+  geometry), where characters need none.
+
+Practical consequence: the character pass is the smaller job *and* the one the
+player looks at continuously. It should lead.
+
 **D3 — Cinematic camera.** Drift, rack focus, cuts for dialogue. Reference target
 is Grim Fandango's staging. Explicitly *not* its controls (see D5).
 

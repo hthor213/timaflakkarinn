@@ -10,6 +10,13 @@ a real URL. Verified end to end: app shell, deep links, `image/png` backgrounds,
 Branch `feat/unify`, pushed to `git.spliffdonk.com`. Not merged to a trunk yet —
 the repo's default branch question is still open.
 
+**The site is current as of `aec43cc`.** Deployed via the new `tools/deploy.sh`
+and verified: 16 checks passed, gml served byte-identical to master with CRLF
+intact, SPA fallback working, missing assets still 404ing. Everything from the
+overnight session is playable — the Völva prompt, the Irna response, the pointer
+and hit-box fixes, bold-on-hover, spacebar-as-right-button, touch input, the
+Pulser cadence and the freeze escape.
+
 ## What happened
 
 **Halldór's push arrived.** `origin/main` carried the TypeScript port, the
@@ -50,31 +57,61 @@ mounted read-only and verified bit-identical afterwards.
   global container that is never cleared, and `performSequence()` reads from it.
   88 of the 143 names shared by all four chapters have *differing* definitions,
   including `s_begin`/`s_always`/`s_prepare`. Forward jumps look fine; returning
-  to an already-parsed chapter runs the wrong chapter's sequences. This blocks
-  reliable chapter navigation, and Halldór's debug panel already exposes it.
-- **No touch input at all.** Bindings are mouse-only, and `handleMouseDown`
-  reads coordinates only `mousemove` writes, so a first tap lands stale.
-- **`Pulser` loses its remainder** (`= 0` instead of `-= interval`), so subtitles
-  drift progressively late against audio.
-- **`Sequence` freeze race** — a single `frozenResolve` overwritten by concurrent
-  waiters; a `thaw()` landing before the promise hangs that sequence forever.
+  to an already-parsed chapter runs the wrong chapter's sequences.
+- **Moonwalking.** The player's feet cycle faster than he crosses the screen.
+  Classified `1998-bug` by the owner, who confirms it annoyed the team at the
+  time. Logged deliberately unworked — it wants the new walk system, not a patch.
+- **Walking into Hallveig** — he keeps pushing for several seconds as if trying
+  to walk through her. `1998-bug`, deferred to Phase 2.
 - **Runtime chroma-key** — `getImageData` + synchronous `toDataURL()` re-encode
   per PNG, 545 PNGs. Worst mobile item; belongs in the asset pipeline.
+- **Green speckles** — residual green at 118px on 13 sprites. Distinct from the
+  dialogue-start green flash, which is under investigation.
 - **Five hardcoded PNGs missing** — `WAIT`, `KLUKKA`, `SAVELOAD`,
   `COMMON/DIALOG`, `KRISTNIA/DIALOG`. Referenced by no GML, so the
   content-derived capture never saw them. Halldór has them.
 
+## Fixed since that list was written
+
+Touch input (Pointer Events throughout), the `Pulser` remainder, the `Sequence`
+freeze escape, the cursor hotspot, measured dialogue hit boxes, bold-on-hover,
+the animation last-frame hold, scene jump, the Völva soft-lock, and the Irna
+near-miss response. Test suite went from 21 cases to **71 across 10 files**.
+
+## The 2.8D prototype — read `specs/003` before deciding anything
+
+The prototype came back with a result that contradicts **D2**, which is an owner
+decision and was therefore *not* changed. The short version: the 1998 master art
+is Floyd–Steinberg dithered (160 colours, 73% of adjacent pixels differ, median
+constant run 1px), so vectorising it traces the noise — it dissolves the 1px ink
+outlines and flattens the floor gradient into plateaus. The character sprites are
+12 colours and vectorise beautifully. Counterintuitively, the character looks
+*more* like a sticker on a vector background, because his hard black ink no
+longer rhymes with anything.
+
+D2's other half — 3D geometry on coarse proxies — is confirmed working. The
+depth-derived ground plane agrees with the 1998 walkable polygon to mean −1.4px.
+Recommended camera budget: **±10cm lateral**, 16px differential parallax.
+
 ## Start next session with
 
-1. **Chapter container scoping.** It is what turns the new chapter URLs from
-   bookmarks into navigation, and it is a real bug in normal play.
-2. Pointer Events, then `Pulser` remainder, then the `Sequence` freeze race.
-3. CI running `npm run check` on push.
+1. **Decide D2** using `specs/003`. Everything in the art pipeline waits on it,
+   and the falsifying test is named there (Vectorizer.AI on `HJAVOLVU.PNG`) if
+   you want one more data point before committing.
+2. **Chapter container scoping.** Still the top *engine* item — it turns the
+   chapter URLs from bookmarks into navigation, and it is a real bug in play.
+3. **Audit the 23 authored terrains.** `t_HjaVolvul` ramps 1.031x where
+   perspective wants 1.63x, so the calibration problem is not only the 61
+   missing ones.
+4. CI running `npm run check` on push.
 
 ## Needs a human
 
-- **Renew the Forgejo credential on the homeserver** — expired; the deploy had
-  to transfer the branch by git bundle. Blocks the next deploy.
+- **Renew the Forgejo credential on the homeserver** — still expired; deploys
+  fall back to a verified git bundle, which works for code and GML. But a bundle
+  carries LFS *pointers*, not blobs, so **no commit touching an LFS-tracked file
+  can ship at all** until this is renewed. That becomes hard-blocking the moment
+  the art pipeline emits its first derived background.
 - **Ask Halldór for**: the five hardcoded PNGs, the CD ISO, and — new and
   possibly worth more than the ISO — **the original Photoshop PSDs**, whose
   layers may already encode the depth separation D2 is trying to reconstruct.
@@ -90,4 +127,4 @@ mounted read-only and verified bit-identical afterwards.
 `aidev check` is **red on one item**, deliberately: `lint_gml.py` reports 5
 issues, all pre-existing 1998/1999 content gaps, none introduced by the rebuild.
 Left red rather than relaxed — see the Done When note in `specs/001`.
-`npm run check` (typecheck + 21 tests) is green.
+`npm run check` (typecheck + 71 cases across 10 files) is green.

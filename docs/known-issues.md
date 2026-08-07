@@ -907,3 +907,93 @@ the port uses `>=`/`<=`. It only ever makes the port *more* permissive, and the
 collision-box gate makes it moot for boxless actors. Tightening it could newly
 block a boxed actor resting exactly on a boundary, which is a worse trade than
 the divergence.
+
+---
+
+## 18 — `port-bug` · FIXED · Returning to a chapter ran another chapter's sequences
+
+**Found by:** the systematic sweep; the debug flow tree's chapter jump exposes it
+directly.
+
+**Cause.** Every chapter's GML was parsed into one container that was never
+cleared, and every by-name lookup — `performSequence` above all — read out of it.
+Forward-only play never noticed, because each chapter's parse overwrote the
+previous one's names just before they were needed. Going back to a chapter you
+had already visited ran the *other* chapter's `s_always` / `s_prepare` /
+`s_begin`.
+
+**Census, re-measured.** The previous figure ("88 of 143") was wrong on the base.
+Method: parse the six shipped `.gml` files, take every top-level element with a
+`name`, plus the two derived keys the parser also registers (`<Text name=X>` also
+registers `X_face`; an actor's `collision=` attribute registers its own name).
+Canonicalise each declaration as its tag, its attributes minus `name`, and its
+whole child subtree.
+
+| | count |
+|---|---|
+| container keys shared by all four main chapters | **111** |
+| of those, differing in their own XML | **56** |
+| of those, differing once closed over the names they reference | **90** |
+
+The transitive figure is the one that matters. `s_prepare` is spelt *identically*
+in all four chapters and is still a different sequence in each, because the quanta
+it names are redefined per chapter — so a textual census understates the damage,
+and de-duplication would have been the wrong fix. By category, the 111 shared keys
+are 33 quanta, 29 sequences, 21 mouths, 8 faces, 8 actors, 5 terrains, 3 scenes,
+2 flags, 1 polygon, 1 StateController. The 21 that survive unchanged are 6 faces,
+5 quanta, 4 terrains, 3 scenes, 2 flags and 1 polygon — every sequence, every
+mouth and every actor of the 111 differs.
+
+**What 1999 did — this decides the fix.** The Java engine also used a single
+`Hashtable` (`Timaflakkarinn.screenContainer`, forced onto the parser at
+`Timaflakkarinn.java:120` and `:356`), but it **emptied it at every screen
+transition**: `clearContainer()` (`Timaflakkarinn.java:314-341`) calls
+`unprepare()` on every `Preparable`, `kill()` on every `Killable`,
+`Groups.clearAll()`, then `hashtable.clear()`. The next chapter's `.gml` was then
+re-parsed from disk. Returning to an already-visited chapter was possible only
+through Load-game, and that path re-parses too (`displayScreen2` →
+`clearContainer` → `parseStoryPage`, `Timaflakkarinn.java:275-297`). So exactly
+one chapter's names existed at any moment. **The port kept the container and
+dropped the clear — a port bug, not inherited behaviour.**
+
+**Fix.** `webapp/src/game/ChapterScopes.ts`: one map per chapter, resolved
+**strictly** — no fallback to a global union, at parse time or at runtime. That
+restores the 1999 guarantee without paying for the re-parse (which the web port
+would also have to re-prewarm 500+ PNGs for).
+
+**No shared/common scope, deliberately.** The obvious shape — per-chapter scope
+with a fallback to a common one — was rejected on evidence: the content has
+nothing to put in a common scope. Running the real parser over all six files, the
+only names looked up and not found in their own chapter are the four `action_*`
+reactor *roles* (never object names anywhere; `Reaction` routes them to the
+StateController precisely when the container misses), two known content defects
+declared in no file at all (`q_Ahvarerhjorleifur` in landnám's `s_bless1`,
+`s_Fjolin` in tyrkjaránið), and one intra-chapter forward reference (below).
+**Even the Þórshamar and the cross are chapter-local**: `a_Thorshamar` and
+`a_Kross` are declared in `kristnit.gml` and nowhere else, and the trade happens
+inside that chapter in `s_GuessCorrect`. A fallback would have preserved exactly
+the failure being removed.
+
+**Two more bugs fixed en route,** both previously logged as deliberately
+unscoped and both real: `SaveSerializer.serialize` walked every chapter ever
+parsed, so saving in one chapter recorded another chapter's `a_Player` position
+under the same name; and `restore()` assigned `currentScreen` directly instead of
+going through `setCurrentChapter`, so a loaded game ran with the last-parsed
+chapter's StateController.
+
+**New content finding, tagged `1998`:** `qh_TextToggi` is a **forward
+reference**. `s_EgHefSvolitidMerkilegt` names it at `kristnit.gml:3628`; the
+`UpdateQuantum` that declares it is at `:3811`. The 1999 `TTParser` is single-pass
+too, so that sequence was short one quantum in the shipped game as well — it
+would have failed to hide Toggi's conversation text. Same chapter, so scoping is
+not involved. Not fixed: it is a content edit and wants Halldór's confirmation,
+alongside the other two dangling names.
+
+Covered by `webapp/test/chapterscope.test.mjs` (8 cases), which parses all six
+1998 files through the real `GMLParser` and asserts, among others, that after
+landnám → kristnitaka → landnám the game resolves *landnám's* `s_begin` — and
+that the same trip through one shared container still returns the wrong one, so
+the regression cannot be quietly re-introduced. 97 cases total.
+
+**Not verified in a browser.** Typecheck, build and the suite are green;
+nobody has yet clicked back into a visited chapter in the debug panel.

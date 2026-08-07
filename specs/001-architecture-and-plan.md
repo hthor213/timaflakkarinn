@@ -155,20 +155,32 @@ Unblocks everything. No new capability; existing capability made correct.
       and `tt-dev.spliffdonk.com` (debug) from one artifact; `/chapter1..4`,
       `/intro`, `/extro`, Icelandic aliases. Play mode scales the canvas to the
       viewport. 21 tests, the project's first
-- [x] **Chapter container scoping** — done, and **narrower than this spec
-      originally claimed**. The collision is real (88 of the 143 names shared by
-      all four chapters differ) but it only ever bit through *by-name* lookups.
-      `grep -rn "ctx.container" src/` returns **zero hits**: the parser resolves
-      every operand at parse time, so quantums hold direct object references and
-      never consult a container while running, and
-      `StateController.getSequenceContext()` passes an empty `Map`. Only five
-      call sites were exposed — `performSequence`, the `sc.performSequence`
-      closure, `jumpToScene`, `setCurrentSceneFlag`, and `this.stateController`
-      being silently overwritten per chapter. All now route through a
-      per-chapter map that `parseStoryPage` was already building and discarding.
-      **Still unscoped, deliberately:** `SaveSerializer`'s name lookups, and
-      `prewarmChapter` re-warming the union of all parsed chapters. Neither
-      affects jumping
+- [x] **Chapter container scoping** — closed, and **narrower than this spec
+      originally claimed**. The collision is real but the earlier figure was
+      wrong: **111** container keys are shared by all four main chapters, not
+      143. **56** differ in their own XML; **90** differ once you close over the
+      names they reference, which is the number that matters — `s_prepare` is
+      spelt identically in all four chapters and is still a different sequence in
+      each, because the quanta it names are redefined per chapter. Measured by
+      `webapp/test/chapterscope.test.mjs`, which runs the real parser over the
+      real GML.
+      It only ever bit through *by-name* lookups. `grep -rn "ctx.container" src/`
+      returns **zero hits**: the parser resolves every operand at parse time, so
+      quantums hold direct object references and never consult a container while
+      running. Name resolution is now **strict per chapter** (`ChapterScopes`) —
+      there is no global union left to fall through to, at parse time or at
+      runtime. That is the 1999 guarantee: the Java kept one `Hashtable` but
+      `clearContainer()` emptied it at every screen transition and re-parsed the
+      chapter's `.gml` from disk, so exactly one chapter's names existed at a
+      time. There is deliberately **no shared/common scope**, because the content
+      needs none — across all six files nothing resolves outside its own chapter
+      (`a_Thorshamar` and `a_Kross` are kristnit-only; the trade is intra-chapter)
+      — so a fallback would only re-create the failure. `SaveSerializer` and
+      `prewarmChapter`, previously left unscoped, now use the chapter's own map;
+      `restore()` also goes through `setCurrentChapter`, which it did not.
+      **Deliberately unscoped:** `stopAllSequences`, the Enter fast-forward and
+      the debug active list, which must reach a sequence still performing in a
+      chapter we have left
 - [ ] **`Pulser` remainder** — `accumulated -= interval`, not `= 0`. Subtitles
       drift late against audio
 - [x] **`Sequence` freeze escape** — *this entry was wrong and is corrected.*

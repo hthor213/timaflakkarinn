@@ -16,6 +16,7 @@ import { SaveScene, type MenuResult } from './SaveScene';
 import { serialize as serializeSave, restore as restoreSave } from './SaveSerializer';
 import type { SaveData } from './SaveStore';
 import { prewarmChapter } from './AssetPrewarm';
+import { ChapterScopes } from './ChapterScopes';
 import { playBackstory } from './Backstory';
 import { askVolvaName } from './GuessDialog';
 
@@ -124,19 +125,19 @@ export class Timaflakkarinn {
   world: World;
   loader: AssetLoader;
   parser: GMLParser;
-  container = new Map<string, any>();
-
   /**
-   * Per-chapter object maps, retained from parsing. `container` is the global
-   * union and keeps only the *last* definition of each shared name — 88 of the
-   * 143 names common to all four chapters differ, `s_begin`/`s_always`/
-   * `s_prepare` among them — so any lookup by name against it is wrong the
-   * moment a second chapter has been parsed. Quantums bind their operands at
-   * parse time and never consult a container at runtime, so scoping the
-   * remaining by-name lookups to the current chapter is enough to make chapter
-   * and scene jumping resolve the right objects. See specs/001.
+   * Every chapter's names, each in its own scope, resolved strictly. There is
+   * no global union any more: it kept only the *last* definition of each shared
+   * name, and 90 of the 111 container keys common to all four main chapters
+   * differ between them — `s_begin`, `s_always` and `s_prepare` included — so
+   * returning to an already-parsed chapter ran another chapter's sequences.
+   *
+   * Quantums bind their operands at parse time and never consult a scope at
+   * runtime, so scoping the by-name lookups is the whole of the fix. See
+   * `ChapterScopes` for why there is deliberately no shared fallback scope.
    */
-  private chapterObjects: (Map<string, any> | null)[] = new Array(7).fill(null);
+  scopes = new ChapterScopes();
+
   /** The StateController each chapter declared; `sc` is redefined per chapter. */
   private chapterControllers: (StateController | null)[] = new Array(7).fill(null);
 
@@ -384,15 +385,16 @@ export class Timaflakkarinn {
   async parseStoryPage(screen: number): Promise<void> {
     if (this.parsed[screen]) return;
 
-    const gmlContainer = { objects: new Map<string, any>() } as any;
-    gmlContainer.get = (name: string) => gmlContainer.objects.get(name) ?? this.container.get(name);
-    gmlContainer.put = (name: string, obj: any) => {
-      gmlContainer.objects.set(name, obj);
-      this.container.set(name, obj);
-    };
-
-    this.parser.setContainer(gmlContainer);
-    this.chapterObjects[screen] = gmlContainer.objects;
+    // Strict: the parser sees this chapter's names and no others. The old
+    // fallback to a global union bound this chapter's quantums to whatever the
+    // previously-parsed chapter happened to define under the same name, and
+    // that binding is permanent — no amount of runtime scoping undoes it.
+    const objects = this.scopes.open(screen);
+    this.parser.setContainer({
+      objects,
+      get: (name: string) => objects.get(name),
+      put: (name: string, obj: any) => { objects.set(name, obj); },
+    });
     const name = CHAPTER_NAMES[screen];
 
     this.onLoadingProgress?.(`Þáttar ${name}...`, 5);
@@ -403,7 +405,7 @@ export class Timaflakkarinn {
     this.chapterControllers[screen] = this.stateController;
 
     // Forhleða allar PNG-myndir kaflans (audio er áfram lazy)
-    await prewarmChapter(this.container, this.loader, (loaded, total) => {
+    await prewarmChapter(objects, this.loader, (loaded, total) => {
       const pct = total > 0 ? Math.round(loaded / total * 95) + 5 : 100;
       this.onLoadingProgress?.(`Forhleður myndir ${loaded}/${total}`, pct);
     });
@@ -431,47 +433,39 @@ export class Timaflakkarinn {
 
   private getSequenceContext(): SequenceContext {
     return {
-      container: this.container,
+      container: this.scopes.objects() ?? new Map<string, any>(),
       world: this.world,
       fastForward: this.fastForward,
     };
   }
 
   /**
-   * Resolve a GML name against the current chapter first, then the global
-   * union. Mirrors what the parser saw while building this chapter: its own
-   * objects, with cross-chapter names falling through.
+   * Resolve a GML name in the current chapter, and only there — the same
+   * guarantee the 1999 engine got by emptying its container at every chapter
+   * transition. A name this chapter does not declare resolves to nothing;
+   * silently borrowing another chapter's object under that name is the bug.
    */
   private lookup<T = any>(name: string): T | undefined {
-    const scoped = this.chapterObjects[this.currentScreen]?.get(name);
-    return (scoped ?? this.container.get(name)) as T | undefined;
+    return this.scopes.lookup<T>(name);
   }
 
-  /** Objects declared by the chapter now current (global union if unparsed). */
+  /** Objects declared by the chapter now current. */
   private chapterValues(): Iterable<any> {
-    return (this.chapterObjects[this.currentScreen] ?? this.container).values();
+    return this.scopes.values();
   }
 
   /**
-   * Every parsed object across every chapter. `container` alone would miss the
-   * losers of a name collision, so a sequence still performing in a chapter we
-   * have left would never be stopped.
+   * Every parsed object across every chapter. Deliberately unscoped: a sequence
+   * still performing in a chapter we have left must remain stoppable.
    */
-  private *allNamedObjects(): Generator<[string, any]> {
-    const seen = new Set<any>();
-    for (const map of [this.container, ...this.chapterObjects]) {
-      if (!map) continue;
-      for (const [name, obj] of map) {
-        if (seen.has(obj)) continue;
-        seen.add(obj);
-        yield [name, obj];
-      }
-    }
+  private allNamedObjects(): Generator<[string, any]> {
+    return this.scopes.all();
   }
 
   /** Make `chapter` current, restoring the StateController it declared. */
-  private setCurrentChapter(chapter: number): void {
+  setCurrentChapter(chapter: number): void {
     this.currentScreen = chapter;
+    this.scopes.current = chapter;
     const sc = this.chapterControllers[chapter];
     if (sc && sc !== this.stateController) {
       this.stateController = sc;
@@ -497,7 +491,8 @@ export class Timaflakkarinn {
     this.stopAllSequences();
     stopAllAudio();
     this.world.pulser.clear();
-    this.currentScreen = chapter;
+    // Point name resolution at this chapter before anything can look a name up.
+    this.setCurrentChapter(chapter);
     this.world.setCurrentScene(this.blackScene);
 
     await this.parseStoryPage(chapter);

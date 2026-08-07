@@ -95,8 +95,26 @@ Then, in the morning pass — four bugs where the *diagnosis* was the work:
   green on all 19 of her lines in Tyrkjaránið, unreported.
 - **Green speckles.** Not anti-aliasing — 8-bit palette drift, 12 files and 116
   pixels. Keyed at tolerance 16, chosen because distances 12–18 do not occur.
+- **Actor picking ran in world space while painting ran in screen space.** Not
+  oversized hitboxes, as first logged — displaced ones. **89 of 92 clickable
+  actors on scrolling terrains were unpickable at some scroll offset**; the
+  `s_Kot` door was unpickable at every offset and every pixel. Walking kept
+  working because `StateController` added the scroll and `Actor` did not, which
+  is why it looked capricious.
 
-Test suite went from 21 cases to **97 across 14 files**.
+Test suite went from 21 cases to **106 across 15 files**.
+
+**Browser-verified:** the chapter round-trip (three ways), and **Ingólfur's
+öndvegissúlur throw — the original report — seen on screen**, pillar leaving the
+deck with the two walk quanta 4.5s apart where they used to be simultaneous.
+Also bold-on-hover tracking each line's own width, no green flash for Karli, and
+the cursor under the pointer.
+
+**Not browser-verified, and listed as such:** the Tyrkjaránið raiders, the
+Lögberg walk-offs, the drifting log/bottle/barrel, and the picking fix under
+actual scroll. All blocked by trigger-reachability — the debug scene jump
+tunnels arrival state instead of replaying the chain that sets up a walkable
+player. A real playthrough into `s_Kot` closes all of them at once.
 
 **Tooling:** `tools/deploy.sh` landed complete, and a SIGPIPE race in its verify
 stage is fixed — it passed twice then failed three times running, which is the

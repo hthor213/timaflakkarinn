@@ -38,7 +38,7 @@ the people who wrote it, and nobody else.
 
 ---
 
-## 0 — `1998-bug` + `port-bug` · Three lines are displayed but never spoken
+## 0 — `1998-bug` + `port-bug` · PORT HALF FIXED · Three lines are displayed but never spoken
 
 **Reported by:** Hjalti, 2026-08-07, from memory of the original production —
 and confirmed against the disc the same day.
@@ -103,9 +103,16 @@ problem: the 1999 performances *are* the artifact, and the same performers
 today are different instruments. Recording them would produce three lines that
 are authentic in casting and audibly foreign in the middle of a 1998 cast.
 
-Not a blocker either way. **The port regression above should be fixed
-regardless**, because "displayed, not spoken" is the shipped behaviour and the
-port currently delivers neither.
+Not a blocker either way. **The port regression is now fixed** (2026-08-07): a
+`SpeechActorMouth` with no recording runs its sentence timeline on its own clock,
+so the subtitle displays as it did in 1999 and a `wait="true"` sequence still
+waits instead of racing past. The dwell on the closing line scales with its
+length, because the authored timings only say when each sentence *starts* — the
+recording used to say when it ended. Five tests in
+`webapp/test/silentline.test.mjs`.
+
+That fix is also what made issue #15's Irna response possible without a
+recording: the new line is carried entirely by its subtitle.
 
 ---
 

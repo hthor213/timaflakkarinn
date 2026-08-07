@@ -20,9 +20,24 @@
 /** The answer, hardcoded in the 1999 engine (`Timaflakkarinn.java:552`), not in content. */
 const ANSWER = 'erna';
 
+/**
+ * The rune-correct near-miss.
+ *
+ * The runestone behind the seeress reads ᛁ ᚱ ᚾ ᛅ. Younger Futhark has no separate
+ * e-rune, so ís (ᛁ) writes both /i/ and /e/ — a correct chart lookup yields
+ * IRNA. The 1998 team expected players to notice the ambiguity and try Erna as
+ * well ("no Icelander is named Irna, Erna is common"); in practice many did not,
+ * and this became one of the game's hardest puzzles. 1999 rejected `irna`
+ * identically to any wrong answer, with nothing to say the reading was right.
+ *
+ * Added 2026-08-07 at the owner's request: it accepts the answer and explains
+ * the orthography. Content lives in `kristnit.gml` as `s_GuessIrna`.
+ */
+const RUNE_READING = 'irna';
+
 export interface GuessResult {
-  /** Sequence to run: the content's own `s_GuessCorrect` / `s_GuessWrong`. */
-  sequence: 's_GuessCorrect' | 's_GuessWrong';
+  /** Sequence to run — all three exist in `kristnit.gml`. */
+  sequence: 's_GuessCorrect' | 's_GuessIrna' | 's_GuessWrong';
   /** What the player actually typed, for logging. */
   entered: string;
 }
@@ -94,7 +109,10 @@ export function askVolvaName(container: HTMLElement): Promise<GuessResult> {
 
       overlay.remove();
       resolve({
-        sequence: answered === ANSWER ? 's_GuessCorrect' : 's_GuessWrong',
+        sequence:
+          answered === ANSWER       ? 's_GuessCorrect' :
+          answered === RUNE_READING ? 's_GuessIrna'    :
+                                      's_GuessWrong',
         entered,
       });
     };

@@ -79,10 +79,19 @@ export class SimpleActorMouth implements ActorMouth {
     this.playNow();
   }
 
-  private playNow(): void {
+  /**
+   * No audio for this line. Base behaviour is to finish at once; SpeechActorMouth
+   * overrides it, because in 1999 a line with no recording still displayed its
+   * subtitle.
+   */
+  protected onNoAudio(): void {
+    this.finished = true;
+    this.onFinished?.();
+  }
+
+  protected playNow(): void {
     if (!this.audioBuffer || !this.loader) {
-      this.finished = true;
-      this.onFinished?.();
+      this.onNoAudio();
       return;
     }
 
@@ -151,6 +160,20 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
   private position = 0;
   private startTime = 0;
 
+  /**
+   * True when this line has no recording. Three lines shipped that way in 1999 —
+   * the voice edit was unfinished when the master had to leave for Sony's UK
+   * pressing plant, and the team accepted "displayed but not spoken". See
+   * docs/known-issues.md #0.
+   *
+   * The port used to clear the text as soon as `finished` went true, which it
+   * does immediately when there is no buffer — turning that decision into
+   * "neither displayed nor spoken". Here the timeline runs on its own clock
+   * instead, so the subtitle shows and a wait="true" sequence still waits.
+   */
+  private silent = false;
+  private silentDuration = 0;
+
   addSentence(text: string, time: number): void {
     this.sentences.push({ text, time });
   }
@@ -160,7 +183,20 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
     this.textFace.alignment = 'center';
   }
 
+  protected onNoAudio(): void {
+    this.silent = true;
+    this.finished = false;
+    const last = this.sentences[this.sentences.length - 1];
+    // Hold the closing line long enough to read: the timing data only says when
+    // each sentence *starts*, because the recording used to say when it ended.
+    this.silentDuration = last
+      ? last.time + Math.max(1500, last.text.length * 60)
+      : 1500;
+  }
+
   start(): void {
+    this.silent = false;
+    this.silentDuration = 0;
     super.start();
     // Resolve pulser from _pulser if not set (lazy load pattern, like _loader)
     if (!this.pulser) {
@@ -198,6 +234,28 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
 
   private updateSpeech(): void {
     if (!this.textFace) return;
+
+    // A silent line drives itself: show the sentences on schedule, then finish
+    // once the last one has been up long enough to read.
+    if (this.silent) {
+      const elapsed = performance.now() - this.startTime;
+      while (this.position < this.sentences.length &&
+             elapsed >= this.sentences[this.position].time) {
+        this.textFace.setText(this.sentences[this.position].text);
+        if (this.textActor) {
+          this.textActor.setLocation(this.textMiddle.x, this.textMiddle.y, this.textMiddle.z);
+        }
+        this.position++;
+      }
+      if (elapsed >= this.silentDuration) {
+        this.silent = false;
+        this.finished = true;
+        this.pulser?.unregister(this);
+        this.textFace.setText('');
+        this.onFinished?.();
+      }
+      return;
+    }
 
     // Check if sound finished
     if (this.finished) {

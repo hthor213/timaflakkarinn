@@ -2049,6 +2049,13 @@
    	<Sentence text="... sem ég veit að þú hefur í fórum þínum." time="1870"/> </SpeechActorMouth>
 <SpeechActorMouth acc="a_Volva_acc" name="m_GettuBetur" file="\kristniA\Media\volva\gettubeA.wav" >
 	<Sentence text="Gettu betur!" time="0"/> </SpeechActorMouth>
+<!-- Added 2026-08-07. No recording exists; the subtitle carries it.
+     A correct Younger Futhark lookup of the runestone gives IRNA, because
+     is (í) writes both /i/ and /e/. The 1998 team expected players to try
+     Erna as well; many did not. -->
+<SpeechActorMouth acc="a_Volva_acc" name="m_ErnaEkkiIrna" file="\kristniA\Media\volva\ernaekkA.wav" >
+	<Sentence text="Ég heiti reyndar Erna, en rúnaletur greinir ekki á milli I og E." time="0"/>
+	<Sentence text="Þú leystir þrautina!" time="4200"/> </SpeechActorMouth>
 
 <StaticActorFace name="af_Volva_Stop" file="\KristniA\AnimatiA\volva\stop" prepare="false"/>
 <StaticActorFace name="af_Volva_Stop2" file="\KristniA\AnimatiA\volva\stop2" prepare="false" xoffset="-48" yoffset="0"/>
@@ -2073,6 +2080,7 @@
 	<State name="OgMedThettaFallegaHalsmen" face="af_Volva_Talk" mouth="m_OgMedThettaFallegaHalsmen"/>
 	<State name="ThettaVarNuAlltOf" face="af_Volva_Talk" mouth="m_ThettaVarNuAlltOf"/>
 	<State name="GettuBetur" face="af_Volva_Talk" mouth="m_GettuBetur"/>
+	<State name="ErnaEkkiIrna" face="af_Volva_Talk" mouth="m_ErnaEkkiIrna"/>
 	<State name="EgThekkiVanda" face="af_Volva_Talk" mouth="m_EgThekkiVanda"/>
 	<State name="FaduMer" face="af_Volva_Talk" mouth="m_FaduMer"/>
 
@@ -2098,6 +2106,7 @@
 <StateQuantum name="q_ThettaVarNuAlltOf" actor="a_Volva" state="ThettaVarNuAlltOf" wait="true"/>
 <StateQuantum name="q_EgThekkiVanda" actor="a_Volva" state="EgThekkiVanda" wait="true"/>
 <StateQuantum name="q_GettuBetur" actor="a_Volva" state="GettuBetur" wait="true"/>
+<StateQuantum name="q_ErnaEkkiIrna" actor="a_Volva" state="ErnaEkkiIrna" wait="true"/>
 <StateQuantum name="q_FaduMer" actor="a_Volva" state="FaduMer" wait="true"/>
 
 
@@ -4101,6 +4110,29 @@
 <Sequence name="s_GuessCorrect">
 	<Quantum name="q_Conversating"/>
 	<Quantum name="q_ThettaVarNuAlltOf"/>
+	<Quantum name="q_StopVolva"/>
+	<Quantum name="q_FaduMer"/>
+	<Quantum name="q_StopVolva"/>
+	<Quantum name="q_SnuKrossVolva"/>
+	<Quantum name="q_DyfirVolva"/>
+	<Quantum name="q_KrossVolva"/>
+	<Quantum name="q_StopKrossVolva"/>
+	<Quantum name="q_MoveThorshamar"/>
+	<Quantum name="q_ThennanGullfallegaThorshamar1"/>
+	<Quantum name="q_MoveKross2Inventory"/>
+	<Quantum name="q_UpdateInventory"/>
+	<Quantum name="q_FleiraHef2"/>
+	<Quantum name="q_BeginConvVolva3"/>
+	<Quantum name="q_StopVolva"/>
+	<Quantum name="q_Moving"/>
+</Sequence>
+
+<!-- IRNA: the rune-correct answer. Same reward as s_GuessCorrect, minus
+     q_ThettaVarNuAlltOf ("that was far too easy"), which would jar after a
+     player who actually did the transliteration. -->
+<Sequence name="s_GuessIrna">
+	<Quantum name="q_Conversating"/>
+	<Quantum name="q_ErnaEkkiIrna"/>
 	<Quantum name="q_StopVolva"/>
 	<Quantum name="q_FaduMer"/>
 	<Quantum name="q_StopVolva"/>

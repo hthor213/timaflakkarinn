@@ -305,7 +305,10 @@ than 404:
       1 typo'd quantum reference in `s_bless1`, 1 reference to a cut scene.
       Deliberately left red rather than relaxed — the gaps are real and two of
       them need Halldór's confirmation before anyone edits content
-- [ ] The game runs on a phone by touch (blocked on Pointer Events)
+- [ ] The game runs on a phone by touch — **no longer blocked**: Pointer Events
+      landed 2026-08-07 with 10 regression cases, and the engine no longer has a
+      mouse-only path. Unchecked because nobody has held an actual phone; it is a
+      device test now, not an engineering task.
 
 ## Sequencing rationale
 

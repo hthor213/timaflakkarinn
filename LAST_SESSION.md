@@ -1,4 +1,4 @@
-# Last session — 2026-08-06/07
+# Last session — 2026-08-06/07 (overnight + morning)
 
 ## The milestone
 
@@ -142,20 +142,35 @@ Recommended camera budget: **±10cm lateral**, 16px differential parallax.
 
 ## Start next session with
 
-1. **Decide D2** using `specs/003`. Everything in the art pipeline waits on it,
-   and the falsifying test is named there (Vectorizer.AI on `HJAVOLVU.PNG`) if
-   you want one more data point before committing.
-2. **Audit the 23 authored terrains.** `t_HjaVolvul` ramps 1.031x where
-   perspective wants 1.63x, so the calibration problem is not only the 61
-   missing ones.
-3. **Browser-verify the eight unwatched walks.** The Tyrkjaránið raiders
-   entering frame is the one to look at first — verified arithmetically only.
+Two parallel tracks, agreed with the owner:
+
+**(a) Bug-test.** He plays through and reports; fixes land per the existing
+taxonomy (`1998-bug` / `port-bug` / `missing` / `design-improvement`). Play in
+properly rather than using the debug scene jump — the jump tunnels arrival state
+and leaves no walkable player, which is what defeated two verification attempts.
+
+**(b) Graphics.** Blocked on **D2**. Evidence page:
+https://claude.ai/code/artifact/d37cdbfb-55b7-475d-9af9-8a8b79db4da3
+
+1. **Decide D2.** Four routes are laid out in `specs/003` and the page above. The
+   owner's own proposal — generate *surfaces* and keep the 1998 composition — is
+   the strongest of them, because regenerating a whole background moved the
+   horizon −60px and the horizon is the datum `scanline1/2/scaling2` calibrate
+   against. Needs Erna, since it is new art.
+2. **Create `art/` as the canonical location.** It does not exist yet. 128 MB of
+   prototype output currently lives outside the repo in
+   `timaflakkarinn-disc/work/prototype/out/` and is not committed. Proposed
+   shape: `art/<SCENE>/{master,superres,generated,approved}/` — the axis that
+   matters is which version Erna signed off, not which technique produced it.
+3. **Audit the 23 authored terrains.** `t_HjaVolvul` ramps 1.031x where
+   perspective wants 1.63x, so the problem is not only the 61 uncalibrated ones.
 4. CI running `npm run check` on push.
 
 ## Needs a human
 
-- **The Forgejo credential on the homeserver was DELETED, not expired** (see
-  `docs/known-issues.md` #20); deploys
+- ~~Forgejo credential~~ **RESOLVED 2026-08-07.** It had been deleted, not
+  expired — see `docs/known-issues.md` #20. Token restored, transport is `fetch`
+  again, and all 1,215 LFS files resolve as real blobs. Deploys
   fall back to a verified git bundle, which works for code and GML. But a bundle
   carries LFS *pointers*, not blobs, so **no commit touching an LFS-tracked file
   can ship at all** until this is renewed. That becomes hard-blocking the moment

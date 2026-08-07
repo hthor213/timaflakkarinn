@@ -1144,3 +1144,30 @@ Run locally under Playwright; 97 screenshots retained.
   drifting log/bottle/barrel. All blocked by trigger-reachability, not by any
   evidence against the fix. The raiders remain the first thing to watch.
 
+### Verification status of the screen-space picking fix (#19), 2026-08-07
+
+Partly verified, and the gap is stated rather than papered over.
+
+**VERIFIED — it still renders.** Deleting `ScrollingScene.paint()`'s
+`ctx.translate` was the real regression risk. Tyrkjaránið's `s_Kot` loads and
+composites correctly: background, four characters, barrels and the shelf all in
+register, no doubling and no offset. The `scrolling="false"` HUD — the clock at
+top-left and the bag at top-right — draws at fixed canvas corners.
+
+**COULD-NOT-TEST — behaviour under actual scroll.** Entering `s_Kot` through the
+debug scene jump leaves no walkable player: the verb is already `MOVING`, but
+canvas clicks produce no log entries and nobody moves, so the viewport never
+scrolls. The scene jump tunnels arrival state rather than replaying the chain
+that sets the player up. This is a limitation of the debug entry point, not
+evidence against the fix.
+
+**So the following remain unobserved**, all of them predictions the arithmetic
+supports but no one has watched: that the door is clickable once the room is
+scrolled; that actors stay planted on the background as it moves; that the HUD
+and subtitles now hold still where the old paint translate dragged them; and the
+89→7 pickability figure, which is model-derived.
+
+The cheapest way to close this is a real playthrough into `s_Kot` rather than a
+scene jump — which is also the only route to the Tyrkjaránið raiders and to
+Halldóra's dialogue, both still unwatched for the same reason.
+

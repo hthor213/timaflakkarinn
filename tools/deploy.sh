@@ -231,7 +231,7 @@ $(remote "cd $WEB_ROOT && printf '%s %s %s %s %s %s\n' \
     \"\$(find GAME -name '*.M4A' | wc -l)\" \
     \"\$(find GAME -name '*.m4a' | wc -l)\" \
     \"\$(find GAME -name '*.PNG' | wc -l)\" \
-    \"\$(find GAME -name '*.M4A' | sort | head -1 | xargs stat -c %i)\"")
+    \"\$(find GAME -name '*.M4A' | sort | sed -n 1p | xargs stat -c %i)\"")
 EOF
 
 [ "$PRE_GAME_WAV" = 0 ] || die \
@@ -246,7 +246,7 @@ EOF
   "are not in this tree: total silent audio loss with nothing raising an error."
 [ "$PRE_GAME_M4A" -gt 0 ] || die "serving root has no .M4A files under GAME/ — overlay is not built."
 
-PRE_LINKS="$(remote "cd $WEB_ROOT && find GAME -name '*.M4A' | sort | head -1 | xargs stat -c %h")"
+PRE_LINKS="$(remote "cd $WEB_ROOT && find GAME -name '*.M4A' | sort | sed -n 1p | xargs stat -c %h")"
 [ "$PRE_LINKS" -ge 2 ] || die \
   "GAME/*.M4A has link count $PRE_LINKS — the hardlink overlay has been replaced by real copies." \
   "57 MiB apparent should be ~1.3 MiB real; a copy means the next master change silently diverges."
@@ -485,7 +485,7 @@ $(remote "cd $WEB_ROOT && printf '%s %s %s %s %s %s\n' \
     \"\$(find GAME -name '*.M4A' | wc -l)\" \
     \"\$(find GAME -name '*.m4a' | wc -l)\" \
     \"\$(find GAME -name '*.PNG' | wc -l)\" \
-    \"\$(find GAME -name '*.M4A' | sort | head -1 | xargs stat -c %i)\"")
+    \"\$(find GAME -name '*.M4A' | sort | sed -n 1p | xargs stat -c %i)\"")
 EOF
   [ "$POST_WAV" = 0 ] || die "$POST_WAV WAV files appeared under GAME/ — something copied dist/GAME."
   [ "$POST_LC" = 0 ]  || die "$POST_LC lowercase .m4a files appeared under GAME/ — silent audio loss."
@@ -494,7 +494,7 @@ EOF
     "This deploy must not touch GAME/ at all."
   [ "$POST_INO" = "$PRE_GAME_INO" ] || die \
     "GAME/ sample inode changed — files were replaced rather than left alone."
-  POST_LINKS="$(remote "cd $WEB_ROOT && find GAME -name '*.M4A' | sort | head -1 | xargs stat -c %h")"
+  POST_LINKS="$(remote "cd $WEB_ROOT && find GAME -name '*.M4A' | sort | sed -n 1p | xargs stat -c %h")"
   [ "$POST_LINKS" -ge 2 ] || die "GAME hardlinks broken (link count $POST_LINKS) — the overlay became real copies."
   ok "GAME overlay untouched: $POST_FILES files, 0 WAV, 0 lowercase m4a, links=$POST_LINKS, inode stable"
 
@@ -575,7 +575,7 @@ EOF
   # A .M4A that answers with a text content-type makes the engine's probe fall
   # back to .WAV, and the WAVs are not in this tree. Check the header, not just
   # the status.
-  SAMPLE_M4A="$(remote "cd $WEB_ROOT && find GAME -name '*.M4A' | sort | head -1")"
+  SAMPLE_M4A="$(remote "cd $WEB_ROOT && find GAME -name '*.M4A' | sort | sed -n 1p")"
   code="$(http "/$SAMPLE_M4A" "$TMPB" "$TMPH")"
   [ "$code" = 200 ] || die "GET /$SAMPLE_M4A returned $code — audio is not being served."
   grep -qi 'content-type: *audio/' "$TMPH" || die \
@@ -583,7 +583,7 @@ EOF
     "The engine probes Content-Type; anything text/* downgrades it to .WAV, which is absent."
   ok "/$SAMPLE_M4A 200 $(grep -i '^content-type' "$TMPH" | tr -d '\r' | cut -d' ' -f2)"
 
-  SAMPLE_PNG="$(remote "cd $WEB_ROOT && find GAME -name '*.PNG' | sort | head -1")"
+  SAMPLE_PNG="$(remote "cd $WEB_ROOT && find GAME -name '*.PNG' | sort | sed -n 1p")"
   code="$(http "/$SAMPLE_PNG" "$TMPB" "$TMPH")"
   [ "$code" = 200 ] || die "GET /$SAMPLE_PNG returned $code."
   # Size guard catches an LFS pointer masquerading as an image: 130 bytes of

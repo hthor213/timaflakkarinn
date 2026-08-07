@@ -593,13 +593,13 @@
 <ActorMoused actor="a_KristnarBudir2LogbergFF" listener="sc" moving="Til Lögbergs" looking="Til Lögbergs" taking=" " talking=" "/>
 
 <TransparentActorFace name="af_Runir" width="55" height="53"/>
-<StaticActor name="a_Runir" terrain="t_KristnarBudirl" x="400" y="340" z="1" state="stop">
+<StaticActor name="a_Runir" terrain="t_KristnarBudirl" x="400" y="340" z="1" state="stop" random="true">
 	<State name="stop" face="af_Runir"/>
 </StaticActor>
 <ActorMoused actor="a_Runir" listener="sc" moving="Steinristur" thf="steinristur"/>
 
 <TransparentActorFace name="af_Letur" width="65" height="50"/>
-<StaticActor name="a_Letur" terrain="t_KristnarBudirl" x="510" y="350" z="1" state="stop">
+<StaticActor name="a_Letur" terrain="t_KristnarBudirl" x="510" y="350" z="1" state="stop" random="true">
 	<State name="stop" face="af_Letur"/>
 </StaticActor>
 <ActorMoused actor="a_Letur" listener="sc" thf="steinristur" moving="Steinristur"/>

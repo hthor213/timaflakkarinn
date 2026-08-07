@@ -671,7 +671,7 @@
 <ActorMoused actor="a_runni3" listener="sc" moving="Runni" thf="runna"/>
 
 <TransparentActorFace name="af_hmmm" width="94" height="78"/>
-<StaticActor name="a_hmmm" terrain="t_Hjorleifshofdil" x="500" y="300" z="0" state="stop">
+<StaticActor name="a_hmmm" terrain="t_Hjorleifshofdil" x="500" y="300" z="0" state="stop" random="true">
 	<State name="stop" face="af_hmmm"/> </StaticActor>
 <ActorMoused actor="a_hmmm" listener="sc" moving="Hmmm... Hvað er þetta?" thf="hmmm"/>
 

@@ -2463,7 +2463,7 @@
 	<State name="VeistThu" face="Sigrun_talk" collisionbox="cb_Sigrun" mouth="m_VeistThu"/>
 	<State name="JaEnHvar" face="Sigrun_talk" collisionbox="cb_Sigrun" mouth="m_JaEnHvar"/>
 </MovingActor>
-<ActorMoused actor="a_Sigrun" listener="sc" moving="Sigrún" thf="Sigrúnu"/>
+<ActorMoused actor="a_Sigrun" listener="sc" moving="Sigrún" taking="Klappa mér" talking="Tala við sjálfan mig" thf="Sigrúnu"/>
 
 <MoveActorQuantum name="qh_Sigrun" actor="a_Sigrun"/>
 <MoveActorQuantum name="qs_SigrunFyrirUtan" actor="a_Sigrun" terrain="t_UtanHusidl"/>

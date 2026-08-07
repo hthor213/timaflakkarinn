@@ -268,15 +268,21 @@ if [ "$VERIFY_ONLY" = 0 ]; then
 step "Transport"
 
 TRANSPORT=""
-if remote "cd $REMOTE_REPO && GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code origin refs/heads/$BRANCH" >/dev/null 2>&1; then
+LS_ERR=""
+if LS_ERR="$(remote "cd $REMOTE_REPO && GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code origin refs/heads/$BRANCH" 2>&1)"; then
   TRANSPORT="fetch"
   ok "Forgejo credential works — using git fetch (the fast path)"
 else
   TRANSPORT="bundle"
-  # Documented server-side debt: the Forgejo credential on the homeserver is
-  # expired, so `git fetch` fails. This is the fallback, not the design — when
-  # the credential is renewed the branch above just starts working.
-  warn "Forgejo credential on the server is not working — falling back to a verified git bundle"
+  # Report WHY, do not guess. This check used to end in `>/dev/null 2>&1`, so the
+  # real error was discarded on every run. A comment guessing "expired" hardened
+  # into a documented fact and propagated into three other files -- while the
+  # true cause was a DELETED token (Forgejo's API says "access token does not
+  # exist", which is row-not-found, not expiry). The server also sat 13 days
+  # without a single successful origin fetch, silently taking this fallback,
+  # because nothing ever surfaced the reason.
+  warn "Server cannot reach origin — falling back to a verified git bundle. Reported cause:"
+  printf '%s\n' "$LS_ERR" | sed 's/^/         /' >&2
 fi
 
 CHANGED_FILES=""

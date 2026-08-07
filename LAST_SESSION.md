@@ -154,7 +154,8 @@ Recommended camera budget: **±10cm lateral**, 16px differential parallax.
 
 ## Needs a human
 
-- **Renew the Forgejo credential on the homeserver** — still expired; deploys
+- **The Forgejo credential on the homeserver was DELETED, not expired** (see
+  `docs/known-issues.md` #20); deploys
   fall back to a verified git bundle, which works for code and GML. But a bundle
   carries LFS *pointers*, not blobs, so **no commit touching an LFS-tracked file
   can ship at all** until this is renewed. That becomes hard-blocking the moment

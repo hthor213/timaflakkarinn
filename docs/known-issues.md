@@ -1192,3 +1192,60 @@ oversized `a_HjaHestasveini2HeidnarBudir` collision zone intercepts early
 movement in `s_HjaHestasveini` and has to be routed around. That is a *portal*
 collision zone, not a picking rect, so #19's fix does not address it. Worth its
 own look.
+
+---
+
+## 20 — `infrastructure` · The server's Forgejo token was deleted, not expired
+
+**Diagnosed:** 2026-08-07, after the owner declined to re-issue credentials
+without a cause. That call was correct and is the reason this entry exists.
+
+**The error nobody had seen.** `deploy.sh` tested the credential with
+`git ls-remote ... >/dev/null 2>&1`, discarding stderr on every run. Git's own
+message is generic ("Credentials are incorrect or have expired"); the API is
+not:
+
+```
+HTTP 401  {"message":"access token does not exist [sha: <redacted>]"}
+```
+
+That is the row-not-found path. Forgejo personal tokens have **no default
+expiry**, so "expired" was never a possible reading of this failure.
+
+**What actually happened.** Five tokens have been issued on this account and one
+survives: id=4, `Timaflakkarinn`, created 2026-07-26 23:17, scopes
+`write:issue,write:repository`, in daily use from the laptop. The server's token
+file is dated 2026-07-25 07:40 — a day *before* id=4 existed — so it holds one
+of the deleted ids. User `halldor` was created 2026-07-26 22:22, **55 minutes
+before** the surviving token: the churn happened while setting up Halldór's
+access. The laptop received the new token; the server was never updated.
+
+**Ruled out with evidence:** network, DNS and TLS (server reaches Forgejo on
+`127.0.0.1:3000` in 0.66ms and the public host over verified TLS; laptop and
+server take genuinely different routes but land on the same instance); repo
+rename (repo and branch both present); and a version upgrade tightening token
+policy (chronologically impossible — the container predates the token file).
+
+**The worse finding.** `.git/FETCH_HEAD` on the server reads
+`branch 'feat/unify' of /tmp/tt-deploy-*.bundle`, and `refs/remotes/origin/`
+has not moved since 2026-07-25. **Thirteen days with no successful origin
+fetch**, silently falling back every time — invisible precisely because the
+error was discarded. Fixed: the check now reports the server's verbatim reason.
+
+**How this became "fact".** A comment guessing "expired" was written next to the
+silenced check, and was then repeated in `LAST_SESSION.md` and twice in
+`specs/001` — including by this session, which restated it as established. A
+crisp label hardened a weak inference. All four sites corrected.
+
+### Recommendation — do not mint a sixth token
+
+A user-scoped PAT shared between machines is what caused this: rotating it for
+one silently breaks the other, with no signal. Prefer an **SSH deploy key
+scoped to this repository** for the server — immune to PAT churn, revocable
+independently of the owner's own access, and per-machine. Owner's decision;
+nothing has been changed or rotated.
+
+**Live footgun, unrelated to the fix:** Forgejo's 401 body echoes the presented
+token back in the error string, so any log or CI transcript capturing that
+response leaks the credential verbatim. The token in question is already dead.
+

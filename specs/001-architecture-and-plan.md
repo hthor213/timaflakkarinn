@@ -115,7 +115,7 @@ convention and Caddy never reads it. Every live cache and charset rule comes fro
 revision of this document said the gml charset was set "per `_headers`", which
 was wrong.
 
-**A git bundle cannot carry LFS blobs.** While the Forgejo credential is expired,
+**A git bundle cannot carry LFS blobs.** While the server's Forgejo credential is dead,
 transport falls back to a bundle — which carries git objects, but LFS content
 lives behind the same dead endpoint. So no commit touching an LFS-tracked path
 can be deployed until the credential is renewed; `tools/deploy.sh` refuses rather
@@ -130,7 +130,7 @@ scene file, which looks exactly like a regression and wastes a bug report.
 
 ### Server-side debt
 
-- **The Forgejo credential on the homeserver is expired.** The first deploy
+- **The Forgejo credential on the homeserver was deleted, not expired.** The first deploy
   transferred the branch by verified git bundle instead. Renew before the next.
 - The server's clone had a **disjoint history** predating a remote rewrite; it
   now tracks `feat/unify`, with the prior state saved to

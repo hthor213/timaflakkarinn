@@ -363,3 +363,37 @@ continues for a few seconds, as if trying to walk through her.
 Present in the original. **Deferred to Phase 2** — the proxy geometry and real
 ground plane give collision something truthful to work against, and fixing it
 before then would mean tuning against a stand-in.
+
+---
+
+## 9 — `port` · FIXED · Cursor hotspot was 15px off
+
+**Reported by:** Hjalti, 2026-08-07, with two screenshots that pinned it exactly:
+approaching a menu item from **below**, it highlights while the cursor is
+visibly under the text; approaching from **above**, the cursor sits on the text
+and it does *not* highlight. The true hit point was consistently up-left of the
+drawn pointer.
+
+**Two coupled defects in `CursorFace`:**
+
+1. `xOffset`/`yOffset` were declared `0` and never populated. The 1999
+   constructor sets them to `width/2`, `height/2`
+   (`CursorFace.java:98-99`).
+2. The sign was wrong. `setLocation` did `bounds.x = x + xOffset`, copying the
+   `StaticActorFace` convention.
+
+The original deliberately distinguishes the two: for a normal face the offset is
+a **draw offset** and is added (`ActorFace.java:235`); for a cursor it is a
+**hotspot** and is subtracted (`CursorFace.java:45-46`). The port flattened that
+distinction, so `bounds` top-left landed on the mouse point and the arrowheads —
+which converge on the centre of a 30×30 image — rendered 15px down and right of
+the point being hit-tested.
+
+**Only the draw position changed.** `CursorFace` is a separate `Scene.cursorFace`
+field, never a member of `Scene.faces`, so `getActorFaceAt()` never consults
+these bounds. `mouseX`/`mouseY` and both hit-test call sites are untouched:
+clicking accuracy is unaffected, only where the arrow appears.
+
+Note this compounded issue #6 — a mis-measured hit box *and* a 15px cursor
+offset, in the same interaction. Either alone is annoying; together they made
+dialogue options feel arbitrary.

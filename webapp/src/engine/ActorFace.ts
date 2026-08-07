@@ -484,14 +484,26 @@ export class CursorFace implements ActorFace {
     this.image = await loader.loadImage(this.imagePath);
     this.bounds.width = this.image.naturalWidth;
     this.bounds.height = this.image.naturalHeight;
+    // Hotspot is the centre of the art, not its top-left: BENDILL1/2 are 30x30
+    // with four arrowheads converging on the middle pixel. The 1999
+    // CursorFace(String) ctor did exactly this — xOffset = width/2,
+    // yOffset = height/2 — and its setLocation() subtracted them. Without it
+    // the cursor was drawn ~15px down-right of the point actually hit-tested.
+    if (this.xOffset === 0 && this.yOffset === 0) {
+      this.xOffset = Math.floor(this.bounds.width / 2);
+      this.yOffset = Math.floor(this.bounds.height / 2);
+    }
     this.prepared = true;
   }
 
   unprepare(): void { this.image = null; this.prepared = false; }
 
   setLocation(x: number, y: number): void {
-    this.bounds.x = x + this.xOffset;
-    this.bounds.y = y + this.yOffset;
+    // Subtracted, unlike the other faces: for a cursor the offset is a hotspot,
+    // so the art is centred on (x, y). Matches 1999 CursorFace.setLocation()
+    // (bounds.x = n - xOffset) vs ActorFace.setLocation() (bounds.x = n + xOffset).
+    this.bounds.x = x - this.xOffset;
+    this.bounds.y = y - this.yOffset;
   }
 
   setScaling(_s: number): void {}

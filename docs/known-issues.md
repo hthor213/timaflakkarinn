@@ -655,3 +655,57 @@ fire, so first-time dialogue will trigger and inventory is whatever the session
 left. Uneven but honest.
 
 7 new tests in `webapp/test/scenejump.test.mjs`; 44 cases total.
+
+---
+
+## 15 — `port-bug` · FIXED · The Völva's name puzzle soft-locked Kristnitaka
+
+**Found by:** the systematic sweep, 2026-08-07. Not reported from play — the
+owner had not reached it yet.
+
+**The most serious defect found in the port.** `kristnit.gml:4136-4141`:
+
+```xml
+<Sequence name="s_ThuHeitir">
+	<Quantum name="qh_TextVolva"/>   <!-- hide the dialogue options -->
+	<Quantum name="q_Freeze"/>       <!-- lock the controller -->
+	<Quantum name="q_Guess"/>        <!-- open the name-entry dialog -->
+</Sequence>
+```
+
+In 1999 `q_Guess` opens a text prompt (`GuessQuantum.java` →
+`Timaflakkarinn.showDialog2()`); the answer is compared to `"erna"` at
+`Timaflakkarinn.java:552` and routed to `s_GuessCorrect` or `s_GuessWrong`, both
+of which restore the controller.
+
+**The port implemented `GuessQuantum` as an empty stub.** So the sequence hid the
+dialogue options, set `FREEZE`, and returned. `StateController` has no `FREEZE`
+case and the inventory button is gated on `state !== FREEZE`, so **nothing the
+player clicked did anything.** No error, no log, no way out but reload.
+
+`s_GuessCorrect` is also the only path that runs `q_MoveKross2Inventory` and
+`q_MoveThorshamar` — the Völva trading the cross for the Þórshamar. That
+necklace is the game's time-travel device and the object the whole story turns
+on, so this was not merely a stuck puzzle.
+
+**Fix.** `GuessQuantum` now shows a prompt and performs the content's own
+`s_GuessCorrect` / `s_GuessWrong` by name. Rendered as a **DOM overlay**, not on
+the canvas: the 1999 engine drew its own text widget because a Java applet had
+no choice, whereas a DOM input gets mobile keyboards, IME and the Icelandic
+letters for nothing — and the project's fidelity bar is explicitly "feel rather
+than pixels". The dialog cannot be dismissed without answering, since the calling
+sequence has already frozen the controller.
+
+**One deliberate departure from 1999:** the comparison is `trim()`ed as well as
+case-insensitive. The original compared untrimmed input while `charNotAllowed`
+admitted the space character, so `"erna "` was rejected identically to a wrong
+answer with nothing to distinguish them. Trimming accepts only input the original
+unambiguously intended to accept — it preserves a decision, not a bug. Approved
+by the owner.
+
+**Still outstanding, and content:** the owner asked for a distinct response when
+a player types **`irna`** — the reading a correct Younger Futhark chart lookup
+produces, since ís (ᛁ) writes both /i/ and /e/. His line: *"Ég heiti reyndar
+Erna, en rúnaletur greinir ekki á milli I og E. Þú leystir þrautina."* That needs
+a new sequence in `kristnit.gml` and runs into issue #0 — the port clears
+subtitles for a mouth with no audio — so it wants both changes together.

@@ -17,6 +17,7 @@ import { serialize as serializeSave, restore as restoreSave } from './SaveSerial
 import type { SaveData } from './SaveStore';
 import { prewarmChapter } from './AssetPrewarm';
 import { playBackstory } from './Backstory';
+import { askVolvaName } from './GuessDialog';
 
 import {
   INTRO, MAIN_MENU, LANDNAM, KRISTNITAKA, SIDASKIPTI, TYRKJARAN, EXTRO,
@@ -204,6 +205,14 @@ export class Timaflakkarinn {
     // stays the business of s_always / s_prepare / s_begin.
     this.parser.onBeginningScene = (scene) => {
       this.beginningScene = scene;
+    };
+
+    this.parser.onGuess = async () => {
+      const container = document.getElementById('game-container');
+      if (!container) return;
+      const { sequence, entered } = await askVolvaName(container);
+      gameLog('GAME', `volva guess "${entered}" -> ${sequence}`, this.world.pulser.elapsed);
+      await this.performSequence(sequence);
     };
 
     this.parser.stateControllerSetup = (_name, sc) => {

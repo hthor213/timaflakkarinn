@@ -54,6 +54,8 @@ export class GMLParser {
   // Game-specific callbacks
   onThemeFinished?: () => void;
   onBeginningScene?: (scene: Scene) => void;
+  /** Völva name puzzle: show the prompt and run the resulting sequence. */
+  onGuess?: () => Promise<void>;
   stateControllerSetup?: (name: string, sc: StateController) => void;
 
   constructor(loader: AssetLoader, world: World, resourcePath: string, gmlBasePath: string) {
@@ -541,10 +543,17 @@ export class GMLParser {
       }
 
       case 'GuessQuantum': {
-        // Game-specific quiz logic - placeholder
+        // The Völva's name puzzle. In 1999 this opened a text prompt and routed
+        // the answer to s_GuessCorrect / s_GuessWrong, both of which unfreeze
+        // the controller (GuessQuantum.java -> Timaflakkarinn.showDialog2, then
+        // Timaflakkarinn.java:549-556). Stubbed out, it froze Kristnitaka solid:
+        // s_ThuHeitir hides the dialogue options and sets FREEZE before calling
+        // this, and nothing else unfreezes. s_GuessCorrect is also the only path
+        // that trades the Thórshamar for the cross.
+        const self = this;
         c.put(attr(el, 'name'), {
-          async execute(_ctx: SequenceContext) {},
-          async tunnel(_ctx: SequenceContext) {},
+          async execute(_ctx: SequenceContext) { await self.onGuess?.(); },
+          async tunnel(_ctx: SequenceContext) { await self.onGuess?.(); },
           finish() {},
         } as Quantum);
         break;

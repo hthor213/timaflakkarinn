@@ -74,7 +74,7 @@ Three dividends from the one artifact:
 1. Parallax and occlusion become real rather than card-shuffling
 2. Rack focus (D3) gets true per-pixel depth
 3. **It derives the 60 missing terrain calibrations** — an explicit ground plane
-   *is* `scanline1`/`scanline2`/`scaling2`. See `docs/what-bugged-us.md` #1;
+   *is* `scanline1`/`scanline2`/`scaling2`. See `docs/known-issues.md` #1;
    this turns 60 hand-tuned guesses into a computed value
 
 Grim Fandango got depth for free because its backgrounds were pre-rendered from
@@ -139,7 +139,7 @@ Already true and not to be rebuilt:
 - **Depth scaling exists as a mechanism**, `Terrain.getScaling()` at
   `Scene.ts:156` — but it is only *authored* on 23 of 83 terrains. The other 60
   scale by a constant. The machinery does not need building; the data does. See
-  `docs/what-bugged-us.md` #1.
+  `docs/known-issues.md` #1.
 - **Pointer input is already normalized** through `getBoundingClientRect()` to an
   800×600 logical space, so resolution independence is CSS plus input mapping.
 - **Turn transitions were already attempted in 1999** — `STOP2LEA` on 8
@@ -265,7 +265,7 @@ Two things make it cheaper still:
   and the task becomes correcting proposals rather than pointing at everything.
 - **Author the scaling calibration in the same pass.** Drag a reference figure to
   the near and far edges of the walkable polygon and that *is* `scanline2` +
-  `scaling2`. Two drags per scene × 60 scenes closes `docs/what-bugged-us.md` #1
+  `scaling2`. Two drags per scene × 60 scenes closes `docs/known-issues.md` #1
   for the entire game in about an hour.
 
 Output must be GML the existing parser already accepts — the tool emits content,
@@ -276,7 +276,7 @@ not a new format. Runs locally against `web_import/GAME`; no network, no service
 - **Point-and-click under a cutting camera** (D5 × D3). Unsolved, and the
   highest-risk design problem in the project
 - **What always bugged you** → now a living list at
-  [`docs/what-bugged-us.md`](../docs/what-bugged-us.md). Largely deferred until
+  [`docs/known-issues.md`](../docs/known-issues.md). Largely deferred until
   the owner replays it, which makes a playable build a prerequisite for
   gathering remaster requirements rather than merely a milestone before them.
   Entry 1 is already diagnosed and has a fix implementable in the current 2D

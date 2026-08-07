@@ -297,6 +297,19 @@ export class GMLParser {
           const g = int(el, 'g', 255);
           const b = int(el, 'b', 255);
           textFace.color = { r, g, b };
+
+          // Text authored in the chroma key colour was the 1998 way of hiding
+          // it: green is the transparency key everywhere else in this engine,
+          // so green text drew as nothing. Rendering it literally puts a green
+          // flash at the top of the screen on every line.
+          //
+          // Exactly one element in the shipped content does this —
+          // a_Karli_acc in landnam.gml — so Karli's dialogue was unsubtitled in
+          // 1999. Whether that was intended is a remaster question; see
+          // docs/known-issues.md. Faithful behaviour is invisible.
+          if (r === 0 && g === 255 && b === 0) {
+            textFace.transparent = true;
+          }
         }
 
         textFace.highlighted = attr(el, 'hilite', 'true') === 'true';
@@ -589,6 +602,17 @@ export class GMLParser {
       }
 
       case 'BeginningScene': {
+        // Declared in scene.dtd and present once per chapter, but the 1999
+        // engine never implemented it: TTParser dispatches on 48 element names
+        // and this is not among them, so the original silently ignored it.
+        //
+        // The port used to switch the world to this scene *during parsing*,
+        // which put Landnám's ship on screen for about a second before
+        // s_prepare's q_ToBlack and the opening scroll. That flash was invented
+        // by the recreation, not inherited from the game.
+        //
+        // Recorded, never displayed. What is on screen stays the business of
+        // s_always / s_prepare / s_begin, exactly as in 1999.
         const scene = c.get(attr(el, 'scene')) as Scene;
         if (scene) this.onBeginningScene?.(scene);
         break;

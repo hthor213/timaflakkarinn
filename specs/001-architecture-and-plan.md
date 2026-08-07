@@ -151,7 +151,7 @@ are the size authored in 1998, and `lint_gml.py` is clean.
 ### Phase 1 — Classic, shippable
 
 The faithful port. Gates the open-source trigger, **and** is the instrument that
-generates the rest of `docs/what-bugged-us.md` — those requirements cannot be
+generates the rest of `docs/known-issues.md` — those requirements cannot be
 gathered without a playable build.
 
 - [ ] Depth authoring tool (see 000) → 60 terrain calibrations + depth ordering

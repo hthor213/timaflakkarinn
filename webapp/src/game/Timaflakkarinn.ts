@@ -43,6 +43,9 @@ export class Timaflakkarinn {
   // State controller (created during GML parsing)
   private stateController: StateController | null = null;
 
+  /** Declared by <BeginningScene>. Recorded for reference; never auto-displayed. */
+  private beginningScene: Scene | null = null;
+
   // Cursors
   private normalCursor: CursorFace;
   private hiliteCursor: CursorFace;
@@ -87,8 +90,12 @@ export class Timaflakkarinn {
 
     // Wire up parser callbacks
     this.parser.onThemeFinished = () => this.themeFinished();
+    // Recorded, not displayed. Switching to it during parsing put the ship on
+    // screen for ~1s before the opening scroll — a flash the 1999 engine never
+    // had, because its parser has no BeginningScene case at all. What is shown
+    // stays the business of s_always / s_prepare / s_begin.
     this.parser.onBeginningScene = (scene) => {
-      this.world.setCurrentScene(scene);
+      this.beginningScene = scene;
     };
 
     this.parser.stateControllerSetup = (_name, sc) => {

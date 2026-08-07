@@ -1,4 +1,4 @@
-# What bugged us
+# Known issues
 
 A living list, sourced from the people who made the game. Started 2026-08-06.
 
@@ -6,13 +6,26 @@ This is the remaster's requirements list. A remaster is the licence to fix the
 things the original team shipped and winced at — and they are the only source for
 what those are. Most of this cannot be recovered from the code.
 
-Entries are added as they surface. Expect the list to grow substantially once
-there is a playable build to replay: recall is triggered by playing, not by
-remembering.
+Entries are added as they surface. Expect the list to grow substantially now
+there is a playable build: recall is triggered by playing, not by remembering.
+
+## Tags
+
+Every entry carries an origin tag, because **only one class needs a decision**:
+
+| Tag | Meaning | What happens |
+|---|---|---|
+| `1998` | Shipped in the original | **Needs a call: preserve or fix?** The remaster question |
+| `port` | Introduced by the reverse-engineering | Just fix. No decision to make |
+| `missing` | Content the port does not have | Just add |
+| `design` | Worked as built, but felt wrong | What the remaster is *for* |
+
+A `port` entry is never a fidelity question — the original is the specification
+and the recreation is simply wrong. A `1998` entry always is.
 
 ---
 
-## 0 — Three lines are displayed but never spoken
+## 0 — `1998`+`port` · Three lines are displayed but never spoken
 
 **Reported by:** Hjalti, 2026-08-07, from memory of the original production —
 and confirmed against the disc the same day.
@@ -83,7 +96,7 @@ port currently delivers neither.
 
 ---
 
-## 1 — Walking away looks like climbing a wall
+## 1 — `1998` · Walking away looks like climbing a wall
 
 **Reported by:** Hjalti, 2026-08-06 — "when Hjalti is walking up the river there
 is no perspective and he doesn't get smaller … it looks like he's climbing a
@@ -182,3 +195,91 @@ her approval — may fix those scenes more cheaply than layering them.
 **Note:** items 2–4 all depend on the background depth decomposition, which
 routes through Erna as reviewer and approver. Item 1 does not, and should not
 wait for them.
+
+---
+
+## 2 — `port` · FIXED · The ship appears ~1s before the opening scroll
+
+**Reported by:** Hjalti, 2026-08-07, playing the build.
+
+Landnám's ship and its characters flashed on screen for about a second before
+the opening scroll.
+
+**Cause.** `landnam.gml:4623` declares `<BeginningScene scene="s_Skipingolfs"/>`,
+and the port's parser reacted by switching the world to that scene **during
+parsing** — so the ship was shown, then asset prewarm ran (the visible second),
+then `s_prepare`'s `q_ToBlack` blacked it out and `s_begin` finally showed the
+scroll.
+
+**The 1999 engine never did this.** `TTParser` dispatches on 48 element names
+and `BeginningScene` is not among them: the element is declared in `scene.dtd`,
+present once per chapter, and silently ignored by the shipping game. The flash
+was invented by the recreation.
+
+**Fix.** `BeginningScene` is recorded and never displayed. What is on screen
+stays the business of `s_always` / `s_prepare` / `s_begin`, as in 1999.
+
+---
+
+## 3 — `port` · FIXED · Green flash at the top when Karli speaks
+
+**Reported by:** Hjalti, 2026-08-07 — "green blip when Karli starts to talk,
+like there is text at the top which is then suppressed." Every line, not just one.
+
+**Cause.** `landnam.gml:1632`:
+
+```xml
+<Text name="a_Karli_acc" terrain="t_Corners" text=" " r="0" g="255" b="0" hilite="false"/>
+```
+
+Karli's subtitle actor is coloured **pure chroma-key green**. Green is the
+transparency key throughout this engine, so in 1999 text drawn in it rendered as
+nothing — it was how you hid a text actor. The port parses `r`/`g`/`b` into a
+literal colour and paints green text at the subtitle position, screen y≈30.
+
+**It is exactly one element in the whole game.** Every other accumulator —
+`a_Vifill_acc`, `a_Extra_acc` — uses `color="white"`. That is why only Karli
+does it.
+
+**Fix.** Text authored in the chroma key colour parses as transparent, matching
+1999.
+
+**Left open, tagged `1998`:** this means **Karli's dialogue was unsubtitled in
+the shipped game.** Whether that was deliberate or a typo for white is unknown,
+and it is an accessibility gap either way. Faithful behaviour is invisible;
+the remaster may want it white. Hjalti's call.
+
+---
+
+## 4 — `1998` · Green speckles on 13 sprites
+
+**Reported by:** Hjalti, 2026-08-07 — "several places where the green chroma
+didn't work perfect."
+
+**Confirmed by measurement, and it is in the disc art, not the port.** 118 pixels
+across 13 sprites sit one step off pure green, and the engine keys on *exactly*
+`RGB(0,255,0)`, so they survive as specks on moving characters:
+
+```
+41 px  TYRKJARA/ANIMATIA/BUNDNIRA/TALK.PNG
+24 px  TYRKJARA/ANIMATIA/TUNNALEA/TUNNALEA.PNG
+15 px  TYRKJARA/ANIMATIA/MAMMA/TALK.PNG
+11 px  KRISTNIA/ANIMATIA/HJALTI/FRONT.PNG
+ 8 px  TYRKJARA/ANIMATIA/SIGRUN/FRONT.PNG
+ …8 more, down to single pixels
+```
+
+**Fix (not yet applied).** Key on a tolerance rather than an exact match, at
+build time in the asset pipeline. All 118 vanish and no legitimate art is at
+risk — no character sprite uses saturated green otherwise. Nobody is nostalgic
+for 118 stray pixels, so this is a `1998` entry whose answer is almost certainly
+"fix", but it is still a content change and gets recorded as one.
+
+---
+
+## 5 — `missing` · FIXED · The intro film never played
+
+`INTRO.AVI` shipped on the disc, no GML references it, so the capture never
+collected it and the port never played it — the same blind spot that hid the
+cursors and the five hardcoded PNGs. Now plays after the credits as **Kynning**,
+with a skip button. See `tools/pipeline/make-video.sh`.

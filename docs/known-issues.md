@@ -997,3 +997,59 @@ the regression cannot be quietly re-introduced. 97 cases total.
 
 **Not verified in a browser.** Typecheck, build and the suite are green;
 nobody has yet clicked back into a visited chapter in the debug panel.
+
+---
+
+## 19 — `port-bug`? · Oversized hitboxes occlude interactive objects
+
+**Found by:** browser verification, 2026-08-07. Not reported by the owner —
+found because it *blocked three other tests*.
+
+Several background actors' hover/click hitboxes are far larger than their
+visible sprites, and swallow clicks meant for objects near them. The concrete
+case: in Tyrkjaránið's `s_Kot`, the door's handle pixel is covered by
+`a_Mamma`, `a_KotTunnur1` and `a_Tunna`, so **the door cannot reliably be
+clicked at all**. Similar oversized columns appear elsewhere.
+
+**Why this matters more than it looks.** It is not cosmetic — it makes at least
+one scene's exit hard to operate, and it is the reason three separate
+verification attempts could not reach their triggers (the raiders' entrance,
+the Lögberg walk-offs, and Halldóra's dialogue). A player hitting this would
+experience it as the game ignoring their clicks on a door.
+
+**Not yet diagnosed.** Unknown whether the port computes actor bounds
+differently from 1999, or whether the 1998 content genuinely declares these
+sizes and the original engine resolved overlaps by a z-order or
+smallest-area rule the port does not implement. That distinction decides
+whether this is a `port-bug` or a `1998-bug`, and it must be established from
+`src/dimon/agt/` before anything is changed — the hit-box work in issue #9
+measured *text* bounds and is unrelated.
+
+Note the interaction with #17: boxless actors are a separate concept
+(`collisionbox` governs *movement*), so do not conflate the two while
+investigating.
+
+### Browser verification of #17 and the chapter-scoping fix, same session
+
+Run locally under Playwright; 97 screenshots retained.
+
+- **Chapter round-trip: VERIFIED.** Landnám→Kristnitaka→Landnám, the reverse,
+  and a three-chapter trip. Every return shows `StateController → landnam` then
+  Landnám's own `s_begin [1/18]` with `qp_Skipslag` — never Kristnitaka's
+  `[1/26]`/`qp_Kortalag` nor Siðaskipti's `[1/42]`. No wrong-chapter content
+  ever appeared.
+- **Ingólfur's throw: VERIFIED — the owner's original report.** `ingolfur2`
+  walks in from off-frame, scaling up under pseudo-3D, arrives at the mast;
+  `q_HideSula` then `q_Ingolfur_push` fire, the carved pillar leaves the deck
+  and a mass enters at frame right; `q_PlaySplass` plays `m_Splass`. The two
+  `SetDestinationQuantum` log lines are 4.5s apart — real traversal, where the
+  pre-fix engine reported arrival instantly.
+- **Bold-on-hover: VERIFIED**, and it tracks each line's own measured width —
+  a short line bolds on its glyphs and reverts past them.
+- **No green flash for Karli: VERIFIED** by burst capture at 150ms straddling
+  the `q_conversating` log line. Halldóra unreachable (see above).
+- **Cursor under pointer: VERIFIED.**
+- **Still unwatched:** the Tyrkjaránið raiders, the Lögberg walk-offs, and the
+  drifting log/bottle/barrel. All blocked by trigger-reachability, not by any
+  evidence against the fix. The raiders remain the first thing to watch.
+

@@ -551,3 +551,52 @@ rather than authoring both independently: measure each cycle's stride once, then
 drive speed from it — or drive the animation rate from the actual speed, which is
 also what makes D1's speed-dependent gait possible. Either way the two stop being
 free to disagree.
+
+---
+
+## 13 — `1998-bug` · The sword can't be picked up; a discovery hotspot points at empty grass
+
+**Reported by:** Hjalti, 2026-08-07 — hovering the sword in Hjörleifshöfði reads
+**"Taka Hjörleif"** and clicking gives a refusal. "If I recall we should pick up
+the sword, there is no such option."
+
+**The engine is behaving correctly.** Verified against the 1999 original: Java's
+`Scene.getActorFaceAt` walks the face chain keeping the last match, `ActorFace.contains`
+is a plain rect test, and the port's backward-walk-first-match is equivalent.
+No collision-box simplification on this path, no alpha test to have lost.
+**Not a `port-bug`. Content.**
+
+**The sword is background paint, not an object.** It is drawn into
+`LANDNAM/GRAPHIC/HJORLEIA/HJORLEIA.PNG` at roughly x 634–670, y 465–554. No sword
+actor exists in any chapter — a search of all six `.gml` files for
+`sver`/`sword`/`sax`/`vopn`/`brand` returns only spoken dialogue.
+
+What the pointer actually hits is `a_Hjorleifur` (`landnam.gml:562-565`), a
+123×82 `TransparentActorFace` at `x=566 y=408 z=-100`, giving bounds
+**(566,508)–(689,590)**. Cropping exactly that rectangle from the background
+shows Hjörleifur's boots and legs on the left **and the lower half of the sword
+blade on the right**. So the label is right for the actor and wrong for what the
+player thinks they are pointing at.
+
+### The unfinished intent
+
+`landnam.gml:673-676` declares a hotspot named **`a_hmmm`**, labelled
+**"Hmmm... Hvað er þetta?"** — 94×78 at `x=500 y=300`, bounds (500,300)–(594,378).
+That rectangle, cropped from the background, is **empty grass.**
+
+It is the last entry in the `<!-- transparent aukahlutir -->` block, the only
+actor there without `random="true"`, its name is a placeholder, and its label is
+the classic "there is something here" tease. It sits ~150px up and left of the
+sword. Someone authored a discovery hotspot in 1999 and never moved it onto the
+sword or wired a take reaction — the same species as `s_UnDecided6` and the
+hand-on-self omission.
+
+**Falsifying test before acting**, since the geometry claim is sharp: hover the
+sword's **hilt and pommel**, above y≈508 — nothing should highlight. Slide down
+onto the lower blade and it should snap to "Taka Hjörleif". A boundary anywhere
+else means the measurements are wrong.
+
+**Proposed repair (content, needs owner sign-off):** move `a_hmmm` onto the sword
+— roughly `x="634" y="465"` with a ~40×90 face — and give it a take reaction.
+Open questions only Hjalti can answer: does taking the sword belong in the
+inventory, is it used later, and what should the line be?

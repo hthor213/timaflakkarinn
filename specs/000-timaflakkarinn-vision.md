@@ -130,7 +130,23 @@ remaster tractable:
 - **Characters are sprites**, composited at runtime at engine-controlled
   coordinates. Redrawing one breaks no hotspot, no polygon, no scaling. Each is
   done **once and reused in every scene** — ~46 characters, five of which carry
-  ~40% of all animation cells. **The binding constraint is likeness**: an
+  ~40% of all animation cells.
+- **And the player is one character, not four.** Owner, 2026-08-07: *"vifill,
+  hjalti, and even the woman in tyrkjaran level — it's always the same character
+  'Denni' (he was our chairman), the character stays the same, just wears
+  different clothes and is called different names."* Confirmed in the art:
+  `VIFILL`, `HJALTI` and `SIGRUN` share one face, build and hair colour and
+  differ only in costume. (`GISSUR` is a bishop in mitre and vestments —
+  unresolved at 75px whether that is Denni dressed for the Reformation or a
+  distinct character.) Denni is the boy from the intro storybook, modelled on
+  Dímon's chairman, and the time-travel premise is why he wears four names.
+
+  So the protagonist is **one rig with costume variants**, not four rigs — a 4×
+  reduction on the highest-value work in the project, and it restores the
+  original "rig one character first" instinct that an earlier revision of this
+  document wrongly retracted. The four turnaround sets are then *four views of
+  the same character*: more identity reference for holding likeness, not four
+  separate problems. **The binding constraint is likeness**: an
   AI reimagining of the ship scene produced excellent water and a generic viking
   rather than Karli. The disc's orthographic turnarounds — `FRONT`/`BACK`/`LEFT`/
   `RIGHT` per character — are exactly the multi-view identity reference needed to

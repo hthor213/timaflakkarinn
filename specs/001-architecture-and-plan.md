@@ -157,8 +157,27 @@ Unblocks everything. No new capability; existing capability made correct.
       affects jumping
 - [ ] **`Pulser` remainder** — `accumulated -= interval`, not `= 0`. Subtitles
       drift late against audio
-- [ ] **`Sequence` freeze race** — single `frozenResolve` overwritten by
-      concurrent waiters; a `thaw()` before the promise hangs forever
+- [x] **`Sequence` freeze escape** — *this entry was wrong and is corrected.*
+      It claimed a single `frozenResolve` overwritten by concurrent waiters and a
+      lost `thaw()`. Neither reproduces: the `new Promise` executor runs
+      synchronously, so JS run-to-completion makes check-and-park indivisible —
+      the guarantee Java bought with `synchronized` — and the generation check
+      sits *above* the gate, so two runs can never be parked at once.
+      The real defect was that `stopPerforming()` set `frozen = false`, which
+      Java's does not (`frozen` is owned solely by `freeze()`/`thaw()`), so a
+      stop or a restart **silently escaped a freeze and ran**. Note the whole
+      path is currently unreachable — `FreezeSequenceQuantum` appears in no
+      `.gml`, is absent from the DTD, and nothing in the 1999 Java calls
+      `World.freeze()` either. Same signature as `SetSpeedQuantum`: built,
+      wired, never invoked. Latent-correctness work for when world freeze is
+      used
+- [x] **Pointer Events** — touch input existed nowhere; a cold first tap
+      resolved at (0,0) and every later one wherever the previous tap landed.
+      Now `pointerdown`/`move`/`up`/`cancel` with coordinates read from the
+      event itself, plus `touch-action: none` so the browser stops claiming taps
+      for pan and pinch-zoom. **The affordance is still missing** — touch has no
+      hover, so nothing turns the cursor red to show what is interactive. That
+      needs a design decision (verb coin, hotspot reveal), not plumbing
 - [x] **Asset failures warn in dev** — `AssetLoader.missing` plus a warning in
       the debug deployment. Silent 1×1/`null` fallbacks are why five missing
       PNGs went unnoticed for years
@@ -167,8 +186,6 @@ Unblocks everything. No new capability; existing capability made correct.
       `index.html` for any missing path, so a status check would "find" m4a
       everywhere and then throw inside `decodeAudioData`
 - [x] **Deployed** — see Deployment above
-- [ ] **Pointer Events** — no touch input exists; `handleMouseDown` reads
-      coordinates only `mousemove` writes, so first tap lands stale
 - [ ] `tools/lint_gml.py` takes `src/` as a second oracle for hardcoded assets
 
 **Done when:** the 1998 game runs on desktop and on a phone by touch, characters

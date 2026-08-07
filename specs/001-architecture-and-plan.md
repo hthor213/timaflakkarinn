@@ -89,10 +89,30 @@ Serving root `/srv/timaflakkarinn/web` is a **hardlink overlay**: images from
 apparent for ~1.3 MiB of real disk, and it is what actually realises the
 169 → 33 MiB audio win. Masters are read-only inputs and were verified untouched.
 
-Caddy handles `/GAME/*`, `/gml/*` and `/assets/*` **before** the SPA fallback, so
-a missing asset returns a real 404 instead of being masked by `index.html`.
-`try_files {path} /index.html` on the catch-all is what makes `/chapter1..4`
-work at all.
+Caddy handles `/GAME/*`, `/gml/*`, `/video/*` and `/assets/*` **before** the SPA
+fallback, so a missing asset returns a real 404 instead of being masked by
+`index.html`. `try_files {path} /index.html` on the catch-all is what makes
+`/chapter1..4` work at all.
+
+### Deploy rules, learned the hard way
+
+**Never copy `dist/GAME` or `dist/gml` into the serving root.** Vite dereferences
+the symlinks in `webapp/public/`, so `dist/GAME` is the raw 1 213-file tree with
+668 WAVs and no `.M4A` — a plain `cp -r dist/*` silently reintroduces 169 MiB of
+WAV and destroys the uppercase-`.M4A` overlay.
+
+**But `gml/` in the serving root is an independent copy, not a hardlink**, and it
+*does* need refreshing whenever content changes — from `web_import/gml`, the
+authoritative source, never from `dist/gml`. This was discovered on the first
+deploy that changed a `.gml`: refreshing only assets/index.html/_headers/video
+would have shipped stale scene files and made a landed fix look broken. Making
+those copies symlinks into `web_import/gml` would remove the failure mode
+permanently; not yet done.
+
+**Cache headers must match how a file is named.** `/assets/*` is content-hashed,
+so `immutable` is correct. `/gml/*` is **not** hashed, so it revalidates
+(`no-cache` + ETag) — otherwise a browser runs a new bundle against an hour-old
+scene file, which looks exactly like a regression and wastes a bug report.
 
 ### Server-side debt
 

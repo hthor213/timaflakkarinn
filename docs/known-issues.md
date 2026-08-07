@@ -716,3 +716,23 @@ produces, since ís (ᛁ) writes both /i/ and /e/. His line: *"Ég heiti reyndar
 Erna, en rúnaletur greinir ekki á milli I og E. Þú leystir þrautina."* That needs
 a new sequence in `kristnit.gml` and runs into issue #0 — the port clears
 subtitles for a mouth with no audio — so it wants both changes together.
+
+---
+
+## 16 — `port-bug`? · UNVERIFIED · `a_Rope`'s hotspot may sit ~90px from the rope
+
+**Found incidentally** by the art-assessment agent, 2026-08-07, while computing
+hotspot bounds for the ship scene. Reported rather than asserted.
+
+Using the same anchoring convention that puts `a_Tunnur` (barrels) and `a_Kista`
+(chest) exactly on their objects, `a_Rope`'s computed bounds land on **empty
+deck**, while the rope appears roughly **90 px higher** in the rendered scene.
+
+Two readings, unresolved: the sprite's anchor differs from the others (a content
+quirk), or the port places it wrongly (a `port-bug`). The agent declined to draw
+a box it could not stand behind, which is the right call — but it means someone
+should click the rope in Landnám's ship scene and see whether it responds where
+it looks.
+
+Cheap check: in `s_Skipingolfs`, hover the coiled rope on the deck. If nothing
+highlights there but something does ~90 px below, this is real.

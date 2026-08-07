@@ -168,6 +168,46 @@ remaster tractable:
 Practical consequence: the character pass is the smaller job *and* the one the
 player looks at continuously. It should lead.
 
+**Evidence, 2026-08-07 — the character half is proven; the background half has a
+specific, measured failure mode.** Full report and reproducible scripts at
+`timaflakkarinn-disc/work/art-exploration/ASSESSMENT.md`.
+
+**Characters: yes.** DreamShaper-8 + ControlNet-lineart + IP-Adapter-Plus, fp16 on
+MPS, running locally and free. The lineart control is driven from **Erna's own ink
+outlines** — the art already is lineart — with img2img at strength 0.40 so the
+palette comes from her fills, and one Denni body reference.
+
+- **13–18 s per character.**
+- Silhouette IoU against the 1998 cel **0.95–0.97** (Sigrún 0.76).
+- Identity across the four costume heads, CLIP ViT-H: **remaster 0.754 vs the
+  1998 originals' 0.738.** One reference carried Denni across tunic, cloak, dress
+  and bishop's vestments, holding together *marginally better than Erna's own
+  four drawings did*.
+
+Denni was also confirmed in the pixels independently: skin, outline, eye-white
+and hair yellow are byte-identical across VIFILL/HJALTI/SIGRUN, and **all four
+wear the same ochre boots, `RGB(164,124,36)`** — a Reformation bishop in a
+9th-century farmhand's laced boots is a costume swap.
+
+**Backgrounds: the failure is specific and it is the expensive one.** Measured
+against Gemini's reimagining of the ship scene: props held well — barrels +10 px,
+chest +13 px, hotspot boxes still cover their objects — but the **horizon moved
+−60 px, 10% of frame height.** That is the vanishing line of the deck plane:
+exactly what `scanline1`/`scanline2`/`scaling2` is calibrated against, and exactly
+the datum this decision wants to *derive* to fix the 60 uncalibrated terrains.
+**Free generation preserved the cheap thing and moved the expensive one.**
+
+Nothing prompt-driven is provably geometry-preserving (ControlNet's own paper
+reports 0.35 IoU; no vendor documents a spatial tolerance). Two operations are
+exact by construction: **integer super-resolution**, and **pixel-space masked
+inpainting**.
+
+**So the recommended shape is: integer SR plus masked inpainting inside the 4:3
+safe area, with free generation confined to the 21:9 margins D4 already declares
+non-load-bearing.** That keeps the genuinely better generated ocean at zero
+coordinate risk. It does not contradict the vector direction — it constrains
+*where* invention is allowed, which is what D4 was always for.
+
 **D3 — Cinematic camera.** Drift, rack focus, cuts for dialogue. Reference target
 is Grim Fandango's staging. Explicitly *not* its controls (see D5).
 

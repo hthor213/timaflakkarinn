@@ -129,7 +129,31 @@ export class World {
     }
   }
 
+  /**
+   * Keys the game owns. Space is the important one: it is the right mouse
+   * button, which is how you cycle verbs — and on a trackpad that is far more
+   * comfortable than a two-finger click. Laptops were not the 1998 target.
+   *
+   * These must not also reach the browser. Space scrolls the document and, worse,
+   * re-activates whatever button currently has focus — press "Sleppa kynningu",
+   * then press space to change mode, and you would trigger the skip button again.
+   */
+  private static readonly OWNED_KEYS = new Set([' ', 'Enter', 'F1']);
+
   private handleKeyDown(e: KeyboardEvent): void {
+    // Never steal keys from a real text field — the save-name entry and the
+    // Völva's name prompt both need a literal space character.
+    const el = document.activeElement;
+    const typing = el instanceof HTMLInputElement
+      || el instanceof HTMLTextAreaElement
+      || (el instanceof HTMLElement && el.isContentEditable);
+
+    if (!typing && World.OWNED_KEYS.has(e.key)) {
+      e.preventDefault();
+      // A focused button would otherwise consume the next space itself.
+      if (e.key === ' ' && el instanceof HTMLButtonElement) el.blur();
+    }
+
     this.onKeyDown?.(e.key, e.code);
   }
 }

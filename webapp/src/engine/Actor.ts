@@ -222,13 +222,36 @@ export class MovingActor extends Actor implements Pulsable {
   frozen = false;
   pulser: Pulser | null = null;
 
+  // Obstacle-detour state — mirrors Java MovingActor's control/xFailed/yFailed/
+  // tempDest. When the straight line to the destination is blocked, the walker
+  // remembers the *real* target in trueDest and walks axis-aligned legs toward
+  // it, re-deriving the course for each leg. Without this the actor keeps its
+  // original course while sliding along a wall, drifts permanently off target
+  // and ends up parked in a corner of the terrain polygon.
+  private detouring = false;
+  private xFailed = 0;      // 0 = not yet tried X, 1 = X leg failed once, 2 = give up
+  private yFailed = false;
+  private trueDest: { x: number; y: number } | null = null;
+
   onDestinationReached?: (actor: MovingActor) => void;
 
   setDestination(x: number, y: number): void {
-    this.destination = { x, y, z: this.location.z };
-    this.course = Math.atan2(this.location.y - y, x - this.location.x);
+    this.detouring = false;
+    this.xFailed = 0;
+    this.yFailed = false;
+    this.trueDest = null;
+    this.aimAt(x, y);
 
     this.pulser?.register(this);
+  }
+
+  /**
+   * Java's private setDestination(float,float): retarget and re-derive the
+   * course without clearing the detour bookkeeping.
+   */
+  private aimAt(x: number, y: number): void {
+    this.destination = { x, y, z: this.location.z };
+    this.course = Math.atan2(this.location.y - y, x - this.location.x);
   }
 
   getCourse(): number { return this.course; }
@@ -236,6 +259,10 @@ export class MovingActor extends Actor implements Pulsable {
   stopMoving(): void {
     this.destination = null;
     this.course = 10.0;
+    this.detouring = false;
+    this.xFailed = 0;
+    this.yFailed = false;
+    this.trueDest = null;
     this.pulser?.unregister(this);
     this.switchFace();
   }
@@ -301,58 +328,99 @@ export class MovingActor extends Actor implements Pulsable {
       speedFactor = terrain.getScaling(this.location);
     }
 
-    const dx = Math.cos(this.course) * this.speed * dt * speedFactor;
-    const dy = -Math.sin(this.course) * this.speed * dt * speedFactor;
+    // Java computes the per-pulse step once and uses it both as the move
+    // length and as the arrival threshold.
+    const step = this.speed * dt * speedFactor;
 
-    const newX = this.location.x + dx;
-    const newY = this.location.y + dy;
+    if (!this.checkDestinationReached(step)) {
+      this.updateLocation(step);
+    }
+  }
 
-    // Check if destination reached
-    const distToDest = Math.hypot(this.destination.x - this.location.x,
-                                   this.destination.y - this.location.y);
-    const moveStep = Math.hypot(dx, dy);
+  /**
+   * Java MovingActor.destinationReached(). Runs *before* the move, so the
+   * actor can never overshoot: the per-axis threshold is exactly one step.
+   * While detouring, arriving at a leg end switches to the next leg instead of
+   * declaring arrival.
+   */
+  private checkDestinationReached(step: number): boolean {
+    const dest = this.destination;
+    if (!dest || this.course === 10.0) return false;
+    if (Math.abs(dest.x - this.location.x) >= step) return false;
+    if (Math.abs(dest.y - this.location.y) >= step) return false;
 
-    if (distToDest <= moveStep + 2) {
-      // Snap to destination
-      this.setLocation(this.destination.x, this.destination.y, this.location.z);
-      this.stopMoving();
-      this.onDestinationReached?.(this);
+    if (!this.detouring) {
+      this.arrive(dest.x, dest.y);
+      return true;
+    }
+
+    const t = this.trueDest!;
+    if (Math.abs(t.x - this.location.x) < step && Math.abs(t.y - this.location.y) < step) {
+      this.arrive(t.x, t.y);
+      return true;
+    }
+    if (this.xFailed === 0) {
+      this.xFailed = 2;
+      this.aimAt(this.location.x, t.y);
+      return false;
+    }
+    if (this.yFailed) return false;
+    this.yFailed = true;
+    this.aimAt(t.x, this.location.y);
+    return false;
+  }
+
+  /** Settle on the target and fire the arrival event. */
+  private arrive(x: number, y: number): void {
+    this.setLocation(x, y, this.location.z);
+    this.stopMoving();
+    this.onDestinationReached?.(this);
+  }
+
+  /**
+   * Java MovingActor.updateLocation(). On a blocked step, enter detour mode:
+   * remember the real target and walk one axis at a time toward it, giving up
+   * (and reporting arrival) once both axes are blocked.
+   */
+  private updateLocation(step: number): void {
+    if (this.course === 10.0 || !this.destination) return;
+
+    const terrain = this.currentTerrain;
+    const newX = this.location.x + Math.cos(this.course) * step;
+    const newY = this.location.y - Math.sin(this.course) * step;
+
+    if (!terrain || terrain.contains({ x: newX, y: newY, z: this.location.z })) {
+      this.setLocation(newX, newY, this.location.z);
+      this.checkCollisions();
+      this.switchFace();
       return;
     }
 
-    // Try full move
-    let moved = false;
-    const newPos = { x: newX, y: newY, z: this.location.z };
-    if (!terrain || terrain.contains(newPos)) {
-      this.setLocation(newX, newY, this.location.z);
-      moved = true;
+    // Blocked.
+    if (!this.detouring) {
+      this.detouring = true;
+      this.trueDest = { x: this.destination.x, y: this.destination.y };
     } else {
-      // Try X only
-      const xPos = { x: newX, y: this.location.y, z: this.location.z };
-      if (terrain.contains(xPos)) {
-        this.setLocation(newX, this.location.y, this.location.z);
-        moved = true;
-      } else {
-        // Try Y only
-        const yPos = { x: this.location.x, y: newY, z: this.location.z };
-        if (terrain.contains(yPos)) {
-          this.setLocation(this.location.x, newY, this.location.z);
-          moved = true;
-        }
+      if (this.xFailed === 0) this.xFailed = 1;
+      else if (!this.yFailed) this.yFailed = true;
+      else if (this.xFailed === 1) this.xFailed = 2;
+
+      if (this.xFailed === 2) {
+        // Both axes blocked — destination unreachable. Java stops here and
+        // still reports "reached" so the waiting sequence continues.
+        this.stopMoving();
+        this.onDestinationReached?.(this);
+        return;
       }
     }
 
-    // If completely blocked, stop — destination is unreachable
-    if (!moved) {
-      this.stopMoving();
-      this.onDestinationReached?.(this);
-      return;
+    const t = this.trueDest!;
+    if (this.xFailed === 0 || this.yFailed) {
+      this.aimAt(t.x, this.location.y);   // horizontal leg
+    } else {
+      this.aimAt(this.location.x, t.y);   // vertical leg
     }
-
-    // Check collisions with other actors on same terrain
-    this.checkCollisions();
-
-    this.switchFace();
+    this.updateLocation(step);
   }
 
   /** Check collisions between this moving actor and all others on the terrain */

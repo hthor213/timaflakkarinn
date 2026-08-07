@@ -397,3 +397,57 @@ clicking accuracy is unaffected, only where the arrow appears.
 Note this compounded issue #6 — a mis-measured hit box *and* a 15px cursor
 offset, in the same interaction. Either alone is annoying; together they made
 dialogue options feel arbitrary.
+
+---
+
+## 10 — `port` · FIXED · The walker never re-aims, and wall-follows to a corner
+
+**Reported by:** Hjalti, 2026-08-07 — talking to Karli in Ingólfshöfði sends
+Vífill to the far right of the screen instead of stopping at his left.
+
+**Cause.** `MovingActor.updateMovement` slid along a blocked axis while keeping
+the course it computed **once**, in `setDestination`. It never re-aimed. So the
+first time the terrain polygon deflects the actor, the stale course carries him
+past the target and he wall-follows to a polygon corner.
+
+`p_Ingolfshofdi` has a raised ledge whose right wall runs (260,424)→(260,470)
+(`landnam.gml:397-408`). Standing on that lip, the straight line to the authored
+`(360,550)` crosses the wall. Reproduced headlessly against the real polygon:
+`(240,430) → (798,598)`, precisely the reported endpoint. A grid sweep found
+**7 of 879 walkable start points** land at the screen edge, all in the band
+x∈[220,255], y∈[425,455] — the ledge lip.
+
+**The 1999 engine has a detour state machine the port dropped entirely**:
+`control` / `xFailed` / `yFailed` / `tempDest` in `MovingActor.java`. On an
+invalid position it stores the real target in `tempDest` and re-derives `course`
+for an axis-aligned leg; `destinationReached()` switches legs on arrival and only
+reports true near the real target. When both axes fail it stops **and still fires
+the reached event**, so a `wait="true"` sequence continues. Ported verbatim.
+
+**It also fixed five hangs.** Across 8,400 randomised walks over all 83 terrain
+polygons in all five chapters, five walks *never terminated* before the fix and
+zero do after. A `SetDestinationQuantum wait="true"` on one of those would have
+frozen its sequence permanently.
+
+Residual: 129/343 blocked-line walks still miss. That is Java-faithful — the
+original is a two-leg Manhattan detour, not a pathfinder, and gives up on concave
+geometry.
+
+Covered by `webapp/test/walker.test.mjs` (5 tests), which fails on the previous
+code with `from 220,425 ended at 798,598`.
+
+### Three divergences found alongside, reported not changed
+
+1. **Walk speed is ~35% slow on scaled terrains.** The port multiplies speed by
+   `terrain.getScaling()` for dynamic-scaling actors — 0.63 in Ingólfshöfði.
+   Java declares `speedScalingFactor` but **never assigns it anywhere**; it is
+   always 1.0. The port invented this. Changing it re-times every scripted walk
+   in the game, so it needs a deliberate decision.
+2. **`Terrain.contains` is a point test.** Java validates the actor's whole
+   collision-box footprint (`Pseudo3DCollisionBox.validLocation`, 9–27 sample
+   points) plus terrain transitions and **actor-vs-actor blocking**. The port has
+   none of that, so characters walk up to walls and through each other. **This is
+   very likely issue #8 (walking through Hallveig), which was filed as `1998` on
+   the assumption it was original — it may well be `port`.**
+3. `SetDestinationQuantum.leap()` in Java has a 240s watchdog that force-sets the
+   location. The port's `await` has no timeout.

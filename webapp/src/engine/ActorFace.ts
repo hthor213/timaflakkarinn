@@ -269,6 +269,21 @@ export class AnimatedActorFace implements ActorFace, Pulsable {
 }
 
 /** Text face - renders dynamic text */
+/**
+ * Shared offscreen context used purely for text metrics.
+ *
+ * Hit boxes must be measured with the same font the text is drawn with;
+ * anything else guesses, and a guessed hit box is a dialogue option you cannot
+ * click. One context for the whole app — measuring is stateless.
+ */
+let _measureCtx: CanvasRenderingContext2D | null = null;
+function measuringContext(): CanvasRenderingContext2D {
+  if (!_measureCtx) {
+    _measureCtx = document.createElement('canvas').getContext('2d')!;
+  }
+  return _measureCtx;
+}
+
 export class TextActorFace implements ActorFace {
   name: string;
   owner: Actor | null = null;
@@ -289,7 +304,18 @@ export class TextActorFace implements ActorFace {
   highlightColor: Color = { r: 255, g: 255, b: 0 };
   highlighted = false;
   mouseOver = false;
-  fontSize = 22;
+  /**
+   * Changing the size invalidates the hit box, so re-measure. Callers set
+   * `fontSize` before or after `setText()` depending on the call site, and an
+   * order-dependent hit box is the kind of bug that only shows up in one menu.
+   */
+  private _fontSize = 22;
+  get fontSize(): number { return this._fontSize; }
+  set fontSize(v: number) {
+    if (v === this._fontSize) return;
+    this._fontSize = v;
+    if (this.text) this.measureText();
+  }
   alignment: 'center' | 'left' | 'right' = 'left';
   backgroundColor: Color | null = null;
   prepared = false;
@@ -303,10 +329,41 @@ export class TextActorFace implements ActorFace {
     this.measureText();
   }
 
+  /** Font used at rest and when hovered. Hover renders bold. */
+  fontFor(bold: boolean): string {
+    return `${bold ? 'bold ' : ''}${this.fontSize}px serif`;
+  }
+
+  /**
+   * Measure the hit box against the font actually used to draw it.
+   *
+   * This used to estimate `text.length * fontSize * 0.55` — a fixed advance per
+   * character, against a *proportional* serif. The box was therefore wrong by a
+   * different amount for every line, and where it under-measured, the right-hand
+   * part of a dialogue option simply was not clickable: you had to aim left.
+   *
+   * Measured with the **bold** metrics, which are the wider of the two, so the
+   * clickable area never shrinks at the moment the pointer enters and the text
+   * thickens.
+   */
   private measureText(): void {
-    const charWidth = this.fontSize * 0.55;
-    this.bounds.width = Math.round(this.text.length * charWidth) + 16;
-    this.bounds.height = this.fontSize + 6;
+    if (!this.text) {
+      this.bounds.width = 0;
+      this.bounds.height = 0;
+      return;
+    }
+    const ctx = measuringContext();
+    ctx.font = this.fontFor(true);
+    const m = ctx.measureText(this.text);
+    this.bounds.width = Math.ceil(m.width) + 16;
+
+    // Real ascent/descent where the browser reports it; the old fontSize+6
+    // guess was close for 22px serif but drifts at other sizes.
+    const asc = (m as any).actualBoundingBoxAscent;
+    const desc = (m as any).actualBoundingBoxDescent;
+    this.bounds.height = (typeof asc === 'number' && typeof desc === 'number' && asc + desc > 0)
+      ? Math.ceil(asc + desc) + 6
+      : this.fontSize + 6;
   }
 
   async prepare(_loader: AssetLoader): Promise<void> {
@@ -329,11 +386,13 @@ export class TextActorFace implements ActorFace {
   paint(ctx: CanvasRenderingContext2D, _dirtyRect: Rect): void {
     if (!this.text || this.transparent) return;
 
-    const font = `${this.fontSize}px serif`;
-    ctx.font = font;
+    // Hovering a selectable line renders it bold. The hit box was measured with
+    // bold metrics, so it does not move or resize as the weight changes.
+    const hovering = this.highlighted && this.mouseOver;
+    ctx.font = this.fontFor(hovering);
     ctx.textBaseline = 'top';
 
-    const drawColor = (this.highlighted && this.mouseOver) ? this.highlightColor : this.color;
+    const drawColor = hovering ? this.highlightColor : this.color;
     const tx = this.bounds.x + 8;
     const ty = this.bounds.y + 3;
 

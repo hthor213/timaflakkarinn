@@ -283,3 +283,44 @@ for 118 stray pixels, so this is a `1998` entry whose answer is almost certainly
 collected it and the port never played it — the same blind spot that hid the
 cursors and the five hardcoded PNGs. Now plays after the credits as **Kynning**,
 with a skip button. See `tools/pipeline/make-video.sh`.
+
+---
+
+## 6 — `port` · FIXED · Dialogue options are hard to click, and never highlight
+
+**Reported by:** Hjalti, 2026-08-07 — "it's like the mouse pointer is inaccurate…
+when there are short answers among the answers the clickable area gets smaller…
+I have to move the pointer to the left." Correctly guessed as a conversion bug.
+
+**Cause 1 — the hit box was estimated, not measured.**
+
+```ts
+const charWidth = this.fontSize * 0.55;
+this.bounds.width = Math.round(this.text.length * charWidth) + 16;
+```
+
+A fixed advance per character, against a **proportional** 22px serif. Every line
+was wrong by a different amount, depending on its mix of wide and narrow
+letters. Where it under-measured, the right-hand part of the option was simply
+not clickable — hence aiming left. Where it over-measured, a line stole clicks
+from its neighbour, which is why short options behaved worst: `Bless!` measured
+89px against real glyphs far narrower, and the long line above it over-reached.
+
+Now measured with `ctx.measureText()` against the exact font used to draw, plus
+real ascent/descent for the height. `fontSize` became an accessor that
+re-measures, so the box cannot go stale when a caller sets the size after the
+text.
+
+**Cause 2 — hover state was never set for game actors.** `mouseOver` was
+assigned only inside `SaveScene`, by hand, per actor. So the `hilite` attribute
+authored throughout the content did nothing outside the save menu: no game text
+ever highlighted. `World` now sets `mouseOver` on the face during the same
+enter/exit transition it already tracked.
+
+**New feature, as requested: hovering a selectable line renders it bold.** The
+hit box is measured with **bold** metrics — the wider of the two — so the
+clickable area never shrinks at the instant the pointer enters and the text
+thickens, which would otherwise cause a flicker at the edges.
+
+**To verify:** in the debug deployment, toggle the bounding-box overlay in the
+panel. Boxes should now sit tight around the glyphs instead of drifting.

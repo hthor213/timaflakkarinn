@@ -99,13 +99,18 @@ export class World {
     if (this.currentScene) {
       const face = this.currentScene.getActorFaceAt(this.mouseX, this.mouseY);
       if (face !== this.lastFaceUnderMouse) {
-        if (this.lastFaceUnderMouse?.owner) {
-          this.lastFaceUnderMouse.owner.onExited?.(this.lastFaceUnderMouse.owner);
-          this.onActorExited?.(this.lastFaceUnderMouse.owner);
+        // Hover state belongs on the face, and belongs here: SaveScene used to
+        // wire it per-actor by hand, which is why no *game* text ever
+        // highlighted — only the save menu did.
+        if (this.lastFaceUnderMouse) {
+          (this.lastFaceUnderMouse as any).mouseOver = false;
+          this.lastFaceUnderMouse.owner?.onExited?.(this.lastFaceUnderMouse.owner);
+          if (this.lastFaceUnderMouse.owner) this.onActorExited?.(this.lastFaceUnderMouse.owner);
         }
-        if (face?.owner) {
-          face.owner.onEntered?.(face.owner);
-          this.onActorEntered?.(face.owner);
+        if (face) {
+          (face as any).mouseOver = true;
+          face.owner?.onEntered?.(face.owner);
+          if (face.owner) this.onActorEntered?.(face.owner);
         }
         this.lastFaceUnderMouse = face;
       }

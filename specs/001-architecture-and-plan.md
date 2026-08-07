@@ -121,14 +121,20 @@ Unblocks everything. No new capability; existing capability made correct.
       and `tt-dev.spliffdonk.com` (debug) from one artifact; `/chapter1..4`,
       `/intro`, `/extro`, Icelandic aliases. Play mode scales the canvas to the
       viewport. 21 tests, the project's first
-- [ ] **Chapter container scoping** — *blocks reliable chapter jumping.* All
-      GML objects land in one global container that is never cleared, and
-      `performSequence()` reads from it. 88 of the 143 names shared by all four
-      chapters have differing definitions, `s_begin`/`s_always`/`s_prepare`
-      among them. Forward jumps appear correct because the newest chapter parsed
-      last; returning to an already-parsed chapter runs the wrong one's
-      sequences. Fix: per-chapter containers with a genuinely global map for
-      cross-chapter objects (cursors, state controller)
+- [x] **Chapter container scoping** — done, and **narrower than this spec
+      originally claimed**. The collision is real (88 of the 143 names shared by
+      all four chapters differ) but it only ever bit through *by-name* lookups.
+      `grep -rn "ctx.container" src/` returns **zero hits**: the parser resolves
+      every operand at parse time, so quantums hold direct object references and
+      never consult a container while running, and
+      `StateController.getSequenceContext()` passes an empty `Map`. Only five
+      call sites were exposed — `performSequence`, the `sc.performSequence`
+      closure, `jumpToScene`, `setCurrentSceneFlag`, and `this.stateController`
+      being silently overwritten per chapter. All now route through a
+      per-chapter map that `parseStoryPage` was already building and discarding.
+      **Still unscoped, deliberately:** `SaveSerializer`'s name lookups, and
+      `prewarmChapter` re-warming the union of all parsed chapters. Neither
+      affects jumping
 - [ ] **`Pulser` remainder** — `accumulated -= interval`, not `= 0`. Subtitles
       drift late against audio
 - [ ] **`Sequence` freeze race** — single `frozenResolve` overwritten by

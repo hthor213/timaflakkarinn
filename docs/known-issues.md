@@ -600,3 +600,58 @@ else means the measurements are wrong.
 — roughly `x="634" y="465"` with a ~40×90 face — and give it a take reaction.
 Open questions only Hjalti can answer: does taking the sword belong in the
 inventory, is it used later, and what should the line be?
+
+---
+
+## 14 — `port-bug` · FIXED · Debug scene-jump landed in an empty room
+
+**Reported by:** Hjalti, 2026-08-07 — clicking `s_Hjorleifshofdi` in the debug
+flow tree showed the background with **no characters**. In Halldór's original dev
+build, jumping to a stage set things up as though earlier puzzles were solved.
+
+**Cause.** `jumpToScene` only ever *prepared*. It ran `s_always`, `s_prepare`,
+`setCurrentScene`, `setState(MOVING)` — and both prepare sequences are
+`PrepareQuantum`s end to end, which decode faces and place nobody. The log the
+owner sent was therefore complete and correct: the jump did everything it was
+written to do.
+
+What real arrival runs (`landnam.gml:4224-4269`) and the jump did not: two
+`MoveActorQuantum`s attaching Vífill and Karli to the terrain, a
+`MoveTerrainQuantum` for the conversation terrain, `SetFlagQuantum` for
+`f_CurrentScene`, two `SetDestinationQuantum`s putting them on their marks, and
+the exit-hotspot toggles. The furniture appeared because statics are attached at
+parse time by their `terrain=` attribute; only the *characters* were missing.
+
+*(Hjörleifur is not a missing character — he is painted into the background with
+a `TransparentActorFace` hotspot over him, same as `a_Hus` and `a_Skreid`.
+Independently confirmed by the agent on issue #13.)*
+
+**Fix.** Replay the game's own arrival sequence, keeping only the quantums that
+*establish* state — `MoveActor`, `MoveTerrain`, `SetFlag`, `SetDestination` —
+and dropping speech, fades, music, pauses and scene switches. Execution goes
+through the engine's own `tunnel()` path, so destinations land on their mark
+instead of walking. **No invented coordinates anywhere: dev mode reaches a state
+the engine itself produces.**
+
+Sequence selection was validated against the real GML for **all 40 flow-tree
+scenes across six chapters**. 25 place the player directly; the rest are covered
+by a fallback or are scenes the player never occupies (`s_Map`, `s_BeginScene`,
+intro/extro). Where it cannot reproduce a real state it now **logs an `ERR`
+line** rather than silently showing an empty room — that log is the honesty
+contract for anything found in dev mode.
+
+**Two further bugs found and fixed en route:**
+
+1. `setCurrentSceneFlag` only looked for `f_CurrentScene`/`q_Current<Scene>`.
+   **Kristnitaka names them `f_CS`/`q_CS<Scene>`** (`kristnit.gml:166-175`), so
+   that chapter's flag was never set and `s_prepare` would prepare whatever the
+   flag happened to hold.
+2. `stopAllSequences`, Enter-fast-forward and the active-sequence panel iterated
+   only the winner of each name collision, so a sequence still performing in a
+   chapter you had left could never be stopped.
+
+**Not covered:** puzzle progress. Only the SetFlags inside the chosen sequence
+fire, so first-time dialogue will trigger and inventory is whatever the session
+left. Uneven but honest.
+
+7 new tests in `webapp/test/scenejump.test.mjs`; 44 cases total.

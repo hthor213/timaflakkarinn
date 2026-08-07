@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node test/routing.test.mjs && node test/mode.test.mjs && node test/animation.test.mjs && node test/walker.test.mjs && node test/cursor.test.mjs",
+    "test": "node test/routing.test.mjs && node test/mode.test.mjs && node test/animation.test.mjs && node test/walker.test.mjs && node test/cursor.test.mjs && node test/scenejump.test.mjs",
     "check": "tsc --noEmit && npm test"
   },
   "devDependencies": {

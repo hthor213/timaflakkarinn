@@ -1146,28 +1146,49 @@ Run locally under Playwright; 97 screenshots retained.
 
 ### Verification status of the screen-space picking fix (#19), 2026-08-07
 
-Partly verified, and the gap is stated rather than papered over.
+**All of it verified in a browser, by real gameplay rather than scene jumps.**
+334 screenshots retained. An earlier note here said several of these were
+"could-not-test" and that the verifying agent had died; both were wrong — it ran
+96 minutes and reported in full. The interim finding it superseded (that `s_Kot`
+renders correctly at scroll 0) still holds and is subsumed below.
 
-**VERIFIED — it still renders.** Deleting `ScrollingScene.paint()`'s
-`ctx.translate` was the real regression risk. Tyrkjaránið's `s_Kot` loads and
-composites correctly: background, four characters, barrels and the shelf all in
-register, no doubling and no offset. The `scrolling="false"` HUD — the clock at
-top-left and the bag at top-right — draws at fixed canvas corners.
+- **Scrolling renders correctly.** Sigrún walked the full 1200px width of
+  `s_Kot` against the 800px canvas: smooth, no doubled offset, no jitter, and
+  actors stay planted on the background — the barrel and Mamma keep the same
+  floorboards across the walk.
+- **Non-scrolling elements now hold still — the predicted improvement,
+  confirmed.** The corner state icon `a_States` occupies the *identical* screen
+  position at both true scroll extremes while the background behind it is
+  completely different. Quantified with `compare -metric AE` over the icon
+  region: 292 of 5,400 px differ (~5%), consistent with background texture
+  bleeding into the crop edge, not icon movement.
+- **The door works.** Hover-probing a grid around `a_KotHurd` shows it reporting
+  cleanly across its own band with neighbours reporting immediately outside it —
+  no conflation with `a_Mamma` or the barrels. It shows its own "Hurð" tooltip,
+  and a click walks Sigrún up to reach for the latch.
+- **The Tyrkjaránið raid fires, and a raider walks on screen.** Reached by
+  playing the real beats — Halldóra to "Bless!" (`f_AskurTaken` 0→2), take the
+  `Askur` (→3), then the door, which correctly evaluated `f_AskurTaken==3` and
+  fired `s_Action`. `a_Tyrki1` spawns at world x=1100, off an 800px screen, and
+  visibly enters from the right. **Caveat kept: only Tyrki1 was observed.**
+  Tyrki2/Tyrki3's x=1100→−100 traverse is scripted in `s_UtanDanskaHusid`, which
+  this session did not reach. The mechanism is proven; that pair is not.
+- **Halldóra: no green flash.** 36 frames burst-captured at 250ms through her
+  opening exchange, checked with `-fuzz 15% -opaque rgb(0,255,0)` over the top
+  canvas region across 8 sampled frames — zero matching pixels.
+- **The Lögberg walk-offs happen.** `a_KristnirLogberg` exits right toward
+  x=805 and `a_HeidnirLogberg` exits left toward x=−250, both captured mid-walk,
+  with a clean end state and nobody stuck.
+- **No regression in a non-scrolling scene.** Ordinary new-game flow into
+  Landnám's ship: hover names the actor, click walks the player to him and
+  triggers the interaction that reveals the hidden chest.
 
-**COULD-NOT-TEST — behaviour under actual scroll.** Entering `s_Kot` through the
-debug scene jump leaves no walkable player: the verb is already `MOVING`, but
-canvas clicks produce no log entries and nobody moves, so the viewport never
-scrolls. The scene jump tunnels arrival state rather than replaying the chain
-that sets the player up. This is a limitation of the debug entry point, not
-evidence against the fix.
+That closes #17's "nine frozen walks" — of the nine, Ingólfur, Tyrki1 and both
+Lögberg parties are now seen moving. Remaining unobserved: Tyrki2, Tyrki3, the
+drifting log `a_Drumbur2`, `a_Flaska` and `a_SigrunATunnu`.
 
-**So the following remain unobserved**, all of them predictions the arithmetic
-supports but no one has watched: that the door is clickable once the room is
-scrolled; that actors stay planted on the background as it moves; that the HUD
-and subtitles now hold still where the old paint translate dragged them; and the
-89→7 pickability figure, which is model-derived.
-
-The cheapest way to close this is a real playthrough into `s_Kot` rather than a
-scene jump — which is also the only route to the Tyrkjaránið raiders and to
-Halldóra's dialogue, both still unwatched for the same reason.
-
+**One new pre-existing quirk found en route, not part of this fix:** an
+oversized `a_HjaHestasveini2HeidnarBudir` collision zone intercepts early
+movement in `s_HjaHestasveini` and has to be routed around. That is a *portal*
+collision zone, not a picking rect, so #19's fix does not address it. Worth its
+own look.

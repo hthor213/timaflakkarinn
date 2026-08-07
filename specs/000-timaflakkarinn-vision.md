@@ -136,10 +136,17 @@ remaster tractable:
   'Denni' (he was our chairman), the character stays the same, just wears
   different clothes and is called different names."* Confirmed in the art:
   `VIFILL`, `HJALTI` and `SIGRUN` share one face, build and hair colour and
-  differ only in costume. (`GISSUR` is a bishop in mitre and vestments —
-  unresolved at 75px whether that is Denni dressed for the Reformation or a
-  distinct character.) Denni is the boy from the intro storybook, modelled on
-  Dímon's chairman, and the time-travel premise is why he wears four names.
+  differ only in costume. **`GISSUR` is Denni too** — the bishop's mitre and
+  vestments make the sprite look like a different person at 75px, but the owner
+  confirmed it: *"always denni"*. The rule is simply **the character that walks
+  when Moving is selected is always the protagonist.**
+
+  Denni is the boy from the intro storybook, modelled on Dímon's chairman. The
+  film opens with *"Einu sinni var strákur sem hét Denni"*; he puts on a necklace
+  and travels back, then forward, then forward, until he gets home. The four
+  names are the four eras he lands in. The necklace is the **Þórshamar** — the
+  object the Völva trades the cross for in Kristnitaka, and the one the whole
+  story turns on.
 
   So the protagonist is **one rig with costume variants**, not four rigs — a 4×
   reduction on the highest-value work in the project, and it restores the

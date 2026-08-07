@@ -110,11 +110,16 @@ deck with the two walk quanta 4.5s apart where they used to be simultaneous.
 Also bold-on-hover tracking each line's own width, no green flash for Karli, and
 the cursor under the pointer.
 
-**Not browser-verified, and listed as such:** the Tyrkjaránið raiders, the
-Lögberg walk-offs, the drifting log/bottle/barrel, and the picking fix under
-actual scroll. All blocked by trigger-reachability — the debug scene jump
-tunnels arrival state instead of replaying the chain that sets up a walkable
-player. A real playthrough into `s_Kot` closes all of them at once.
+**Everything above is browser-verified by real gameplay** (334 screenshots),
+including the ones an earlier note wrongly listed as untestable: the Tyrkjaránið
+raid firing from its real story beats with `a_Tyrki1` entering from off-screen,
+both Lögberg parties walking off, Halldóra with no green flash, the `s_Kot` door
+clickable, scrolling rendering cleanly across the full 1200px room, and the
+non-scrolling HUD holding its exact screen position at both scroll extremes.
+
+**Still unobserved:** `a_Tyrki2`/`a_Tyrki3` (their traverse is in
+`s_UtanDanskaHusid`, not reached), and the drifting log, bottle and barrel. Four
+of #17's nine frozen walks are now seen moving.
 
 **Tooling:** `tools/deploy.sh` landed complete, and a SIGPIPE race in its verify
 stage is fixed — it passed twice then failed three times running, which is the

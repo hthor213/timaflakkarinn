@@ -50,9 +50,18 @@ function ingolfshofdi() {
   return t;
 }
 
-/** Walk an actor to a destination, pulsing until it stops. */
+/**
+ * Walk an actor to a destination, pulsing until it stops.
+ *
+ * The actor is given Vífill's real collision box (`vifill_cb` x="100" y="15"
+ * z="292"), because only a state that has one is position-validated at all —
+ * see MovingActor.updateLocation. Without it these cases would pass vacuously,
+ * the walker striding through the ledge wall instead of detouring around it.
+ */
 function walk(terrain, from, dest, maxTicks = 20000) {
   const a = new MovingActor('vifill');
+  a.addState('stop', null, null, 100, 15, 292);
+  a.setState('stop');
   a.scalingType = DYNAMIC_SCALING;
   a.currentTerrain = terrain;
   terrain.addActor(a);

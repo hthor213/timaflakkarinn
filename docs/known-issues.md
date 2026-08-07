@@ -398,6 +398,13 @@ panel. Boxes should now sit tight around the glyphs instead of drifting.
 **Reported by:** Hjalti, 2026-08-07 — the öndvegissúla is thrown overboard after
 Ingólfur speaks, but "there was animation where it falls over."
 
+> **This entry did not fully explain the report it is named after.** The
+> last-frame fix below is real and its tests are intact, but it was not what
+> Hjalti was seeing. The öndvegissúlur throw was invisible for a different and
+> upstream reason — Ingólfur never walked onto the deck at all. See **#17**. Two
+> genuine bugs happened to share one symptom, and fixing the first made the
+> entry look closed.
+
 **Cause.** `AnimatedActorFace.advanceFrame()` wrapped to frame 0 at the end of
 the final repetition and froze there. The 1999 engine instead detects the last
 frame of the last repetition and, on the next pulse, fires the finished event
@@ -782,3 +789,67 @@ it looks.
 
 Cheap check: in `s_Skipingolfs`, hover the coiled rope on the deck. If nothing
 highlights there but something does ~90 px below, this is real.
+
+---
+
+## 17 — `port-bug` · FIXED · Actors with no collision box could not move at all
+
+**Found by:** the investigation into #7, 2026-08-07. Not separately reported —
+the owner saw only the missing öndvegissúlur animation.
+
+**Cause.** Java validates a move *only when the current state declares a
+collision box* (`src/dimon/agt/Actor.java:90`):
+
+```java
+if (this.currentTerrain != null && this.currentCollisionBox != null
+    && !this.currentCollisionBox.validLocation(f, f2, f3)) { throw new InvalidPositionException(); }
+```
+
+The port tested `terrain.contains()` unconditionally. `ingolfur2` declares five
+states, **none with a `collisionbox`**, and sits at z=327 against
+`t_Skipingolfs` (`zmin="-7" zmax="0"`) — so every step was rejected. Reproduced
+headlessly against the real engine classes: both `wait="true"` walks reported
+*reached* instantly at the unchanged start position, screen y=860 on a 600px
+canvas. Nothing hung and nothing logged. He spoke off-screen, pushed off-screen,
+and the pillar simply vanished.
+
+The animation itself was never the problem: `ingolfur_push` is a 10-frame,
+225 ms one-shot (`landnam.gml:1822`), its frames exist as
+`GAME/LANDNAM/ANIMATIA/INGOLFUR/PUSH.PNG` (510×4860 = 10 cells), and composited
+at the engine's computed coordinates it lands on the deck to the pixel — frame
+height 486 at draw-y 113 ends at 599 against a 600px canvas. Nothing was cut in
+1998, and no GML edit was needed.
+
+**Boxless is a 1998 convention, not an oversight.** It is exactly what the
+content uses for actors that enter or leave frame, whose destinations are
+outside the walkable polygon *by design*. Nine such walks across three chapters
+were frozen:
+
+| Chapter | Actor | Intended movement |
+|---|---|---|
+| Landnám | `ingolfur2` | comes up on deck, throws the pillars |
+| Landnám | `a_Drumbur2` | log drifting to (82,900) |
+| Kristnitaka | `a_HeidnirLogberg`, `a_KristnirLogberg` | the two parties leaving Lögberg |
+| Tyrkjaránið | `a_Tyrki1/2/3` | raiders entering from x=1100, leaving to x=-100 |
+| Tyrkjaránið | `a_Flaska`, `a_SigrunATunnu` | bottle drifting; Sigrún on the barrel |
+
+**Verification status is uneven and worth knowing.** `ingolfur2` was verified
+end to end. The other eight were verified *arithmetically only* — each was
+blocked before the fix and is unblocked now — but **nobody has watched them in a
+browser**. The Tyrkjaránið raiders entering frame is the one to look at first.
+
+Covered by `webapp/test/collisionbox.test.mjs` (4 cases), which reads PUSH.PNG's
+IHDR from the master so it breaks if the asset changes. Confirmed to fail on the
+pre-fix code.
+
+**A test was passing vacuously.** `walker.test.mjs` built its `MovingActor` with
+no state at all, so after this change its five cases still passed — while the
+walker strode straight through the ledge wall. The fixture now carries Vífill's
+real `vifill_cb` (100×15×292), which is what the test always claimed to model.
+Without that, the #10 regression coverage was silently dead.
+
+**Left unfixed, deliberately.** Java's z-test is strict (`z > zMin && z < zMax`);
+the port uses `>=`/`<=`. It only ever makes the port *more* permissive, and the
+collision-box gate makes it moot for boxless actors. Tightening it could newly
+block a boxed actor resting exactly on a boundary, which is a worse trade than
+the divergence.

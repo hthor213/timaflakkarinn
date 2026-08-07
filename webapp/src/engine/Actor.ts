@@ -15,6 +15,14 @@ export interface ActorState {
   collisionWidth: number;
   collisionHeight: number;
   collisionDepth: number;
+  /**
+   * Whether the content authored a `collisionbox=` on this state. Load-bearing:
+   * see `MovingActor.updateLocation`. All 82 `Pseudo3DCollisionBox` elements in
+   * the five chapters declare non-zero x/y/z, and every `collisionbox=`
+   * reference resolves, so "all three dimensions are 0" is an exact test for
+   * "no box was authored".
+   */
+  hasCollisionBox: boolean;
 }
 
 export class Actor {
@@ -34,6 +42,8 @@ export class Actor {
   collisionWidth = 0;
   collisionHeight = 0;
   collisionDepth = 0;
+  /** Whether the *current* state has an authored collision box. */
+  hasCollisionBox = false;
 
   // Collision listeners: called with (thisActor, otherActor)
   collisionListeners: ((self: Actor, other: Actor) => void)[] = [];
@@ -56,6 +66,7 @@ export class Actor {
     this.states.set(name, {
       face, mouth,
       collisionWidth: colW, collisionHeight: colH, collisionDepth: colD,
+      hasCollisionBox: colW !== 0 || colH !== 0 || colD !== 0,
     });
   }
 
@@ -85,6 +96,7 @@ export class Actor {
     this.collisionWidth = state.collisionWidth;
     this.collisionHeight = state.collisionHeight;
     this.collisionDepth = state.collisionDepth;
+    this.hasCollisionBox = state.hasCollisionBox;
 
     // Add new face to scene
     if (newFace) {
@@ -381,6 +393,24 @@ export class MovingActor extends Actor implements Pulsable {
    * Java MovingActor.updateLocation(). On a blocked step, enter detour mode:
    * remember the real target and walk one axis at a time toward it, giving up
    * (and reporting arrival) once both axes are blocked.
+   *
+   * **A state with no collision box is never position-validated.** Java gates
+   * the whole check on it (`Actor.setLocation`):
+   *
+   * ```java
+   * if (currentTerrain != null && currentCollisionBox != null
+   *     && !currentCollisionBox.validLocation(f, f2, f3)) throw ...
+   * ```
+   *
+   * The port tested `terrain.contains()` unconditionally, which froze every
+   * boxless scripted walk in the game — nine actors across three chapters,
+   * all of them written to enter or leave the frame: Ingólfur coming up on
+   * deck to throw the öndvegissúlur overboard (`ingolfur2`, z=327 against a
+   * terrain of zmin=-7/zmax=0, so *every* step was rejected), the heathen and
+   * Christian parties walking away from Lögberg to x=-250 and x=805, the
+   * Turkish raiders, the drifting bottle, the floating log. Each reported its
+   * destination as "reached" the instant it was told to move, so a
+   * `wait="true"` sequence ran on and the actor simply never appeared.
    */
   private updateLocation(step: number): void {
     if (this.course === 10.0 || !this.destination) return;
@@ -389,7 +419,8 @@ export class MovingActor extends Actor implements Pulsable {
     const newX = this.location.x + Math.cos(this.course) * step;
     const newY = this.location.y - Math.sin(this.course) * step;
 
-    if (!terrain || terrain.contains({ x: newX, y: newY, z: this.location.z })) {
+    if (!terrain || !this.hasCollisionBox ||
+        terrain.contains({ x: newX, y: newY, z: this.location.z })) {
       this.setLocation(newX, newY, this.location.z);
       this.checkCollisions();
       this.switchFace();

@@ -13,16 +13,13 @@ import { serialize as serializeSave, restore as restoreSave } from './SaveSerial
 import type { SaveData } from './SaveStore';
 import { prewarmChapter } from './AssetPrewarm';
 
-/** Game chapter constants */
-export const INTRO = 0;
-export const MAIN_MENU = 1;
-export const LANDNAM = 2;
-export const KRISTNITAKA = 3;
-export const SIDASKIPTI = 4;
-export const TYRKJARAN = 5;
-export const EXTRO = 6;
+import {
+  INTRO, MAIN_MENU, LANDNAM, KRISTNITAKA, SIDASKIPTI, TYRKJARAN, EXTRO,
+  CHAPTER_NAMES,
+} from './chapters';
 
-const CHAPTER_NAMES = ['intro', 'intro', 'landnam', 'kristnit', 'sidaskip', 'tyrkran', 'extro'];
+// Re-exported so existing importers of this module keep working.
+export { INTRO, MAIN_MENU, LANDNAM, KRISTNITAKA, SIDASKIPTI, TYRKJARAN, EXTRO };
 
 export class Timaflakkarinn {
   world: World;
@@ -59,7 +56,9 @@ export class Timaflakkarinn {
   constructor(
     canvas: HTMLCanvasElement,
     private resourcePath: string,
-    private gmlPath: string
+    private gmlPath: string,
+    /** Debug panel, sequence list and log. Off in the play deployment. */
+    private debug: boolean = false
   ) {
     this.world = new World(canvas);
     this.loader = new AssetLoader(resourcePath);
@@ -136,10 +135,15 @@ export class Timaflakkarinn {
       }
     };
 
-    this.createDebugPanel();
+    if (this.debug) this.createDebugPanel();
   }
 
-  async start(): Promise<void> {
+  /**
+   * @param entryChapter  Boot straight into this chapter, skipping the intro
+   *   and main menu. Used by URL routing (/chapter2 etc). Omit for the normal
+   *   intro -> menu -> Landnám flow.
+   */
+  async start(entryChapter?: number): Promise<void> {
     this.running = true;
     this.world.start();
 
@@ -161,6 +165,15 @@ export class Timaflakkarinn {
       this.hiliteCursor.prepare(this.loader),
       this.saveScene.prepare(this.loader),
     ]);
+
+    // Deep link: boot directly into a chapter, bypassing intro and menu.
+    // Safe as an *entry* point because only this chapter gets parsed. Jumping
+    // between chapters in one session is a separate matter — see the container
+    // scoping note in specs/001.
+    if (entryChapter !== undefined && entryChapter !== INTRO) {
+      await this.startChapter(entryChapter);
+      return;
+    }
 
     // Parse and play intro (with skip button)
     const skipBtn = document.createElement('button');

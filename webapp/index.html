@@ -11,15 +11,33 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      /* Leave room for debug: 280px right panel, 180px bottom log */
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* Debug deployment (tt-dev.*) reserves room for the 280px side panel and
+       180px log strip. Play deployment gets the whole viewport. main.ts stamps
+       data-mode on <html>. */
+    html[data-mode="debug"] body {
       width: calc(100vw - 280px);
       height: calc(100vh - 180px);
-      overflow: hidden;
     }
     #game-container {
       position: relative;
       width: 800px;
       height: 600px;
+    }
+    /* Play: scale to fit the viewport, preserving the 4:3 frame. The canvas
+       backing store stays 800x600, so every game coordinate is unchanged, and
+       World.handleMouseMove already maps pointer position through
+       getBoundingClientRect() — so scaling is safe for input. */
+    html[data-mode="play"] #game-container {
+      width: min(100vw, calc(100vh * 4 / 3));
+      height: min(100vh, calc(100vw * 3 / 4));
+    }
+    html[data-mode="play"] #game-canvas {
+      width: 100%;
+      height: 100%;
     }
     #game-canvas {
       display: block;

@@ -1249,3 +1249,57 @@ nothing has been changed or rotated.
 token back in the error string, so any log or CI transcript capturing that
 response leaks the credential verbatim. The token in question is already dead.
 
+---
+
+## 21 — `provenance` · The disc is the 1999 build, and there were two engines
+
+**Established 2026-08-07** by mounting `FLAKKARI.ISO` — which we have had all
+along, and whose `MAC/`, `WIN/` and `DIRECTX/` directories nobody had opened.
+`web_import/` is a capture of the deployed website, not an ISO extraction, so it
+contains only `GAME/` and `INTRO.AVI`.
+
+**The disc is the November 1999 build, not the 1998 original.** Everything is
+stamped Nov 16–18 1999; only `INTRO.AVI` keeps its **Dec 5 1998** date, because
+the video was rendered once and carried forward.
+
+| path | bytes | dated |
+|---|---|---|
+| `INTRO.AVI` | 14,197,248 | 1998-12-05 |
+| `WIN/SETJAUPP.EXE` | 3,887,070 | 1999-11-18 |
+| `WIN/LESTUMIG.TXT` | 4,163 | 1999-11-16 |
+| `MAC/SETJAUPP.BIN` | 9,608,450 | 1999-11-17 |
+| `MAC/LESTUMIG.TXT` | 4,357 | 1999-11-17 |
+| `DIRECTX/DX6CORE.EXE` | 1,598,704 | 1998-11-12 |
+
+**There were two engines, and we reverse-engineered the Mac one.** The Mac
+readme requires **Macintosh Runtime for Java 2.1.4** — so the `is.dimon` classes
+are the *Mac* build. The Windows build was a separate native implementation
+requiring **DirectX 6.0**. Wherever this repo says "the 1999 engine did X", it
+means the Mac Java build; the Windows build may well have differed, and no claim
+here has been checked against it.
+
+**A 1999 FAQ entry that explains issue #4.** The *Windows* readme — and only the
+Windows one — carries this:
+
+> *Myndin er skrýtin, það kemur alltaf grænn kassi í kringum alla hluti sem
+> hreyfast...* — "the picture is strange, there's always a green box around
+> everything that moves"
+
+with the answer being outdated display drivers. Windows keyed the chroma in
+**hardware** via DirectDraw, so on a card with bad drivers the key failed and
+players saw green rectangles. That is why stray near-green pixels were never
+cleaned out of the artwork: on correct hardware they disappeared, and the art
+never had to be exact. Issue #4's classification as `1998-bug` stands, with a
+mechanism behind it now.
+
+**Still unaccounted for: the original 1998 pressing.** The game shipped November
+1998 and this disc is a year later. Whether the 1998 release differs — content,
+voice lines, engine — is unknown, and no copy of it is in hand. Hjalti's OneDrive
+copy, made 2014-09-02, matches this disc item-for-item, so it is a second witness
+to the 1999 build rather than a new artefact. Valuable as independent
+provenance; not a different version.
+
+**`MAC/SETJAUPP.BIN` (9.6 MB) is unexamined** and is the most likely origin of
+the decompiled Java. Worth opening if any question about original engine
+behaviour becomes load-bearing.
+

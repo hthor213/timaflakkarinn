@@ -160,10 +160,14 @@ Recommended camera budget: **±10cm lateral**, 16px differential parallax.
   carries LFS *pointers*, not blobs, so **no commit touching an LFS-tracked file
   can ship at all** until this is renewed. That becomes hard-blocking the moment
   the art pipeline emits its first derived background.
-- **Ask Halldór for**: the five hardcoded PNGs, the CD ISO, and — new and
-  possibly worth more than the ISO — **the original Photoshop PSDs**, whose
-  layers may already encode the depth separation D2 is trying to reconstruct.
-- **Confirm with Halldór** the two content defects before anyone edits GML:
+- **Do NOT ask Halldór for original assets.** He was never on the team — he is
+  an enthusiastic customer who had the retail ISO and nothing else, and built
+  the TypeScript port from it. Questions about 1998 intent, the PSDs, the
+  dangling GML names and the missing hardcoded PNGs go to Hjalti and the
+  original team, not to him.
+- **The PSDs remain the highest-value unknown** — layers may already encode the
+  depth separation D2 is reconstructing, possibly above 800x600.
+- **Confirm with the original team (not Halldór)** the two content defects before anyone edits GML:
   the `q_Ahvarerhjorleifur` typo in `s_bless1` and the cut-scene reference
   `q_ToFjolin`.
 - **Repo shape**: `feat/unify` needs a decision — does it become the trunk?

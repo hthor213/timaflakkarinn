@@ -507,3 +507,47 @@ original intent. The edit was made byte-wise: a first attempt through Python's
 text mode silently converted CRLF to LF across four files and was reverted.
 Any future content edit must read and write bytes — the files are ISO-8859-1 with
 CRLF and both are load-bearing.
+
+---
+
+## 12 — `1998-bug` · Moonwalking: feet move faster than the character does
+
+**Reported by:** Hjalti, 2026-08-07 — "this annoyed the 'crap' out of us... it
+looks like the main character is moonwalking, his feet move faster than his speed
+across the screen." Known and disliked at the time, so `1998-bug` by the
+definition above. **Not being worked on — logged only.**
+
+**Mechanism.** A cel walk cycle has an implied *stride*: the ground distance the
+character should cover in one loop, baked into the art by where the feet plant.
+Read it right and the contact foot appears stationary against the ground. The
+walk reads correctly only when
+
+```
+translation speed  ==  stride per cycle  ×  cycles per second
+```
+
+Nothing in the engine enforces that. Animation rate is authored on the face
+(`CelledAnimated2DActorFace speed=`, ms per frame, with `count=` frames) and
+movement speed is authored separately on the actor and on
+`SetDestinationQuantum speed=`. The two were tuned by eye and never tied
+together, so any mismatch shows as skating (too fast) or moonwalking (too slow).
+Example: `karli_left` is 8 frames at 60 ms — a 480 ms cycle — and its translation
+speed is set nowhere near it by construction.
+
+**The port very likely makes it worse.** `MovingActor.updateMovement` multiplies
+speed by `terrain.getScaling(location)` for dynamic-scaling actors — about **0.63
+in Ingólfshöfði**, so roughly 35% slower than authored. The 1999 Java declares
+`speedScalingFactor` and **never assigns it anywhere**; it is always 1.0. So the
+port invented a speed reduction while leaving the animation rate untouched, which
+is precisely the moonwalk failure mode, amplified.
+
+**Consequence for the pending decision.** "Should we remove the port's invented
+35% speed scaling?" was filed as a fidelity question needing a deliberate call
+because it re-times every scripted walk. It is now also **a candidate fix for
+this entry** — worth measuring before treating the two separately.
+
+**Proper fix, for the remaster.** Derive translation speed from the animation
+rather than authoring both independently: measure each cycle's stride once, then
+drive speed from it — or drive the animation rate from the actual speed, which is
+also what makes D1's speed-dependent gait possible. Either way the two stop being
+free to disagree.

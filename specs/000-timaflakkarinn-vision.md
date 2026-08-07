@@ -53,14 +53,32 @@ original **PSDs** survive they are worth pursuing alongside the ISO: layered
 files may already encode the foreground/background separation this decision is
 otherwise reconstructing, possibly above 800×600.)
 
-Vector is rejected on cost and necessity rather than fidelity. Fidelity is not
-the deciding argument, because every derived version goes to Erna for approval
-and an approved image is an approved image regardless of how it was produced.
-The deciding argument is that **D3's constrained camera caps the zoom** — it
-never gets arbitrarily close, so resolution independence beyond ~4K has no
-consumer. Super-resolution is one automated pass; vectorizing painterly raster
-art is closer to regeneration. Both require the same review. Vector buys
-headroom the camera cannot spend.
+**Vector is the chosen direction — owner decision, 2026-08-07.** An earlier
+revision of this document rejected it on cost and necessity. That is overruled,
+on two grounds the owner stated:
+
+1. **These are not physical paintings.** They were made in Photoshop in 1998, so
+   there is no original artefact whose materiality is being lost. The
+   "preserve the brushwork" framing was romanticism about a raster file.
+2. **Erna signs off.** An approved image is approved regardless of how it was
+   produced, which removes fidelity as the deciding argument.
+
+So the plan is **vectorized backgrounds with rich textures, and 3D geometry where
+it helps** — true resolution independence rather than a 4× ceiling, which also
+ages better against the App Store and Google Play targets and whatever displays
+those imply.
+
+**The counter-argument is recorded, not suppressed**, because it may still cost
+something: these are soft-shaded painterly images, which is the adversarial case
+for tracing — unlike the character cels, which are flat with hard ink outlines.
+Vectorizing them is closer to reinterpretation than enlargement, and the result
+may look *different* rather than merely sharper. That is a question about the
+output, not about principle, and it is cheap to settle: **vectorize one
+background, place it beside the super-resolved version of the same frame, and let
+Hjalti and Erna look at both.** Until that comparison exists, this decision is
+made on reasoning rather than evidence.
+
+**Erna's sign-off is a deploy gate.** No derived background ships without it.
 
 **Depth.** Fixed by **coarse 3D proxy geometry per scene** — a ground plane, a few
 vertical planes, the occasional box — with the super-resolved painting projected

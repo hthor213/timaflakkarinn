@@ -63,6 +63,13 @@ four-chapter adventure this matters.
 Referenced by the content, absent from both the repo and the deployment. They
 must come from the CD-ROM ISO or from Halldór.
 
+**Update 2026-08-07:** the ISO has been located — see
+[ownership-and-provenance.md](ownership-and-provenance.md), "The original ISO".
+It was a Forgejo release attachment, uploaded 2026-08-03, unnoticed for four days.
+Note the disc carries **668 WAVs, the same count as the mirror**, so if the three
+absent voice lines are not on it either they were never shipped — a 1998
+authoring defect, not an archival loss. Untested until the diff is run.
+
 | Asset | Used by | Live? |
 |---|---|---|
 | `LANDNAM/MEDIA/VIFILL/GODRADDA.WAV` | `m_godraddyr` (Vífill) | yes |

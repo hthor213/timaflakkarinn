@@ -86,6 +86,10 @@ both the initial request and the retry, every case and extension variant was pro
 returned the fallback, and sibling files in the same directories downloaded normally. They must
 be recovered from the CD ISO or from Halldór.
 
+**2026-08-07:** the ISO is in hand (sha256 66d63615…, 1999 v1.1 disc, 1 229
+files). It holds 554 PNGs against this mirror's 545. See
+`docs/ownership-and-provenance.md` — authenticity is not yet corroborated.
+
 ## Reproducing / verifying
 
 `SHA256SUMS` in this directory covers every mirrored file. Verify with:

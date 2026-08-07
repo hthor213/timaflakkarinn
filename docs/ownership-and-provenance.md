@@ -62,16 +62,58 @@ disc already carried, the media and the GML.
 
 GML is an XML format the original team developed to describe the gameplay.
 
-Which disc the recreation derives from is not yet established; the 1999 v1.1 is
-the likely basis, and the ISO will confirm it.
+~~Which disc the recreation derives from is not yet established.~~ **Settled
+2026-08-07**: the ISO's volume was built 1999-11-18, confirming the **1999 v1.1**
+disc as the basis. See "The original ISO" below.
 
 For Phase 1, pushes to canonical branches and deployment are handled by Hjalti.
 
-## The original ISO
+## The original ISO — located 2026-08-07
 
-An ISO of the original CD-ROM is **a copy of the original work**, and belongs
-with the project as primary-source material — on the same footing as the assets
-already in `web_import/`. Record it in `web_import/PROVENANCE.md` when it lands.
+**It exists.** Halldór uploaded it to Forgejo as a release attachment on tag
+`0.0.1-alpha` on 2026-08-03 and nobody noticed for four days — release
+attachments live outside git, so every search of the repository tree missed it,
+and its download count was zero.
+
+```
+FLAKKARI.ISO   236,644,352 bytes (225.7 MiB)
+sha256         66d63615b9ba53e6e950d9275933a232e5f9980bb0e7a736b19671537cce14db
+type           ISO 9660 (DOS/MBR boot sector), volume label 'FLAKKARI'
+built          1999-11-18 09:19:20 by MKHYBRID ISO9660/HFS FILESYSTEM BUILDER
+contents       1,229 files — 668 WAV, 554 PNG, 2 EXE, 2 TXT, 2 BIN, 1 AVI
+```
+
+**This settles which disc the recreation derives from.** The 1999-11-18 build
+date makes it the **v1.1 1999 release**, which this document previously listed
+as an open question.
+
+It also holds more than `web_import/` does: **554 PNGs against the mirror's
+545.** The mirror was derived from GML references plus two lucky recoveries, so
+it was always a subset of the disc, never a copy of it.
+
+### Authenticity is NOT established
+
+Halldór's release note, verbatim:
+
+> FLAKKARI.ISO was lifted from Reddit thread somewhere, use at your own risk.
+
+So this is a **third-party rip of unverified origin** — not a rip made by a known
+holder of the disc. There is no provenance chain back to a physical 1999
+pressing. The sha256 above fixes exactly what we received; it says nothing about
+whether what we received is authentic. Treat it as an **unverified primary-source
+candidate**, not a confirmed master.
+
+It can be corroborated, and should be: `web_import/` was sourced independently
+of Reddit. If those 1,211 files match the ISO byte for byte, an independent
+source vouches for the rip. Until that diff is run, this stays unverified.
+
+### Copies
+
+Four failure domains as of 2026-08-07: the Forgejo attachment and
+`/srv/timaflakkarinn/archive/` on the homeserver (same volume, so one domain),
+Hjalti's laptop, Google Drive, and OneDrive. A full manifest with the provenance
+caveat sits beside the homeserver copy; this section is the replicated record of
+it, because sidecar files do not survive being copied to a cloud drive.
 
 It is also the best available source for what the web mirror is missing: see
 `docs/project-state.md` for the three absent voice lines. Worth asking which

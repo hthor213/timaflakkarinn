@@ -2,10 +2,14 @@ import { World } from '../engine/World';
 import { Scene } from '../engine/Scene';
 import { AssetLoader } from '../engine/AssetLoader';
 import { GMLParser } from '../engine/GMLParser';
-import type { SequenceContext } from '../engine/Sequence';
+import type { SequenceContext, Quantum } from '../engine/Sequence';
 import { Sequence, ConditionFlag } from '../engine/Sequence';
+import {
+  MoveActorQuantum, MoveTerrainQuantum, SetDestinationQuantum,
+  SetFlagQuantum, SwitchSceneQuantum,
+} from '../engine/Quantums';
 import { CursorFace } from '../engine/ActorFace';
-import { StateController } from './StateController';
+import { StateController, MOVING } from './StateController';
 import { stopAllAudio } from '../engine/ActorMouth';
 import { getLogEntries, onLogUpdate, formatTime, gameLog } from '../engine/GameLog';
 import { SaveScene, type MenuResult } from './SaveScene';
@@ -25,11 +29,115 @@ const BACKSTORY_SRC = '/video/INTRO.mp4';
 // Re-exported so existing importers of this module keep working.
 export { INTRO, MAIN_MENU, LANDNAM, KRISTNITAKA, SIDASKIPTI, TYRKJARAN, EXTRO };
 
+// === Debug scene jumping ===
+//
+// The flow tree's scene buttons used to run s_always + s_prepare and switch the
+// world to the scene. Both prepare sequences only load and prepare *faces*
+// (they are PrepareQuantums throughout), so the jump raised the background and
+// nothing else: the moving cast — vifill, karli, the NPCs — stayed attached to
+// whatever terrain they were last on, which after a jump out of another chapter
+// is no terrain in this scene at all.
+//
+// In play, arrival is never bare. Every scene is entered by a sequence that
+// also runs MoveActorQuantums (attach the cast to this scene's terrains),
+// MoveTerrainQuantums (bring conversation terrains along), a SetFlagQuantum for
+// f_CurrentScene, and SetDestinationQuantums that walk everyone to their marks
+// — see s_Ingolfshofdi2Hjorleifshofdi in landnam.gml.
+//
+// So rather than hand-author a jump, the debug jump replays the game's own
+// arrival sequence, keeping the quantums that *establish* state and dropping
+// the ones that *perform* it (speech, fades, waits, music, scene switches).
+// Dev mode therefore lands in a state the engine itself can produce.
+
+/**
+ * Quantums the debug jump replays. Deliberately narrow: these four are the
+ * whole of "where things are" — terrain attachment, terrain-to-scene moves,
+ * flags, and final standing positions. Everything else in an arrival sequence
+ * is theatre and is skipped.
+ */
+const STATE_QUANTA = [
+  MoveActorQuantum,
+  MoveTerrainQuantum,
+  SetFlagQuantum,
+  SetDestinationQuantum,
+] as const;
+
+/** True if this quantum establishes state rather than performing it. */
+export function isStateQuantum(q: unknown): boolean {
+  return STATE_QUANTA.some(C => q instanceof C);
+}
+
+/** The state-establishing quantums of a sequence, in authored order. */
+export function stateQuanta(seq: Sequence): Quantum[] {
+  return seq.quanta.filter(isStateQuantum);
+}
+
+/**
+ * How well a sequence works as an arrival path into `scene`.
+ *
+ * `moveInto` — actors this sequence attaches to a terrain of the target scene.
+ *   The load-bearing term: a sequence that switches to the scene but populates
+ *   nothing (a prepare sequence, a `s_To<Scene>44` fade) scores zero here.
+ * `travel` — the chapter's own naming for a walk between two scenes,
+ *   `s_<From>2<To>` (sometimes with a trailing variant digit). When one exists
+ *   it is always the cleanest arrival, so it outranks a fatter cutscene.
+ * `kept` — total state quantums, as a last tie-break.
+ */
+export function arrivalScore(seq: Sequence, scene: Scene): {
+  travel: boolean; moveInto: number; kept: number;
+} {
+  const suffix = scene.name.replace(/^s_/, '');
+  const moveInto = seq.quanta.filter(
+    q => q instanceof MoveActorQuantum && q.terrain?.scene === scene
+  ).length;
+  return {
+    travel: new RegExp(`2${suffix}\\d*$`).test(seq.name) && moveInto > 0,
+    moveInto,
+    kept: stateQuanta(seq).length,
+  };
+}
+
+/**
+ * Pick the sequence the game itself uses to arrive in `scene`: any sequence
+ * that switches the world to it, best-scoring first. Returns null when the
+ * chapter has none, which the caller must report rather than hide.
+ */
+export function findArrivalSequence(objects: Iterable<any>, scene: Scene): Sequence | null {
+  const ranked: { seq: Sequence; score: ReturnType<typeof arrivalScore> }[] = [];
+  for (const obj of objects) {
+    if (!(obj instanceof Sequence)) continue;
+    if (!obj.quanta.some(q => q instanceof SwitchSceneQuantum && q.scene === scene)) continue;
+    ranked.push({ seq: obj, score: arrivalScore(obj, scene) });
+  }
+  if (ranked.length === 0) return null;
+  // Stable sort keeps parse order as the final tie-break.
+  ranked.sort((a, b) =>
+    Number(b.score.travel) - Number(a.score.travel) ||
+    b.score.moveInto - a.score.moveInto ||
+    b.score.kept - a.score.kept
+  );
+  return ranked[0].seq;
+}
+
 export class Timaflakkarinn {
   world: World;
   loader: AssetLoader;
   parser: GMLParser;
   container = new Map<string, any>();
+
+  /**
+   * Per-chapter object maps, retained from parsing. `container` is the global
+   * union and keeps only the *last* definition of each shared name — 88 of the
+   * 143 names common to all four chapters differ, `s_begin`/`s_always`/
+   * `s_prepare` among them — so any lookup by name against it is wrong the
+   * moment a second chapter has been parsed. Quantums bind their operands at
+   * parse time and never consult a container at runtime, so scoping the
+   * remaining by-name lookups to the current chapter is enough to make chapter
+   * and scene jumping resolve the right objects. See specs/001.
+   */
+  private chapterObjects: (Map<string, any> | null)[] = new Array(7).fill(null);
+  /** The StateController each chapter declared; `sc` is redefined per chapter. */
+  private chapterControllers: (StateController | null)[] = new Array(7).fill(null);
 
   currentScreen = INTRO;
   private parsed = new Array(7).fill(false);
@@ -104,7 +212,7 @@ export class Timaflakkarinn {
         if (wait) {
           this.performSequence(name);
         } else {
-          const seq = this.container.get(name) as Sequence;
+          const seq = this.lookup<Sequence>(name);
           if (seq) seq.perform(this.getSequenceContext());
         }
       };
@@ -275,10 +383,15 @@ export class Timaflakkarinn {
     };
 
     this.parser.setContainer(gmlContainer);
+    this.chapterObjects[screen] = gmlContainer.objects;
     const name = CHAPTER_NAMES[screen];
 
     this.onLoadingProgress?.(`Þáttar ${name}...`, 5);
     await this.parser.parseGMLFile(name);
+
+    // <StateController name="sc"> is declared once per chapter; the parser
+    // callback overwrote this.stateController while parsing. Remember whose.
+    this.chapterControllers[screen] = this.stateController;
 
     // Forhleða allar PNG-myndir kaflans (audio er áfram lazy)
     await prewarmChapter(this.container, this.loader, (loaded, total) => {
@@ -315,8 +428,50 @@ export class Timaflakkarinn {
     };
   }
 
+  /**
+   * Resolve a GML name against the current chapter first, then the global
+   * union. Mirrors what the parser saw while building this chapter: its own
+   * objects, with cross-chapter names falling through.
+   */
+  private lookup<T = any>(name: string): T | undefined {
+    const scoped = this.chapterObjects[this.currentScreen]?.get(name);
+    return (scoped ?? this.container.get(name)) as T | undefined;
+  }
+
+  /** Objects declared by the chapter now current (global union if unparsed). */
+  private chapterValues(): Iterable<any> {
+    return (this.chapterObjects[this.currentScreen] ?? this.container).values();
+  }
+
+  /**
+   * Every parsed object across every chapter. `container` alone would miss the
+   * losers of a name collision, so a sequence still performing in a chapter we
+   * have left would never be stopped.
+   */
+  private *allNamedObjects(): Generator<[string, any]> {
+    const seen = new Set<any>();
+    for (const map of [this.container, ...this.chapterObjects]) {
+      if (!map) continue;
+      for (const [name, obj] of map) {
+        if (seen.has(obj)) continue;
+        seen.add(obj);
+        yield [name, obj];
+      }
+    }
+  }
+
+  /** Make `chapter` current, restoring the StateController it declared. */
+  private setCurrentChapter(chapter: number): void {
+    this.currentScreen = chapter;
+    const sc = this.chapterControllers[chapter];
+    if (sc && sc !== this.stateController) {
+      this.stateController = sc;
+      gameLog('GAME', `StateController → ${CHAPTER_NAMES[chapter]}`, this.world.pulser.elapsed);
+    }
+  }
+
   async performSequence(name: string): Promise<void> {
-    const seq = this.container.get(name) as Sequence;
+    const seq = this.lookup<Sequence>(name);
     if (!seq) {
       console.warn(`Sequence not found: ${name}`);
       return;
@@ -338,6 +493,9 @@ export class Timaflakkarinn {
 
     await this.parseStoryPage(chapter);
     if (this.chapterGeneration !== gen) return; // interrupted
+    // Re-apply now the chapter's own StateController is known: returning to an
+    // already-parsed chapter would otherwise keep the last-parsed chapter's.
+    this.setCurrentChapter(chapter);
     this.updateDebugPanel();
 
     // Run chapter sequences — s_always, s_prepare, s_begin
@@ -372,20 +530,26 @@ export class Timaflakkarinn {
     scene.cursorFace = cursor;
   }
 
-  /** Jump directly to a scene, running its prepare sequence (debug) */
+  /**
+   * Jump directly to a scene (debug). Prepares it, then replays the game's own
+   * arrival sequence for its state-establishing quantums so the scene is
+   * populated and walkable rather than an empty backdrop.
+   */
   async jumpToScene(sceneName: string): Promise<void> {
-    const scene = this.container.get(sceneName) as Scene | undefined;
+    const scene = this.lookup<Scene>(sceneName);
     if (!scene) {
       console.warn(`Scene not found: ${sceneName}`);
       return;
     }
     const gen = ++this.chapterGeneration;
+    const t = () => this.world.pulser.elapsed;
     this.stopAllSequences();
     stopAllAudio();
     this.world.pulser.clear();
     this.world.setCurrentScene(this.blackScene);
 
-    // Set f_CurrentScene flag to match target scene so q_CheckPrepare/q_CheckSong work
+    // Before s_prepare, not after: s_prepare's q_CheckPrepare branches on
+    // f_CurrentScene to decide which scene's faces to load.
     this.setCurrentSceneFlag(sceneName);
 
     // Run s_always (prepares music etc) and s_prepare (prepares scene assets)
@@ -394,31 +558,96 @@ export class Timaflakkarinn {
     await this.performSequence('s_prepare');
     if (this.chapterGeneration !== gen) return;
 
+    // Prepare loads faces and nothing more. Populate the scene the way the
+    // game does — see the comment on findArrivalSequence above.
+    const arrival = findArrivalSequence(this.chapterValues(), scene);
+    if (arrival) {
+      const n = await this.replayArrivalState(arrival);
+      gameLog('GAME', `jump state from ${arrival.name} (${n} state quantums)`, t());
+    } else {
+      gameLog('ERR', `no arrival sequence switches to ${sceneName} — scene may be unpopulated`, t());
+    }
+    if (this.chapterGeneration !== gen) return;
+
+    await this.ensurePlayerInScene(scene);
+
     // Switch to target scene and give player control
     this.world.setCurrentScene(scene);
-    this.stateController?.setState(0); // MOVING
-    gameLog('GAME', `jumpToScene ${sceneName}`, this.world.pulser.elapsed);
+    this.stateController?.setState(MOVING);
+    gameLog('GAME', `jumpToScene ${sceneName}`, t());
   }
 
-  /** Set f_CurrentScene flag based on scene name by finding matching q_Current* SetFlagQuantum */
-  private setCurrentSceneFlag(sceneName: string): void {
-    // Try to find f_CurrentScene flag
-    const flag = this.container.get('f_CurrentScene') as ConditionFlag | undefined;
-    if (!flag) return;
-
-    // Search for a SetFlagQuantum named q_Current<scene> that sets f_CurrentScene
-    // Scene names are like s_Skipingolfs → look for q_CurrentSkipingolfs
-    const suffix = sceneName.replace(/^s_/, '');
-    const quantumName = `q_Current${suffix}`;
-    const quantum = this.container.get(quantumName) as any;
-    if (quantum && quantum.flag === flag) {
-      flag.value = quantum.value;
-      gameLog('GAME', `f_CurrentScene = ${flag.value} (${quantumName})`, this.world.pulser.elapsed);
+  /**
+   * Execute a sequence's state-establishing quantums, in order, skipping the
+   * rest. `tunnel()` throughout: it is the engine's own fast-forward path, so a
+   * SetDestinationQuantum lands the actor on its mark instead of walking there,
+   * and the other three behave exactly as they do in play.
+   */
+  private async replayArrivalState(seq: Sequence): Promise<number> {
+    const ctx = this.getSequenceContext();
+    let applied = 0;
+    for (const q of stateQuanta(seq)) {
+      try {
+        await q.tunnel(ctx);
+        applied++;
+      } catch (e) {
+        gameLog('ERR', `arrival quantum failed: ${e}`, this.world.pulser.elapsed);
+      }
     }
+    return applied;
+  }
+
+  /**
+   * Last resort when the chosen arrival sequence did not bring the player
+   * along: any authored MoveActorQuantum that puts the player on a terrain of
+   * this scene. Still the game's own data — no invented coordinates. If none
+   * exists, say so rather than leave the owner wondering where he is.
+   */
+  private async ensurePlayerInScene(scene: Scene): Promise<void> {
+    const player = this.stateController?.mainActor;
+    const t = () => this.world.pulser.elapsed;
+    if (!player) {
+      gameLog('ERR', `no player actor set — ${scene.name} is not playable`, t());
+      return;
+    }
+    if (player.currentTerrain?.scene === scene) return;
+
+    for (const obj of this.chapterValues()) {
+      if (obj instanceof MoveActorQuantum && obj.actor === player &&
+          obj.terrain?.scene === scene && obj.hasLocation) {
+        await obj.tunnel(this.getSequenceContext());
+        gameLog('GAME', `placed ${player.name} via ${(obj as any).gmlName ?? 'MoveActorQuantum'}`, t());
+        return;
+      }
+    }
+    gameLog('ERR', `${player.name} is not on a terrain of ${scene.name} — jump is not walkable`, t());
+  }
+
+  /**
+   * Set the chapter's "which scene am I in" flag from the target scene name.
+   * s_prepare branches on it, so it must be right before s_prepare runs.
+   *
+   * Three chapters name the pair f_CurrentScene / q_Current<Scene>; Kristnitaka
+   * names it f_CS / q_CS<Scene> (kristnit.gml:166-175), which the old
+   * f_CurrentScene-only lookup silently missed. The quantum carries its own
+   * flag reference, so finding the quantum is enough.
+   */
+  private setCurrentSceneFlag(sceneName: string): void {
+    const suffix = sceneName.replace(/^s_/, '');
+    for (const quantumName of [`q_Current${suffix}`, `q_CS${suffix}`]) {
+      const quantum = this.lookup<any>(quantumName);
+      if (!(quantum instanceof SetFlagQuantum)) continue;
+      const flag = quantum.flag as ConditionFlag;
+      flag.value = quantum.value;
+      gameLog('GAME', `${flag.name} = ${flag.value} (${quantumName})`, this.world.pulser.elapsed);
+      return;
+    }
+    gameLog('ERR', `no q_Current/q_CS quantum for ${sceneName} — s_prepare may prepare the wrong scene`,
+      this.world.pulser.elapsed);
   }
 
   stopAllSequences(): void {
-    for (const [, obj] of this.container) {
+    for (const [, obj] of this.allNamedObjects()) {
       if (obj instanceof Sequence && obj.isPerforming()) {
         obj.stopPerforming();
       }
@@ -440,7 +669,7 @@ export class Timaflakkarinn {
     // Enter: fast-forward sequences
     if (key === 'Enter') {
       this.fastForward = true;
-      for (const [, obj] of this.container) {
+      for (const [, obj] of this.allNamedObjects()) {
         if (obj instanceof Sequence && obj.isPerforming()) {
           obj.fastForward();
         }
@@ -500,10 +729,17 @@ export class Timaflakkarinn {
 
     // Bottom log bar (full width)
     const logBar = document.createElement('div');
-    logBar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:180px;background:#111;color:#aaa;font:10px monospace;z-index:200;border-top:1px solid #333;display:flex;flex-direction:column;';
+    // Collapsed by default. Expanded it eats 180px, and with the canvas at a
+    // fixed 800x600 that clips the top of the game — you lose actors walking in
+    // along the skyline, which is exactly when you want to be watching.
+    const LOG_COLLAPSED_H = 24, LOG_EXPANDED_H = 180;
+    logBar.style.cssText = `position:fixed;left:0;right:0;bottom:0;height:${LOG_COLLAPSED_H}px;background:#111;color:#aaa;font:10px monospace;z-index:200;border-top:1px solid #333;display:flex;flex-direction:column;transition:height .12s;`;
     logBar.innerHTML = `
-      <div style="flex:0 0 auto;padding:3px 8px;color:#888;border-bottom:1px solid #222;">Log <span id="dbg-clock2" style="color:#4af;float:right;">0:00.000</span></div>
-      <div id="dbg-log" style="flex:1 1 0;overflow-y:auto;padding:2px 8px;line-height:1.35;"></div>
+      <div id="dbg-logbar-head" style="flex:0 0 auto;padding:3px 8px;color:#888;border-bottom:1px solid #222;cursor:pointer;user-select:none;" title="Sýna/fela annál">
+        <span id="dbg-log-caret">\u25B8</span> Log
+        <span id="dbg-clock2" style="color:#4af;float:right;">0:00.000</span>
+      </div>
+      <div id="dbg-log" style="flex:1 1 0;overflow-y:auto;padding:2px 8px;line-height:1.35;display:none;"></div>
     `;
     document.body.appendChild(logBar);
 
@@ -515,6 +751,22 @@ export class Timaflakkarinn {
     (this as any)._debugClock2 = logBar.querySelector('#dbg-clock2');
 
     // Skip button
+    // Log expand/collapse. Also drives the body height reservation in
+    // index.html, so the canvas gets the space back when the log is hidden.
+    const logHead = logBar.querySelector('#dbg-logbar-head') as HTMLElement;
+    const logBody = logBar.querySelector('#dbg-log') as HTMLElement;
+    const caret = logBar.querySelector('#dbg-log-caret') as HTMLElement;
+    let logOpen = false;
+    const applyLogState = () => {
+      logBar.style.height = `${logOpen ? LOG_EXPANDED_H : LOG_COLLAPSED_H}px`;
+      logBody.style.display = logOpen ? 'block' : 'none';
+      caret.textContent = logOpen ? '\u25BE' : '\u25B8';
+      document.documentElement.dataset.dbgLog = logOpen ? 'open' : 'closed';
+      if (logOpen && this.debugLogDiv) this.debugLogDiv.scrollTop = this.debugLogDiv.scrollHeight;
+    };
+    logHead.onclick = () => { logOpen = !logOpen; applyLogState(); };
+    applyLogState();
+
     this.debugSkipBtn = panel.querySelector('#dbg-skip');
     this.debugSkipBtn!.onclick = () => {
       this.stopAllSequences();
@@ -591,7 +843,7 @@ export class Timaflakkarinn {
 
     // Active sequences
     const active: string[] = [];
-    for (const [name, obj] of this.container) {
+    for (const [name, obj] of this.allNamedObjects()) {
       if (obj instanceof Sequence && obj.isPerforming()) {
         const cur = (obj as any).currentQuantum;
         const curName = cur?.gmlName ?? cur?.constructor?.name ?? '';
@@ -670,14 +922,15 @@ export class Timaflakkarinn {
           // Ensure chapter is parsed first
           if (!this.parsed[ch.id]) {
             await this.parseStoryPage(ch.id);
-            this.currentScreen = ch.id;
           } else if (this.currentScreen !== ch.id) {
-            // Chapter is parsed but not current — switch to it without re-running sequences
+            // Chapter is parsed but not current — switch to it without re-running
+            // s_begin. setCurrentChapter re-points name resolution and the
+            // StateController at this chapter's objects.
             this.stopAllSequences();
             stopAllAudio();
-            this.currentScreen = ch.id;
           }
-          this.jumpToScene(sceneName);
+          this.setCurrentChapter(ch.id);
+          await this.jumpToScene(sceneName);
           this.buildFlowTree(div);
         };
         sceneRow.appendChild(btn);

@@ -73,6 +73,18 @@ Unblocks everything. No new capability; existing capability made correct.
 - [x] **`getScaling` fallback** — restore Java's `a == 0 → defaultScaling`.
       Characters render visibly too large on the 18 flat terrains authored at
       `defaultscaling` 0.6–0.9
+- [x] **Play/debug deployments + chapter routing** — `tt.spliffdonk.com` (play)
+      and `tt-dev.spliffdonk.com` (debug) from one artifact; `/chapter1..4`,
+      `/intro`, `/extro`, Icelandic aliases. Play mode scales the canvas to the
+      viewport. 21 tests, the project's first
+- [ ] **Chapter container scoping** — *blocks reliable chapter jumping.* All
+      GML objects land in one global container that is never cleared, and
+      `performSequence()` reads from it. 88 of the 143 names shared by all four
+      chapters have differing definitions, `s_begin`/`s_always`/`s_prepare`
+      among them. Forward jumps appear correct because the newest chapter parsed
+      last; returning to an already-parsed chapter runs the wrong one's
+      sequences. Fix: per-chapter containers with a genuinely global map for
+      cross-chapter objects (cursors, state controller)
 - [ ] **`Pulser` remainder** — `accumulated -= interval`, not `= 0`. Subtitles
       drift late against audio
 - [ ] **`Sequence` freeze race** — single `frozenResolve` overwritten by

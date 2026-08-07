@@ -8,8 +8,64 @@ export class AssetLoader {
   private totalLoaded = 0;
   onProgress?: (loaded: number, total: number) => void;
 
+  /**
+   * Which audio container the served asset tree actually has.
+   *
+   * The build pipeline transcodes the 1998 WAVs to AAC (169 MiB -> 33 MiB), but
+   * the masters remain playable and a plain checkout has only WAV. Rather than
+   * configure this per deployment, the first audio load probes for .m4a and
+   * the answer is reused for every subsequent file.
+   *
+   * The probe cannot rely on status codes: Vite's SPA fallback answers 200 with
+   * index.html for any missing path, so a status check would "find" m4a
+   * everywhere and then fail inside decodeAudioData. Content-type is the
+   * reliable signal.
+   */
+  private audioExt: 'M4A' | 'WAV' | null = null;
+  private audioProbe: Promise<'M4A' | 'WAV'> | null = null;
+
+  /** Assets that failed to load, for the dev overlay / warnings. */
+  readonly missing = new Set<string>();
+  /** Emit console warnings for missing assets. On in debug builds. */
+  warnOnMissing = false;
+
   constructor(basePath: string) {
     this.basePath = basePath.replace(/\/$/, '');
+  }
+
+  private noteMissing(resolved: string, why: string): void {
+    if (this.missing.has(resolved)) return;
+    this.missing.add(resolved);
+    if (this.warnOnMissing) {
+      console.warn(`[assets] missing: ${resolved} (${why})`);
+    }
+  }
+
+  /** True if the response is really the media we asked for, not an SPA fallback. */
+  private looksLikeAudio(res: Response): boolean {
+    const ct = (res.headers.get('content-type') ?? '').toLowerCase();
+    return res.ok && !ct.startsWith('text/');
+  }
+
+  private async resolveAudioExt(): Promise<'M4A' | 'WAV'> {
+    if (this.audioExt) return this.audioExt;
+    if (this.audioProbe) return this.audioProbe;
+
+    this.audioProbe = (async () => {
+      // Probe one known-present line rather than a synthetic path, so a
+      // partially-transcoded tree is reported as WAV rather than half-broken.
+      const probe = `${this.basePath}/KRISTNIA/MEDIA/VOLVA/GETTUBEA.M4A`;
+      try {
+        const res = await fetch(probe, { method: 'GET' });
+        this.audioExt = this.looksLikeAudio(res) ? 'M4A' : 'WAV';
+      } catch {
+        this.audioExt = 'WAV';
+      }
+      console.info(`[assets] audio format: .${this.audioExt.toLowerCase()}`);
+      return this.audioExt;
+    })();
+
+    return this.audioProbe;
   }
 
   getAudioContext(): AudioContext {
@@ -60,6 +116,7 @@ export class AssetLoader {
         resolve(processed);
       };
       img.onerror = () => {
+        this.noteMissing(resolved, 'image failed to decode');
         this.totalLoaded++;
         this.onProgress?.(this.totalLoaded, this.totalRequested);
         // Return a 1x1 transparent image on failure
@@ -106,14 +163,19 @@ export class AssetLoader {
   }
 
   async loadAudio(path: string): Promise<AudioBuffer | null> {
-    const resolved = this.resolvePath(path);
+    // GML always names audio with a literal .wav; swap in whatever the served
+    // tree actually carries.
+    const ext = await this.resolveAudioExt();
+    const resolved = this.resolvePath(path).replace(/\.WAV$/, `.${ext}`);
+
     const cached = this.audioCache.get(resolved);
     if (cached) return cached;
 
     this.totalRequested++;
     try {
       const response = await fetch(resolved);
-      if (!response.ok) {
+      if (!this.looksLikeAudio(response)) {
+        this.noteMissing(resolved, response.ok ? 'not audio (SPA fallback?)' : `HTTP ${response.status}`);
         this.totalLoaded++;
         this.onProgress?.(this.totalLoaded, this.totalRequested);
         return null;
@@ -124,7 +186,8 @@ export class AssetLoader {
       this.totalLoaded++;
       this.onProgress?.(this.totalLoaded, this.totalRequested);
       return audioBuffer;
-    } catch {
+    } catch (e) {
+      this.noteMissing(resolved, `decode failed: ${e}`);
       this.totalLoaded++;
       this.onProgress?.(this.totalLoaded, this.totalRequested);
       return null;

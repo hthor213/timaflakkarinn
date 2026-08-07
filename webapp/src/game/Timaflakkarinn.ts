@@ -62,6 +62,9 @@ export class Timaflakkarinn {
   ) {
     this.world = new World(canvas);
     this.loader = new AssetLoader(resourcePath);
+    // Silent 1x1/null fallbacks are why five hardcoded PNGs went unnoticed for
+    // years. Surface them in the debug deployment.
+    this.loader.warnOnMissing = debug;
     this.parser = new GMLParser(this.loader, this.world, resourcePath, gmlPath);
 
     this.blackScene = new Scene('blackScene');

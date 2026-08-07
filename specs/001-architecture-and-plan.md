@@ -1,8 +1,10 @@
 # 001 — Architecture and plan of execution
 
-Status: **draft**, 2026-08-07. Implements the vision in
-[000](000-timaflakkarinn-vision.md). Scope: Icelandic first; the English overdub
-is parked and does not constrain Phase 0–1 beyond the seams noted below.
+Status: draft
+
+Implements the vision in [000](000-timaflakkarinn-vision.md). Scope: Icelandic
+first; the English overdub is parked and does not constrain Phase 0–1 beyond the
+seams noted below.
 
 ## The governing principle
 
@@ -61,6 +63,45 @@ web_import/GAME_BUILD/  (derived, gitignored, regenerable)
 Per-chapter packing is not an optimisation. Store install limits require it once
 backgrounds are super-resolved, and it is the same mechanism as web lazy-loading.
 
+**Pipeline requirement: derived assets keep the ISO 9660 uppercase convention.**
+`AssetLoader.resolvePath` uppercases every path, because the 1998 content is an
+ISO 9660 tree. The audio transcode emitted lowercase `.m4a`, which on a
+case-sensitive filesystem means every request 404s, the content-type probe falls
+back to `.WAV`, and the WAVs are not in the serving tree — **total silent audio
+loss, with nothing raising an error.** Caught during the first deploy, before it
+shipped. Any stage that emits derived files must uppercase the extension.
+
+## Deployment
+
+Live since 2026-08-07.
+
+| Host | Mode |
+|---|---|
+| `tt.spliffdonk.com` | play |
+| `tt-dev.spliffdonk.com` | debug |
+
+One build artifact for both; the mode is chosen client-side from the hostname.
+Cloudflare A records are **DNS-only (grey cloud)**, matching every other record
+in the zone — Caddy needs HTTP-01 to reach the origin for Let's Encrypt.
+
+Serving root `/srv/timaflakkarinn/web` is a **hardlink overlay**: images from
+`web_import/GAME`, audio from `web_import/GAME_M4A`, WAVs excluded. 57 MiB
+apparent for ~1.3 MiB of real disk, and it is what actually realises the
+169 → 33 MiB audio win. Masters are read-only inputs and were verified untouched.
+
+Caddy handles `/GAME/*`, `/gml/*` and `/assets/*` **before** the SPA fallback, so
+a missing asset returns a real 404 instead of being masked by `index.html`.
+`try_files {path} /index.html` on the catch-all is what makes `/chapter1..4`
+work at all.
+
+### Server-side debt
+
+- **The Forgejo credential on the homeserver is expired.** The first deploy
+  transferred the branch by verified git bundle instead. Renew before the next.
+- The server's clone had a **disjoint history** predating a remote rewrite; it
+  now tracks `feat/unify`, with the prior state saved to
+  `/home/hjalti/work/PRE_UNIFY_HEAD.txt`.
+
 ## Plan of execution
 
 ### Phase 0 — Foundation
@@ -68,8 +109,11 @@ backgrounds are super-resolved, and it is the same mechanism as web lazy-loading
 Unblocks everything. No new capability; existing capability made correct.
 
 - [x] Unify the two git histories into one tree
-- [ ] `npm install`, run the game, capture a baseline
-- [ ] CI: typecheck + build (there is none today)
+- [x] `npm install`, build, capture a baseline — typecheck clean, build green,
+      dev server verified serving chapters, backgrounds, voice and the cursor
+      through the symlinks
+- [ ] CI: typecheck + build + test on push (there is none today; `npm run check`
+      exists and is what CI should run)
 - [x] **`getScaling` fallback** — restore Java's `a == 0 → defaultScaling`.
       Characters render visibly too large on the 18 flat terrains authored at
       `defaultscaling` 0.6–0.9
@@ -89,12 +133,16 @@ Unblocks everything. No new capability; existing capability made correct.
       drift late against audio
 - [ ] **`Sequence` freeze race** — single `frozenResolve` overwritten by
       concurrent waiters; a `thaw()` before the promise hangs forever
-- [ ] **Asset failures warn in dev** — silent 1×1/`null` fallbacks are why five
-      missing PNGs went unnoticed for years
+- [x] **Asset failures warn in dev** — `AssetLoader.missing` plus a warning in
+      the debug deployment. Silent 1×1/`null` fallbacks are why five missing
+      PNGs went unnoticed for years
+- [x] **`.m4a` extension mapping** in `resolvePath` — probed once by
+      content-type, not status code: Vite's SPA fallback answers 200 with
+      `index.html` for any missing path, so a status check would "find" m4a
+      everywhere and then throw inside `decodeAudioData`
+- [x] **Deployed** — see Deployment above
 - [ ] **Pointer Events** — no touch input exists; `handleMouseDown` reads
       coordinates only `mousemove` writes, so first tap lands stale
-- [ ] **`.m4a` extension mapping** in `resolvePath` — the transcode is inert
-      without it
 - [ ] `tools/lint_gml.py` takes `src/` as a second oracle for hardcoded assets
 
 **Done when:** the 1998 game runs on desktop and on a phone by touch, characters
@@ -150,6 +198,35 @@ of all animation cells.
 - [ ] Eye-wander idle hints (needs a new authored salience layer)
 - [ ] Atmospheric perspective
 - [ ] English overdub (parked; seams in Phase 1 keep it cheap)
+
+## Done When
+
+Phase 0 acceptance. Automatable checks first so `aidev check` can run them.
+
+Typecheck and unit tests:
+
+- [x] `cd webapp && npm run check`
+
+Production build:
+
+- [x] `cd webapp && npm run build`
+
+Assets reached by relative symlink — not a duplicated tree, not an absolute path
+into someone's home directory:
+
+- [x] `test -L webapp/public/GAME && test -L webapp/public/gml`
+
+SPA fallback serves the app on a deep link, so `/chapter1..4` resolve rather
+than 404:
+
+- [x] `curl -sf https://tt.spliffdonk.com/chapter2 | grep -q game-canvas`
+- [ ] `python3 tools/lint_gml.py web_import` — currently **5 issues**, all
+      pre-existing 1998/1999 content gaps, none introduced by the rebuild:
+      3 voice lines absent from the archival master (need the CD ISO),
+      1 typo'd quantum reference in `s_bless1`, 1 reference to a cut scene.
+      Deliberately left red rather than relaxed — the gaps are real and two of
+      them need Halldór's confirmation before anyone edits content
+- [ ] The game runs on a phone by touch (blocked on Pointer Events)
 
 ## Sequencing rationale
 

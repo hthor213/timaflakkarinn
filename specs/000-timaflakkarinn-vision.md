@@ -1,8 +1,9 @@
 # 000 — Tímaflakkarinn: vision
 
-Status: **draft**, 2026-08-06. Supersedes the Phase 1 framing in
-`docs/ownership-and-provenance.md`, which described a faithful port. The
-ambition is larger than that document records.
+Status: draft
+
+Supersedes the Phase 1 framing in `docs/ownership-and-provenance.md`, which
+described a faithful port. The ambition is larger than that document records.
 
 ## The frame: this is a remaster
 

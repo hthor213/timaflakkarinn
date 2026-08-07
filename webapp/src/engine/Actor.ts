@@ -146,11 +146,23 @@ export class Actor {
     if (!this.currentFace || !this.currentTerrain) return;
 
     const terrain = this.currentTerrain;
-    const scrollX = 0; // ScrollingScene handles this
-    const scrollY = 0;
 
-    const physX = terrain.getPhysicalX(this.location, scrollX);
-    const physY = terrain.getPhysicalY(this.location, scrollY);
+    // Scroll is part of the *layout*, not of painting.
+    //
+    // 1999 does it here: `SimplePseudo3DTerrain.getPhysicalXCoord()` subtracts
+    // `((ScrollingScene) myScene).getScrollPosition()` whenever the terrain is
+    // scrolling, so `ActorFace.bounds` is always screen space — which is the
+    // space `Scene.getActorFaceAt(mouseX, mouseY)` hit-tests in.
+    // `ScrollingScene.setScrollPosition()` then re-runs `setLocation` on every
+    // actor of every terrain so the whole scene re-lays-out on each scroll step.
+    //
+    // The port used to pass 0 here and translate the canvas at paint time
+    // instead. That drew correctly but left `bounds` in *world* space while the
+    // pointer stayed in *screen* space, so every hit test in a scrolling scene
+    // was wrong by exactly the scroll offset. See docs/known-issues.md #19.
+    const scene = terrain.scene;
+    const physX = terrain.getPhysicalX(this.location, scene?.scrollX ?? 0);
+    const physY = terrain.getPhysicalY(this.location, scene?.scrollY ?? 0);
 
     // Apply scaling
     let scale = 1.0;

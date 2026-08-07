@@ -1000,34 +1000,125 @@ nobody has yet clicked back into a visited chapter in the debug panel.
 
 ---
 
-## 19 — `port-bug`? · Oversized hitboxes occlude interactive objects
+## 19 — `port-bug` · FIXED · Picking was done in world space, painting in screen space
 
 **Found by:** browser verification, 2026-08-07. Not reported by the owner —
 found because it *blocked three other tests*.
 
-Several background actors' hover/click hitboxes are far larger than their
-visible sprites, and swallow clicks meant for objects near them. The concrete
-case: in Tyrkjaránið's `s_Kot`, the door's handle pixel is covered by
-`a_Mamma`, `a_KotTunnur1` and `a_Tunna`, so **the door cannot reliably be
-clicked at all**. Similar oversized columns appear elsewhere.
+**Reported as** "several background actors' hover/click hitboxes are far larger
+than their visible sprites"; the concrete case was Tyrkjaránið's `s_Kot`, where
+the door's handle pixel resolved to `a_Mamma`, `a_KotTunnur1` or `a_Tunna` and
+**the door could not be clicked at all**.
 
-**Why this matters more than it looks.** It is not cosmetic — it makes at least
-one scene's exit hard to operate, and it is the reason three separate
-verification attempts could not reach their triggers (the raiders' entrance,
-the Lögberg walk-offs, and Halldóra's dialogue). A player hitting this would
-experience it as the game ignoring their clicks on a door.
+**The hitboxes were the right size in the right shape. They were in the wrong
+coordinate space** — displaced by exactly the scroll offset, which reads as
+"too big" when you probe an unfamiliar scene by hovering.
 
-**Not yet diagnosed.** Unknown whether the port computes actor bounds
-differently from 1999, or whether the 1998 content genuinely declares these
-sizes and the original engine resolved overlaps by a z-order or
-smallest-area rule the port does not implement. That distinction decides
-whether this is a `port-bug` or a `1998-bug`, and it must be established from
-`src/dimon/agt/` before anything is changed — the hit-box work in issue #9
-measured *text* bounds and is unrelated.
+### The 1999 rule, from `src/dimon/agt/`
+
+Three facts settle it, and all three come from the decompiled source:
+
+1. **Hit-testing is a plain rectangle test against `bounds`.**
+   `ActorFace.contains(n, n2)` is `n > 0 && n < bounds.width && n2 > 0 &&
+   n2 < bounds.height` and **no subclass overrides it** — not
+   `StaticActorFace`, not `CelledAnimated2DActorFace`. There is no per-pixel
+   alpha test in the original, so the chroma-key hypothesis is dead: a 1999
+   sprite has always been clickable on its transparent corners.
+2. **Overlaps are resolved by z-order, frontmost wins — nothing else.**
+   `Scene.getActorFaceAt` walks the chain from `firstFace` toward the front and
+   keeps the *last* match; the chain is ordered by `ActorFace.compareTo`, which
+   compares `Actor.getZOrder()` — and that is just `location.y`
+   (`Actor.java:107`). No smallest-area rule, no declaration order. The port
+   already did this correctly.
+3. **The scroll offset belongs to the layout, not to the painting.**
+   `SimplePseudo3DTerrain.getPhysicalXCoord/YCoord` subtract
+   `((ScrollingScene) myScene).getScrollPosition()` whenever the terrain is
+   scrolling, and `ScrollingScene.setScrollPosition` then re-runs
+   `actor.setLocation(actor.getLocation())` over **every actor of every
+   terrain** so the whole scene re-lays-out on each 30px step. `bounds` is
+   therefore always in screen space — the same space `getActorFaceAt(mouseX,
+   mouseY)` is called in.
+
+The port did the opposite. `Actor.updateFace()` passed a hard-coded
+`scrollX = 0` (`// ScrollingScene handles this`) and `ScrollingScene.paint()`
+did `ctx.translate(-scrollX, -scrollY)` instead. That draws correctly and picks
+wrongly: `bounds` stayed in **world** space while the pointer stayed in
+**screen** space. `StateController.handleMouseEvent` did convert — it adds
+`scrollX` to get a walk destination — which is why walking still worked while
+clicking objects did not, and why the failure looked capricious rather than
+systematic.
+
+Also killed by measurement, since it was the leading hypothesis: **sprite sheets
+are divided per cell in both engines.** `CelledAnimated2DActorFace.setImageSize`
+does `frameHeight = n2 / numCells`, and the port's `AnimatedActorFace.prepare()`
+does `Math.floor(naturalHeight / numFrames)`. Mamma's `TALK.PNG` is 205×3300
+over `count="10"` → 205×330 in both.
+
+### Measured scope
+
+All six chapters, arithmetic replayed from the GML and the real PNGs (script
+kept out of the tree; method: reimplement `Actor.updateFace` + the terrain
+physical-coordinate maths, then sweep every scroll offset in 25–50px steps and
+ask, for each interactive actor, whether *any* pixel of where it is drawn
+resolves to it).
+
+| | count |
+|---|---|
+| actors carrying an `ActorMoused` (i.e. clickable) | 239 |
+| ... on a scrolling terrain inside a `ScrollingScene` | 92 |
+| **fully unpickable at some scroll offset, before the fix** | **89** |
+| fully unpickable at some scroll offset, after the fix | 7 |
+| clickable but under half their own rect, after the fix | 10 |
+
+`a_KotHurd` was unreachable at *every* scroll offset, not merely most: its rect
+starts at world x=996 and a screen x of 996 does not exist on an 800px canvas.
+
+**The residual 7 are 1998 content, not a port defect**, and are left alone. Each
+is a small actor whose rect sits wholly inside a nearer, larger one *in its
+initial state* — `a_Edalsteinn` under the closed `a_Lok`, `a_Thorshamar` behind
+the heathen party at Lögberg, `a_Hjorleifur` behind `a_Bush`, and so on. That is
+concealment by design, it is exactly what the 1999 rect-and-z rule produces, and
+`a_KotPokar1` is only covered while Sigrún herself is standing in front of it.
+
+The "hitbox larger than the sprite" observation is also real and also faithful:
+11 of 171 image-backed actors have a visible (non-chroma) bounding box under half
+their rect, worst being `a_Batur` at 17%. Both engines rect-test, so this is 1998
+behaviour and must not be "fixed".
+
+### The fix
+
+- `Actor.updateFace()` reads `terrain.scene.scrollX/scrollY` instead of 0.
+- `Scene` grows `scrollX`/`scrollY` (always 0); `ScrollingScene` owns them.
+- `ScrollingScene.setScrollPosition()` early-returns when unchanged and
+  otherwise calls `relayout()`, which runs `updateFace()` over every actor of
+  every terrain — Java's `setLocation(getLocation())` loop without the
+  `onMoved` event storm this port would re-enter `updateScroll()` with.
+- `ScrollingScene.onStage()` relayouts, because a scene keeps its scroll offset
+  between visits and actors can change state while it is off stage.
+- `ScrollingScene.paint()` is **deleted**; the inherited screen-space paint is
+  now correct. That also stops the translate dragging the `scrolling="false"`
+  terrains — the corner HUD and the subtitle containers — sideways with the
+  viewport, which is very likely why Halldóra's dialogue could not be verified.
+
+Covered by `webapp/test/picking.test.mjs` (9 cases) built from the real `s_Kot`
+geometry in `tyrkran.gml`; the decisive case asserts the door is picked at its
+handle. Confirmed to fail on the pre-fix code (`996 !== 596`).
+
+**Not verified in a browser.** Typecheck, build and the 106-case suite are
+green; nobody has yet walked Sigrún to the cottage door and clicked it.
 
 Note the interaction with #17: boxless actors are a separate concept
-(`collisionbox` governs *movement*), so do not conflate the two while
-investigating.
+(`collisionbox` governs *movement*) and were not involved. #9 measured *text*
+bounds and was likewise unrelated.
+
+**Left alone, deliberately.** Java's `contains` excludes the left and top edge
+column (`n > 0`, not `n >= 0`); the port includes them, a 1px difference in the
+player's favour. Java breaks z-order ties by face *name*
+(`ActorFace.compareTo`), the port by insertion order. And `ScrollingScene`
+never centres on the player the way `ScrollingScene.centerActor()` does —
+`centerOnActor()` exists but nothing calls it, and the port's version uses
+`y - z` where 1999 uses `y`. None of these change picking; all three are
+camera/tie-break polish for a separate pass.
 
 ### Browser verification of #17 and the chapter-scoping fix, same session
 

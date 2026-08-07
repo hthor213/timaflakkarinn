@@ -11,6 +11,16 @@ export class Scene {
   active = false;
   cursorFace: CursorFace | null = null;
 
+  /**
+   * Scroll offset, subtracted at *layout* time by every scrolling terrain
+   * (`Terrain.getPhysicalX/Y`). Always 0 on a plain Scene; only
+   * `ScrollingScene` moves it. Because the offset is baked into
+   * `ActorFace.bounds`, painting and hit-testing both work in screen space and
+   * cannot drift apart.
+   */
+  scrollX = 0;
+  scrollY = 0;
+
   // Sorted face list for rendering (by z-order)
   private faces: ActorFace[] = [];
 
@@ -156,8 +166,11 @@ export class Scene {
         const scale = terrain.getScaling(actor.location);
         const w = actor.collisionWidth * scale;
         const h = actor.collisionHeight * scale;
-        const px = terrain.getPhysicalX(actor.location);
-        const py = terrain.getPhysicalY(actor.location);
+        // Same scroll the faces were laid out with, or the boxes would be the
+        // only thing left in world space — the exact confusion that made #19
+        // look like an oversized-hitbox problem.
+        const px = terrain.getPhysicalX(actor.location, this.scrollX);
+        const py = terrain.getPhysicalY(actor.location, this.scrollY);
 
         ctx.strokeStyle = actor.collisionListeners.length > 0 ? '#f80' : '#88f';
         ctx.setLineDash([2, 2]);
@@ -208,8 +221,6 @@ export class Scene {
 
 /** Scrolling scene that follows a main actor */
 export class ScrollingScene extends Scene {
-  scrollX = 0;
-  scrollY = 0;
   realWidth = 800;
   realHeight = 600;
   mainActor: MovingActor | null = null;
@@ -221,9 +232,47 @@ export class ScrollingScene extends Scene {
   bottomScrollDist = 450;
   scrollStep = 30;
 
+  /**
+   * Move the viewport and re-lay-out the scene.
+   *
+   * The relayout is the whole point, and it is what 1999 does: after clamping,
+   * `ScrollingScene.setScrollPosition` walks every terrain and every actor and
+   * calls `actor.setLocation(actor.getLocation())`, which re-runs
+   * `updateFace()` against the new scroll. Faces on scrolling terrains move,
+   * faces on `scrolling="false"` terrains (the corner HUD, the subtitle
+   * containers) deliberately do not.
+   *
+   * We call `updateFace()` directly rather than round-tripping through
+   * `setLocation()`: identical layout effect, minus an `onMoved` storm that in
+   * this port would re-enter `updateScroll()` once per actor.
+   */
   setScrollPosition(x: number, y: number): void {
-    this.scrollX = Math.max(0, Math.min(x, this.realWidth - 800));
-    this.scrollY = Math.max(0, Math.min(y, this.realHeight - 600));
+    const nx = Math.max(0, Math.min(x, this.realWidth - 800));
+    const ny = Math.max(0, Math.min(y, this.realHeight - 600));
+    if (nx === this.scrollX && ny === this.scrollY) return;
+    this.scrollX = nx;
+    this.scrollY = ny;
+    this.relayout();
+  }
+
+  /**
+   * A scene keeps its scroll offset between visits, and actors can change
+   * state or terrain while it is off stage. Re-placing on entry costs one pass
+   * over the terrains and removes any chance of a face carrying a stale offset
+   * into the first hit test of the scene.
+   */
+  onStage(): void {
+    super.onStage();
+    this.relayout();
+  }
+
+  /** Re-place every face in the scene against the current scroll offset. */
+  relayout(): void {
+    for (const terrain of this.terrains) {
+      for (const actor of terrain.actors) {
+        actor.updateFace();
+      }
+    }
   }
 
   centerOnActor(): void {
@@ -235,40 +284,14 @@ export class ScrollingScene extends Scene {
     );
   }
 
-  /** Override paint to apply scroll offset */
-  paint(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
-    ctx.translate(-this.scrollX, -this.scrollY);
-    // Need to paint with offset
-    const dirtyRect = {
-      x: this.scrollX, y: this.scrollY, width: 800, height: 600
-    };
-
-    // Clear
-    if (this.backgroundColor) {
-      ctx.fillStyle = `rgb(${this.backgroundColor.r},${this.backgroundColor.g},${this.backgroundColor.b})`;
-    } else {
-      ctx.fillStyle = '#000';
-    }
-    ctx.fillRect(this.scrollX, this.scrollY, 800, 600);
-
-    this.sortFaces();
-    for (const face of this.getFaces()) {
-      face.paint(ctx, dirtyRect);
-    }
-
-    // Debug overlay (in scroll space)
-    if (Scene.debugOverlay) {
-      this.paintDebugOverlay(ctx);
-    }
-
-    ctx.restore();
-
-    // Cursor in screen space
-    if (this.cursorFace) {
-      this.cursorFace.paint(ctx, { x: 0, y: 0, width: 800, height: 600 });
-    }
-  }
+  // No paint() override. The scroll offset is already baked into every face's
+  // bounds by `relayout()`, exactly as in 1999, so the inherited screen-space
+  // paint is correct — and the debug overlay, which draws `face.bounds`
+  // straight onto the canvas, now shows the rectangle that is actually
+  // hit-tested. Translating the canvas here instead was what let the drawn
+  // scene and the pointer live in two different coordinate spaces; it also
+  // dragged the `scrolling="false"` terrains (corner HUD, subtitles) sideways
+  // with the viewport, which they are explicitly authored not to do.
 
   /** Update scroll to follow actor */
   updateScroll(): void {

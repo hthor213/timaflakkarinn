@@ -1,0 +1,302 @@
+<!ELEMENT Body					ANY>
+
+<!ELEMENT Scene					EMPTY	>
+<!ATTLIST Scene					name		CDATA	#REQUIRED>
+
+<!ELEMENT ScrollingScene		EMPTY	>
+<!ATTLIST ScrollingScene		name		CDATA	#REQUIRED
+								width		CDATA	#REQUIRED
+								height		CDATA	#REQUIRED>
+
+<!ELEMENT Polygon				(Point*) >
+<!ATTLIST Polygon				name		CDATA	#REQUIRED>
+<!ELEMENT Point					EMPTY >
+<!ATTLIST Point					x			CDATA	#REQUIRED
+								y			CDATA	#REQUIRED>
+
+<!ELEMENT SimplePseudo3DTerrain	EMPTY >
+<!ATTLIST SimplePseudo3DTerrain	name		CDATA	#REQUIRED
+								scene		CDATA	#REQUIRED
+								polygon		CDATA	#REQUIRED
+								zmin		CDATA	#REQUIRED
+								zmax		CDATA	#REQUIRED
+								defaultscaling
+											CDATA	#IMPLIED
+								scanline1   CDATA   #IMPLIED
+								scaling2    CDATA   #IMPLIED
+								scanline2   CDATA   #IMPLIED
+								scrolling	(true|false) 'true'>
+
+<!ELEMENT Inventory				EMPTY >
+<!ATTLIST Inventory				name		CDATA	#REQUIRED
+								scene		CDATA	#REQUIRED
+								polygon		CDATA	#REQUIRED
+								zmin		CDATA	#REQUIRED
+								zmax		CDATA	#REQUIRED>
+<!ELEMENT SentenceContainer		EMPTY >
+<!ATTLIST SentenceContainer		name		CDATA	#REQUIRED
+								scene		CDATA	#IMPLIED
+								polygon		CDATA	#REQUIRED
+								zmin		CDATA	#REQUIRED
+								zmax		CDATA	#REQUIRED
+								save		(true|false) 'false'>
+
+<!ELEMENT Image					EMPTY >
+<!ATTLIST Image					name		CDATA	#REQUIRED
+								file		CDATA	#REQUIRED>
+<!ELEMENT Images				EMPTY >
+<!ATTLIST Images				name		CDATA	#REQUIRED
+								pre			CDATA	#REQUIRED
+								post		CDATA	#REQUIRED
+								count		CDATA	#REQUIRED>
+<!ELEMENT Fetch					EMPTY >
+
+<!ELEMENT TransparentActorFace	EMPTY >
+<!ATTLIST TransparentActorFace	name		CDATA	#REQUIRED
+								width		CDATA	#REQUIRED
+								height		CDATA	#REQUIRED
+								xoffset     CDATA   #IMPLIED
+								yoffset     CDATA   #IMPLIED>
+<!ELEMENT StaticActorFace		EMPTY >
+<!ATTLIST StaticActorFace		name		CDATA	#REQUIRED
+								file		CDATA	#IMPLIED
+								image		CDATA	#IMPLIED
+								xoffset     CDATA   #IMPLIED
+								yoffset     CDATA   #IMPLIED
+								transparent (true|false) 'true'
+								prepare		(true|false) 'false'>
+<!ELEMENT Animated2DActorFace	(Frame*, Frames?) >
+<!ATTLIST Animated2DActorFace	name		CDATA	#REQUIRED
+								repeat		CDATA	#REQUIRED
+								xoffset     CDATA   #IMPLIED
+								yoffset     CDATA   #IMPLIED
+								speed		CDATA	#IMPLIED
+								random		(true|false) 'false'>
+<!ELEMENT CelledAnimated2DActorFace
+								EMPTY >
+<!ATTLIST CelledAnimated2DActorFace
+								name		CDATA	#REQUIRED
+								file		CDATA	#REQUIRED
+								repeat		CDATA	#REQUIRED
+								speed		CDATA	#IMPLIED
+								xoffset     CDATA   #IMPLIED
+								yoffset     CDATA   #IMPLIED
+								count		CDATA	#REQUIRED
+								random		(true|false) 'false'
+								prepare		(true|false) 'false'>
+
+<!ELEMENT Frame					EMPTY >
+<!ATTLIST Frame					name		CDATA	#REQUIRED
+								image		CDATA	#REQUIRED>
+<!ELEMENT Frames				EMPTY >
+<!ATTLIST Frames				base		CDATA	#REQUIRED
+								count		CDATA	#REQUIRED>
+
+<!ELEMENT Pseudo3DCollisionBox	EMPTY >
+<!ATTLIST Pseudo3DCollisionBox	name		CDATA	#REQUIRED
+								x			CDATA	#REQUIRED
+								y			CDATA	#REQUIRED
+								z			CDATA	#REQUIRED>
+<!ELEMENT JMFActorMouth			EMPTY >
+<!ATTLIST JMFActorMouth			name		CDATA	#REQUIRED
+								file		CDATA	#REQUIRED
+								repeat      (true|false) 'false'
+								prepare		(true|false) 'false'>
+<!ELEMENT SpeechActorMouth		(Sentence*) >
+<!ATTLIST SpeechActorMouth		name		CDATA	#REQUIRED
+								file		CDATA	#REQUIRED
+								acc			CDATA	#REQUIRED
+								prepare		(true|false) 'false'>
+<!ELEMENT Sentence				EMPTY >
+<!ATTLIST Sentence				text		CDATA	#REQUIRED
+								time		CDATA	#REQUIRED>
+
+<!ELEMENT Text					EMPTY >
+<!ATTLIST Text					name		CDATA	#REQUIRED
+								text		CDATA	#REQUIRED
+								terrain		CDATA	#IMPLIED
+								color		CDATA	#IMPLIED
+								r           CDATA   #IMPLIED
+								g           CDATA   #IMPLIED
+								b           CDATA   #IMPLIED
+								save		(true|false) 'true'
+								hilite		(true|false) 'true'>
+
+<!ELEMENT StaticActor			(State*) >
+<!ATTLIST StaticActor			name		CDATA	#REQUIRED
+								terrain		CDATA	#IMPLIED
+								x			CDATA	#REQUIRED
+								y			CDATA	#REQUIRED
+								z			CDATA	#REQUIRED
+								state		CDATA	#REQUIRED
+								collision	CDATA	#IMPLIED
+								random		(true|false) 'false'
+								save		(true|false) 'false'
+								scaling		(no|static|dynamic) 'no'>
+<!ELEMENT MovingActor			(State*) >
+<!ATTLIST MovingActor			name		CDATA	#REQUIRED
+								terrain		CDATA	#IMPLIED
+								x			CDATA	#REQUIRED
+								y			CDATA	#REQUIRED
+								z			CDATA	#REQUIRED
+								state		CDATA	#REQUIRED
+								collision	CDATA	#IMPLIED
+								speed       CDATA   #IMPLIED
+								random		(true|false) 'false'
+								save		(true|false) 'false'
+								scaling		(no|static|dynamic) 'no'>
+<!ELEMENT State					EMPTY >
+<!ATTLIST State					name		CDATA	#REQUIRED
+								face		CDATA	#IMPLIED
+								mouth		CDATA	#IMPLIED
+								collisionbox CDATA	#IMPLIED>
+
+<!ELEMENT StateController		EMPTY >
+<!ATTLIST StateController		name		CDATA	#REQUIRED
+								stateactor	CDATA	#REQUIRED
+								inventoryactor
+											CDATA	#REQUIRED
+								inventory	CDATA	#REQUIRED
+								textactor	CDATA	#REQUIRED>
+<!ELEMENT ActorMoused			EMPTY >
+<!ATTLIST ActorMoused			actor		CDATA	#REQUIRED
+								listener	CDATA	#REQUIRED
+								moving		CDATA	#IMPLIED
+								thf 		CDATA	#IMPLIED
+								looking		CDATA	#IMPLIED
+								taking		CDATA	#IMPLIED
+								talking		CDATA	#IMPLIED>
+<!ELEMENT UseText   			EMPTY >
+<!ATTLIST UseText   			actor		CDATA	#REQUIRED
+								actor2      CDATA   #REQUIRED
+								listener	CDATA	#REQUIRED
+								text		CDATA	#REQUIRED>
+
+<!-- Sequences -->
+
+<!ELEMENT Sequence				(Quantum*)>
+<!ATTLIST Sequence				name		CDATA	#REQUIRED>
+
+<!ELEMENT Quantum				EMPTY>
+<!ATTLIST Quantum				name		CDATA	#REQUIRED>
+
+<!ELEMENT Reaction				EMPTY>
+<!ATTLIST Reaction				reactor		CDATA	#REQUIRED
+								actor		CDATA	#REQUIRED
+								actor2		CDATA	#IMPLIED
+								seq			CDATA	#REQUIRED>
+
+<!ELEMENT PrepareQuantum		EMPTY>
+<!ATTLIST PrepareQuantum		name		CDATA	#REQUIRED
+								object		CDATA	#REQUIRED
+								prepare		(true|false) 'true'>
+
+<!ELEMENT SwitchSceneQuantum	EMPTY>
+<!ATTLIST SwitchSceneQuantum	name		CDATA	#REQUIRED
+								scene		CDATA	#REQUIRED>
+
+<!ELEMENT SwitchStateQuantum	EMPTY>
+<!ATTLIST SwitchStateQuantum	name		CDATA	#REQUIRED
+								state		CDATA	#REQUIRED
+								controller	CDATA	#REQUIRED>
+
+<!ELEMENT StateQuantum			EMPTY>
+<!ATTLIST StateQuantum			name		CDATA	#REQUIRED
+								state		CDATA	#REQUIRED
+								actor		CDATA	#REQUIRED
+								wait		(true|false) 'false'>
+
+<!ELEMENT UpdateQuantum			EMPTY>
+<!ATTLIST UpdateQuantum			name		CDATA	#REQUIRED
+								terrain		CDATA	#REQUIRED
+								show		CDATA	#REQUIRED>
+
+<!ELEMENT MoveTerrainQuantum	EMPTY>
+<!ATTLIST MoveTerrainQuantum	name		CDATA	#REQUIRED
+								terrain		CDATA	#REQUIRED
+								scene		CDATA	#REQUIRED>
+
+<!ELEMENT MoveActorQuantum		(Location?)>
+<!ATTLIST MoveActorQuantum		name		CDATA	#REQUIRED
+								actor		CDATA	#REQUIRED
+								terrain		CDATA	#IMPLIED>
+
+<!ELEMENT StopActorQuantum		EMPTY>
+<!ATTLIST StopActorQuantum		name		CDATA	#REQUIRED
+								actor		CDATA	#REQUIRED>
+
+
+<!ELEMENT SetDestinationQuantum	EMPTY>
+<!ATTLIST SetDestinationQuantum	name		CDATA	#REQUIRED
+								actor		CDATA	#REQUIRED
+								x			CDATA	#REQUIRED
+								y			CDATA	#REQUIRED
+								speed		CDATA	#IMPLIED
+								wait		(true|false) 'false'>
+
+<!ELEMENT SetSpeedQuantum	    EMPTY>
+<!ATTLIST SetSpeedQuantum	    name		CDATA	#REQUIRED
+								actor		CDATA	#REQUIRED
+								speed		CDATA	#REQUIRED>
+
+
+<!ELEMENT Location				EMPTY>
+<!ATTLIST Location				x			CDATA	#REQUIRED
+								y			CDATA	#REQUIRED
+								z			CDATA	#REQUIRED>
+
+<!-- Condition flags -->
+
+<!ELEMENT ConditionFlag			EMPTY>
+<!ATTLIST ConditionFlag			name		CDATA	#REQUIRED
+								save		(true|false) 'true'>
+
+<!ELEMENT CheckConditionQuantum	(Trigger*)>
+<!ATTLIST CheckConditionQuantum	name		CDATA	#REQUIRED
+								flag		CDATA	#REQUIRED
+								wait		(true|false) 'false'>
+<!ELEMENT Trigger				EMPTY>
+<!ATTLIST Trigger				value		CDATA	#REQUIRED
+								seq			CDATA	#REQUIRED>
+
+<!ELEMENT IncrementFlagQuantum	EMPTY>
+<!ATTLIST IncrementFlagQuantum	name		CDATA	#REQUIRED
+								flag		CDATA	#REQUIRED>
+
+<!ELEMENT PauseQuantum			EMPTY>
+<!ATTLIST PauseQuantum			name		CDATA	#REQUIRED
+								time		CDATA	#IMPLIED>
+
+<!ELEMENT DecrementFlagQuantum	EMPTY>
+<!ATTLIST DecrementFlagQuantum	name		CDATA	#REQUIRED
+								flag		CDATA	#REQUIRED>
+
+<!ELEMENT RandomSetFlagQuantum	EMPTY>
+<!ATTLIST RandomSetFlagQuantum	name		CDATA	#REQUIRED
+								flag		CDATA	#REQUIRED
+								low         CDATA   #REQUIRED
+								high        CDATA   #REQUIRED>
+
+<!ELEMENT SetFlagQuantum		EMPTY>
+<!ATTLIST SetFlagQuantum		name		CDATA	#REQUIRED
+								flag		CDATA	#REQUIRED
+								value		CDATA	#REQUIRED>
+
+<!ELEMENT ThemeFinishedQuantum	EMPTY>
+<!ATTLIST ThemeFinishedQuantum	name		CDATA	#REQUIRED>
+
+<!ELEMENT GuessQuantum	        EMPTY>
+<!ATTLIST GuessQuantum  	    name		CDATA	#REQUIRED>
+
+<!ELEMENT FadeQuantum	        EMPTY>
+<!ATTLIST FadeQuantum  	    	name		CDATA	#REQUIRED
+								mouth		CDATA	#REQUIRED
+								goal		CDATA	#REQUIRED
+								speed		CDATA	#REQUIRED>
+
+<!ELEMENT SetPlayer				EMPTY>
+<!ATTLIST SetPlayer				object		CDATA	#REQUIRED
+								player		CDATA	#REQUIRED>
+
+<!ELEMENT BeginningScene		EMPTY>
+<!ATTLIST BeginningScene		scene		CDATA	#REQUIRED>

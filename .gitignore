@@ -1,5 +1,21 @@
+# secrets
 .env
 .env.*
 !.env.example
-.DS_Store
+
+# build output
 node_modules/
+dist/
+.wrangler/
+
+# derived assets — generated from web_import/GAME by the asset pipeline.
+# Never commit these; the masters in web_import/ are the source of truth.
+web_import/GAME_M4A/
+web_import/GAME_BUILD/
+
+# A real directory here would be a 188 MiB duplicate of the masters — ignore it.
+# The trailing slash matches directories only, so the tracked *symlink* of the
+# same name (→ ../../web_import/GAME) is unaffected and stays in version control.
+webapp/public/GAME/
+
+.DS_Store

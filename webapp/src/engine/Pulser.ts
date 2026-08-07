@@ -52,7 +52,14 @@ export class Pulser {
       entry.accumulated += delta;
       if (entry.accumulated >= entry.interval) {
         entry.target.pulse(entry.accumulated);
-        entry.accumulated = 0;
+        // Carry the remainder instead of discarding it. Zeroing made every
+        // interval round up to the next frame boundary: a 50 ms speech pulse at
+        // 60 fps fired every ~66 ms, so subtitles drifted progressively late
+        // against their audio across a long line, and animations ran ~30% slow.
+        entry.accumulated -= entry.interval;
+        // Don't let a stall bank arrears and then fire a burst of catch-up
+        // pulses — a paused tab would rattle through an animation on resume.
+        if (entry.accumulated >= entry.interval) entry.accumulated = 0;
       }
     }
   }

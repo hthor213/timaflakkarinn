@@ -42,7 +42,7 @@ export class Terrain {
 
   getScaling(p: Float3DPoint): number {
     // Mirrors Java SimplePseudo3DTerrain.getScaling. A terrain only gets a
-    // scaling ramp if the content authored scanline1/scanline2/scaling2; 83 of
+    // scaling ramp if the content authored scanline1/scanline2/scaling2; 61 of
     // the game's 84 terrains did not, leaving a == 0. In that case the original
     // scales by the terrain's declared defaultscaling — not by b, whose initial
     // value of 1 made every character on those terrains render too large.

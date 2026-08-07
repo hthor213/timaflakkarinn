@@ -24,8 +24,8 @@ aesthetic**: *did the 1998 team consider this wrong at the time?*
 Two notes on using this well.
 
 **`1998-bug` covers unfinished intent, not just defects.** That is the dominant
-signature of this codebase — three voice lines cut for a pressing deadline, 60 of
-83 terrains never given their scaling calibration, `SetSpeedQuantum` built and
+signature of this codebase — three voice lines cut for a pressing deadline, 61 of
+84 terrains never given their scaling calibration, `SetSpeedQuantum` built and
 wired and never once used, a sequence literally named `s_UnDecided6`. None of
 that is sloppiness; it is a six-month schedule, still visible in the archive.
 It needs *finishing*, not deciding.
@@ -129,7 +129,7 @@ flat 2D background the shrinking reads as climbing rather than receding.
 depth scaling worked and only the supporting cues were missing. That was wrong,
 and the original report was literally accurate.
 
-**Depth scaling is authored on 23 of 83 terrains — 60 are flat.** Scaling
+**Depth scaling is authored on 23 of 84 terrains — 61 are flat.** Scaling
 requires `scanline1`, `scanline2` and `scaling2`: two (screen row, scale) pairs
 defining the ramp. Where they are absent, `setScalingParameters` is never called,
 `a` stays 0, `getScaling` returns a constant, and the character does not shrink.
@@ -151,14 +151,26 @@ clear majority of scenes are still flat.)*
 The engine's maths is not at fault: `a * y + b` is *correct* perspective for a
 flat ground plane — apparent size is proportional to distance below the horizon,
 the standard pinhole result. The 1999 team built per-scene calibration, used it
-once, and shipped the other 83 terrains flat. Hand-tuning four numbers per
+on 23 terrains, and shipped the other 61 flat. Hand-tuning four numbers per
 terrain is exactly the tedium that gets cut when time runs out.
 
 **Additionally, the TypeScript port regresses this.** Java falls back to the
 authored `defaultScaling` when `a == 0`; the port omits the guard and returns
-`b`, which defaults to 1.0. So on 83 of 84 terrains the web version draws
+`b`, which defaults to 1.0. So on 61 of 84 terrains the web version draws
 characters uniformly too large — 1.0 where 0.7 or 0.85 was authored. That is a
 live bug independent of the remaster.
+
+**And at least one of the 23 authored ramps is not perspective either.**
+`t_HjaVolvul` (the Völva's hut) declares `defaultscaling="1.0" scaling2="1.1"
+scanline1="500" scanline2="800"`. Across the actual y-extremes of its own
+walkable polygon `p_HjaVolvu` (507 to 601) that yields 1.0023 → 1.0337 — a
+**1.031x** ramp, where the painting's perspective demands **1.63x**. A token 3%
+is what you author when you are checking the feature works, not when you are
+calibrating a scene. So this issue is not purely "61 are missing"; the 23 that
+exist need auditing too, and re-deriving scaling from proxy geometry is a
+correction rather than only a gap-fill. Measured in `specs/003`; the ramp
+arithmetic was independently re-verified against the GML and against
+`Terrain.getScaling`.
 
 Compounding it, **scaling was never the only missing cue.** A grep of the engine
 finds zero shadows, zero ground-contact rendering, and no atmospheric perspective

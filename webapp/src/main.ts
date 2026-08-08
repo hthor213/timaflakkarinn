@@ -1,5 +1,6 @@
 import { Timaflakkarinn } from './game/Timaflakkarinn';
-import { resolveMode } from './config';
+import { resolveMode, resolveInput } from './config';
+import { VerbBar } from './game/VerbBar';
 import { parseRoute, DEFAULT_PATH } from './routing';
 
 async function main() {
@@ -17,6 +18,12 @@ async function main() {
   const mode = resolveMode();
   document.documentElement.dataset.mode = mode;
 
+  // pointer | touch — from the media queries, overridable with ?touch=1 / 0.
+  // Stamped on <html> the same way, because the portrait layout is entirely
+  // CSS and has to be in force before the first frame rather than after it.
+  const input = resolveInput();
+  document.documentElement.dataset.input = input;
+
   // "/" and anything unrecognised land on the intro. replaceState rather than
   // push, so Back doesn't bounce the player between / and /intro.
   let route = parseRoute(window.location.pathname);
@@ -32,6 +39,14 @@ async function main() {
   const gmlPath = '/gml';
 
   const game = new Timaflakkarinn(canvas, resourcePath, gmlPath, mode === 'debug');
+
+  // Touch has no right button and no hover, so the verb can never be cycled and
+  // the 404 authored verb reactions are unreachable. The bar replaces the cycle
+  // with a choice. Re-bound per chapter -- see onStateControllerReady.
+  if (input === 'touch') {
+    const verbBar = new VerbBar(document.body);
+    game.onStateControllerReady = (sc) => verbBar.attach(sc);
+  }
 
   game.onLoadingProgress = (text: string, percent: number) => {
     loadingText.textContent = text;

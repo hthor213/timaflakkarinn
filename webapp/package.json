@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node test/routing.test.mjs && node test/mode.test.mjs && node test/animation.test.mjs && node test/walker.test.mjs && node test/cursor.test.mjs && node test/scenejump.test.mjs && node test/pulser.test.mjs && node test/silentline.test.mjs && node test/sequence.test.mjs && node test/pointer.test.mjs && node test/chromatext.test.mjs && node test/collisionbox.test.mjs && node test/chromakey.test.mjs && node test/chapterscope.test.mjs && node test/picking.test.mjs",
+    "test": "node test/routing.test.mjs && node test/mode.test.mjs && node test/touchverbs.test.mjs && node test/animation.test.mjs && node test/walker.test.mjs && node test/cursor.test.mjs && node test/scenejump.test.mjs && node test/pulser.test.mjs && node test/silentline.test.mjs && node test/sequence.test.mjs && node test/pointer.test.mjs && node test/chromatext.test.mjs && node test/collisionbox.test.mjs && node test/chromakey.test.mjs && node test/chapterscope.test.mjs && node test/picking.test.mjs",
     "check": "tsc --noEmit && npm test"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ import { Timaflakkarinn } from './game/Timaflakkarinn';
 import { resolveMode, resolveInput } from './config';
 import { VerbBar } from './game/VerbBar';
 import { SentenceList } from './game/SentenceList';
+import { MenuList } from './game/MenuList';
 import { parseRoute, DEFAULT_PATH } from './routing';
 
 async function main() {
@@ -47,8 +48,10 @@ async function main() {
   if (input === 'touch') {
     // Order matters: both append to <body>, and reading down the screen should
     // go picture, then what you can say, then how you can act.
+    const menu = new MenuList(document.body);
     const sentences = new SentenceList(document.body);
     const verbBar = new VerbBar(document.body);
+    menu.attach(game.saveScene);
     game.onStateControllerReady = (sc) => {
       sentences.attach(sc);
       verbBar.attach(sc);

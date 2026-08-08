@@ -16,6 +16,22 @@ export type MenuResult =
 type SubMode = 'idle' | 'confirmQuit' | 'overwrite' | 'nameInput' | 'message';
 type Action = 'load' | 'save';
 
+/**
+ * The menu described for a touch layout to draw as rows. Each row names the
+ * actor it stands for, so choosing it goes back through handleClick and no
+ * menu rule is written twice. See getTouchMenu().
+ */
+export interface TouchMenuRow {
+  label: string;
+  actor: Actor;
+}
+export interface TouchMenu {
+  prompt: string | null;
+  /** A name field is needed — the save-name prompt, which has no canvas keyboard. */
+  input: boolean;
+  rows: TouchMenuRow[];
+}
+
 const WHITE = { r: 255, g: 255, b: 255 };
 const GREEN = { r: 120, g: 190, b: 30 };
 const GRAY  = { r: 100, g: 100, b: 100 };
@@ -410,6 +426,102 @@ export class SaveScene {
   private commitNameInput(): void {
     const name = this.inputBuffer.trim() || `Leikur ${this.pendingSlot + 1}`;
     this.finish({ kind: 'saveSlot', index: this.pendingSlot, name });
+  }
+
+  // --- Snertiskjár: valmyndin sem raðir undir myndinni ---
+  //
+  // On a phone the menu is unusable and, worse, undiscoverable. Starting a game
+  // means clicking an EMPTY slot -- handleSlotClick turns "no metadata, main
+  // mode" into newGame -- so the new-game button is a line of green text reading
+  // "Leikur 1", stacked 30px apart inside an 800x600 canvas scaled to the width
+  // of a handset. Roughly ten physical pixels tall, and it does not say what it
+  // does.
+  //
+  // getTouchMenu() describes the menu as rows; each row carries the ACTOR that
+  // row stands for, and choosing one calls handleClick with it. That is the same
+  // path a click on the canvas takes, so every rule above -- which buttons are
+  // live in which mode, the overwrite prompt, the quit confirmation -- keeps
+  // working without being written twice.
+
+  /** True while open() is waiting on a decision. */
+  isOpen(): boolean {
+    return this.resolver !== null;
+  }
+
+  /** Current name-input text, for the DOM field to mirror. */
+  getNameInput(): string {
+    return this.inputBuffer;
+  }
+
+  /** Set the save name from a DOM input, since a phone has no canvas keyboard. */
+  setNameInput(text: string): void {
+    if (this.sub !== 'nameInput') return;
+    this.inputBuffer = text.slice(0, 20);
+    this.inputFace.setText(this.inputBuffer + '_');
+  }
+
+  getTouchMenu(): TouchMenu | null {
+    if (!this.resolver) return null;
+
+    // A dialog owns the screen while it is up, exactly as handleClick has it.
+    if (this.sub === 'confirmQuit' || this.sub === 'overwrite') {
+      return { prompt: this.promptFace.text, input: false, rows: [
+        { label: 'Já',  actor: this.yesBtn },
+        { label: 'Nei', actor: this.noBtn },
+      ] };
+    }
+    if (this.sub === 'message') {
+      return { prompt: this.promptFace.text, input: false, rows: [
+        { label: 'Í lagi', actor: this.okBtn },
+      ] };
+    }
+    if (this.sub === 'nameInput') {
+      return { prompt: this.promptFace.text, input: true, rows: [
+        { label: 'Vista', actor: this.okBtn },
+      ] };
+    }
+
+    const rows: TouchMenuRow[] = [];
+    const used = this.slotsMeta.slots
+      .map((meta, i) => ({ meta, i }))
+      .filter(x => x.meta) as { meta: SlotMeta; i: number }[];
+
+    if (this.pending === 'save') {
+      // Choosing where to save. Every slot is a target, including used ones --
+      // those route through the overwrite prompt.
+      for (let i = 0; i < 10; i++) {
+        const meta = this.slotsMeta.slots[i];
+        rows.push({
+          label: meta ? `${i + 1}. ${meta.name}` : `${i + 1}. (tómt)`,
+          actor: this.slots[i],
+        });
+      }
+      return { prompt: 'Vista í hólf:', input: false, rows };
+    }
+
+    if (this.mode === 'main') {
+      // The whole point: name the action instead of making the player deduce
+      // that an empty slot means "new game". Aimed at the first empty slot,
+      // which is what handleSlotClick turns into newGame.
+      const firstEmpty = this.slotsMeta.slots.findIndex(m => !m);
+      if (firstEmpty >= 0) {
+        rows.push({ label: 'Byrja nýjan leik', actor: this.slots[firstEmpty] });
+      }
+      for (const { meta, i } of used) {
+        rows.push({ label: `Opna: ${meta.name}`, actor: this.slots[i] });
+      }
+      rows.push({ label: 'Hætta', actor: this.buttonQuit });
+      return { prompt: null, input: false, rows };
+    }
+
+    // Pause menu.
+    rows.push({ label: 'Halda áfram', actor: this.buttonBack });
+    rows.push({ label: 'Vista leik',  actor: this.buttonSave });
+    for (const { meta, i } of used) {
+      rows.push({ label: `Opna: ${meta.name}`, actor: this.slots[i] });
+    }
+    rows.push({ label: 'Hætta', actor: this.buttonQuit });
+    return { prompt: null, input: false, rows };
   }
 
   /** Lyklaborðsinngjöf — bara virk í name-input mode. */

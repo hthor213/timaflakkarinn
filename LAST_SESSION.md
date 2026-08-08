@@ -170,11 +170,10 @@ https://claude.ai/code/artifact/d37cdbfb-55b7-475d-9af9-8a8b79db4da3
 
 - ~~Forgejo credential~~ **RESOLVED 2026-08-07.** It had been deleted, not
   expired — see `docs/known-issues.md` #20. Token restored, transport is `fetch`
-  again, and all 1,215 LFS files resolve as real blobs. Deploys
-  fall back to a verified git bundle, which works for code and GML. But a bundle
-  carries LFS *pointers*, not blobs, so **no commit touching an LFS-tracked file
-  can ship at all** until this is renewed. That becomes hard-blocking the moment
-  the art pipeline emits its first derived background.
+  again, and all 1,215 LFS files resolve as real blobs. The bundle fallback and
+  its LFS-pointer limitation no longer apply; a commit touching an LFS-tracked
+  file can ship, so the art pipeline's first derived background is not blocked
+  on transport.
 - **Do NOT ask Halldór for original assets.** He was never on the team — he is
   an enthusiastic customer who had the retail ISO and nothing else, and built
   the TypeScript port from it. Questions about 1998 intent, the PSDs, the
@@ -194,4 +193,4 @@ https://claude.ai/code/artifact/d37cdbfb-55b7-475d-9af9-8a8b79db4da3
 `aidev check` is **red on one item**, deliberately: `lint_gml.py` reports 5
 issues, all pre-existing 1998/1999 content gaps, none introduced by the rebuild.
 Left red rather than relaxed — see the Done When note in `specs/001`.
-`npm run check` (typecheck + 97 cases across 14 files) is green.
+`npm run check` (typecheck + 106 cases across 15 files) is green.

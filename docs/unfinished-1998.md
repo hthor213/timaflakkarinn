@@ -104,7 +104,7 @@ while every other object in the chapter answers with a refusal. They hover and
 label correctly and sit on the painted slab, so the player has every reason to
 keep clicking. **Fix: add `random="true"` to both.** One attribute each.
 
-### 3.3 · `design-improvement` · The sea in Fjaran is clickable only on the left two-thirds
+### 3.3 · `modern-only` · The sea in Fjaran is clickable only on the left two-thirds
 
 `af_Sjorinn` is `width="800"` in a scene declared `ScrollingScene width="1200"`.
 Water continues past x=800 outside the hotspot, and the barrel puzzle targets

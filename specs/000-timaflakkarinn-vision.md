@@ -230,6 +230,63 @@ Every alternative stack considered (Godot, Unity, Rust/WASM) loses on the same
 point — it forces a rewrite of the interpreter, which is the asset, while
 improving nothing that matters.
 
+**D8 — Two editions ship: Classic and Modern.** Decided 2026-08-08. This
+supersedes the part of D6 that implied presentation was the *only* axis of
+difference. It is not: Modern may also carry content and behaviour the 1999
+engine could not do.
+
+*Classic* is **the 1999 game as the team meant it to be** — not the disc as it
+shipped, and not a modernisation. Every defect they knew about is fixed, every
+piece of content the port is missing is restored, and everything they intended
+and lost to the schedule is finished. It runs on the 2D presentation.
+
+*Modern* is Classic plus everything the 1999 engine could not do: 3D toon
+characters (D1), super-resolved backgrounds on proxy geometry (D2), cinematic
+camera (D3), 16:9 framing (D4), and any behaviour in that same category.
+
+**The test that sorts every change is one question: could the 1999 engine have
+done it?** If yes and they wanted it, it is Classic (and therefore also Modern).
+If it needed an engine they did not have, it is Modern only. The tag taxonomy in
+`docs/known-issues.md` is the executable form of this: four tags mean both
+editions, `modern-only` means one.
+
+The archetype is already recorded two sections below: **turn transitions were
+attempted in 1999** — `STOP2LEA` on 8 characters, `STOP2RIA` on 7, `STOP2BAA` on
+4. *"The original team reached for continuous turning and could only afford
+discrete cells."* They wanted it; the engine and the budget could not. That is
+`modern-only` exactly, and D1 is its resolution.
+
+Why two editions rather than one remaster: the 1999 game is worth shipping on
+its own terms, the IP owners can evaluate quality by comparison rather than by
+description, and every Modern feature stays individually reversible — the same
+property `ActorFace` gives per character, applied to content.
+
+**Why this does not mean two repositories.** Both editions share the
+interpreter, the simulation, the asset pipeline, the deploy tooling and the
+overwhelming majority of content. They differ by a set of flagged features and a
+render backend. Four of the five issue tags apply to *both* editions, and that is
+where the volume is — so a second repository would mean diagnosing once and
+applying twice, forever, to avoid a divergence confined to a minority of the
+code. One repository, two build variants.
+
+**Mechanism: variant attributes inline in the GML.** Owner's decision, taken
+over an overlay-patch alternative. One tree, one source of truth, diffable in
+place; a reader can see both editions at once instead of reconstructing Modern
+from a base plus a patch.
+
+The cost is explicit and must be paid: **it edits files that are also an
+archive.** The masters are already not pristine — 43 insertions and 11 deletions
+across four chapters since import, all authored-defect fixes — and there is no
+untouched 1999 copy in the repo. So the guarantee changes shape. It is no longer
+*"the masters never change"*; it is:
+
+> **Every divergence from the 1999 content is attributable to a numbered issue.**
+
+That is the stronger claim and the checkable one. It requires a committed
+pristine `web_import/gml-1999/` snapshot and a test asserting every difference
+maps to a `docs/known-issues.md` or `docs/unfinished-1998.md` entry. **Not built
+yet — it is the precondition for editing a master in a variant-bearing way.**
+
 ## Why this is incremental, not a rewrite
 
 `ActorFace` (`webapp/src/engine/ActorFace.ts:7`) is a genuine interface with four

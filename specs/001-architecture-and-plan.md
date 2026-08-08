@@ -22,7 +22,7 @@ Three things follow, and they are the reason this plan is shaped the way it is:
 
 | Layer | Contents | Disposition |
 |---|---|---|
-| **Content** | 6 GML chapters, 1 211 assets | **Sacred.** Edited only to fix authored defects (e.g. terrain calibration), never restructured |
+| **Content** | 6 GML chapters, 1 211 assets | **Traceable.** Edited to fix authored defects, to finish intended-but-cut work, and to carry Modern-only variants. Every divergence from 1999 must map to a numbered issue — see D8 |
 | **Interpretation** | `GMLParser` → object graph | Keep. Extend for new element types only |
 | **Simulation** | `World`, `Pulser`, `Sequence`/`Quantum`, `StateController`, `Terrain`, `Inventory`, save/load | Keep. Fix known defects. **This plus Content is the game** — it is what every alternative stack would have forced us to rewrite |
 | **Presentation** | Renderer, animation, audio spatialisation, camera | **Swappable.** Classic and remastered implementations coexist |
@@ -38,9 +38,32 @@ Four interfaces carry the whole plan. One exists; three are new.
 | `RenderBackend` | `Canvas2D` (classic) · `WebGL` (remaster) | New. Keeps the renderer swap from being a stop-the-world rewrite |
 | `AssetSource` | `Bundled` · `OnDemandPack` | New. Web lazy-load, iOS ODR and Play Asset Delivery are one abstraction |
 | `SaveBackend` | `IndexedDB` · `iCloud` · `PlayGames` | New. Cheap now, expensive to retrofit |
+| `Edition` | `Classic` · `Modern` | New, and now the load-bearing one — see D8 |
 
-`ActorFace` is the important one: it turns a 46-character remaster into 46
-independent, reversible, individually shippable increments.
+`ActorFace` is the important one for art: it turns a 46-character remaster into
+46 independent, reversible, individually shippable increments.
+
+`Edition` is the one that decides what a build *is*. It resolves in two places
+and nowhere else:
+
+1. **Content** — `GMLParser` reads variant attributes and keeps or drops an
+   element by edition. This is new parser work and it is the only change the
+   Interpretation layer needs.
+2. **Presentation** — which `ActorFace` and `RenderBackend` implementations are
+   registered.
+
+Everything between those two — `World`, `Pulser`, `Sequence`/`Quantum`,
+`StateController`, `Terrain`, `Inventory`, save/load — is **edition-blind and
+must stay so.** That is the invariant worth defending: roughly 4 000 of the
+6 457 lines of the codebase, the part that encodes the reverse-engineered 1999
+semantics, never learns which edition it is running. If a change to the
+simulation layer needs to ask, the seam was drawn in the wrong place.
+
+Corollary for tests: the 106 cases encode 1999 behaviour and therefore describe
+**Classic**. Modern-only behaviour needs its own cases, and the most valuable
+test available is the cross-edition one — *does Modern still produce the same
+walk quanta as Classic for `s_Kot`?* That test is only writable because both
+editions live in one build.
 
 ## Asset pipeline
 

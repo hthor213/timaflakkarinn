@@ -185,7 +185,7 @@ skipped. A range touching `web_import/GAME/` additionally needs the overlay
 rebuilt (`tools/make-overlay.sh`) and, for prod, `--art-approved`.
 
 **(a) Bug-test.** He plays through and reports; fixes land per the existing
-taxonomy (`1998-bug` / `port-bug` / `missing` / `design-improvement`). Play in
+taxonomy (`1998-bug` / `port-bug` / `missing` / `modern-only`). Play in
 properly rather than using the debug scene jump — the jump tunnels arrival state
 and leaves no walkable player, which is what defeated two verification attempts.
 Play on **tt-dev** now: it can carry a fix minutes after it lands, and prod stays

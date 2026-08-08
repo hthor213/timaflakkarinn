@@ -12,23 +12,80 @@ there is a playable build: recall is triggered by playing, not by remembering.
 ## Tags
 
 Every entry carries an origin tag. The distinguishing question is **factual, not
-aesthetic**: *did the 1998 team consider this wrong at the time?*
+aesthetic**: *why is this not right in the 1999 build?*
 
-| Tag | Meaning | What happens |
+Since 2026-08-08 the tag also decides **which edition a change lands in.** There
+are two products — see `specs/000` D8. The rule is one line: **four tags go to
+both editions, one goes to Modern only.**
+
+| Tag | Meaning | Edition |
 |---|---|---|
-| `1998-bug` | Wrong against the original team's own intent — a shipped defect, **or** something they meant to do and never got to | **Fix it.** No preserve-or-fix debate: the authors already agreed it was wrong, so preserving it would preserve a mistake, not fidelity |
-| `port-bug` | Introduced by the reverse-engineering | Fix. The 1999 engine is the specification and the recreation is simply wrong |
-| `missing` | Content the port does not have | Add |
-| `design-improvement` | Worked exactly as intended in 1998; we want better now | Genuinely optional. This is what the remaster is *for* |
+| `1998-bug` | A defect. Wrong against the original team's own intent, and they knew it | **both** |
+| `port-bug` | Introduced by the reverse-engineering | **both** |
+| `missing` | Content the port does not have but the disc does | **both** |
+| `cut-for-time` | Intended, achievable on the 1999 engine, lost to the schedule | **both** |
+| `modern-only` | Cannot or should not be in Classic — the archetype is *"we wanted this and wished we had a better engine"* | **Modern** |
 
-Two notes on using this well.
+Two further tags exist and sit **outside** the edition axis entirely, because
+they are about the project rather than the game: `infrastructure` (tooling,
+servers, credentials) and `provenance` (what the artefacts are and where they
+came from). Neither ships.
 
-**`1998-bug` covers unfinished intent, not just defects.** That is the dominant
-signature of this codebase — three voice lines cut for a pressing deadline, 61 of
-84 terrains never given their scaling calibration, `SetSpeedQuantum` built and
-wired and never once used, a sequence literally named `s_UnDecided6`. None of
-that is sloppiness; it is a six-month schedule, still visible in the archive.
-It needs *finishing*, not deciding.
+Three notes on using this well.
+
+**`cut-for-time` is not a defect, and it still goes in Classic.** This is the
+dominant signature of the codebase — three voice lines cut for a pressing
+deadline, 61 of 84 terrains never given their scaling calibration,
+`SetSpeedQuantum` built and wired and never once used, a sequence literally
+named `s_UnDecided6`. None of it is sloppiness; it is a six-month schedule,
+still visible in the archive. It was intended and it was *achievable* — the
+engine could have done it — so finishing it is completing the 1999 game, not
+modernising it. It needs *finishing*, not deciding.
+
+**`modern-only` is a disposition, not a provenance.** Every other tag states a
+fact about the past. This one states where the change ships. It therefore holds
+two things that feel different but behave identically: what the team wanted and
+the engine could not do, and what nobody in 1998 thought of at all. Both are
+Modern-only, both are optional, and neither belongs in Classic. The engine-wish
+cases are the more valuable half — they are recoverable only from the people who
+were there.
+
+**The line between `cut-for-time` and `modern-only` is the whole taxonomy.**
+Both sound like "we wanted it and didn't ship it". The question that separates
+them is: *could the 1999 engine have done it?* If yes, it is `cut-for-time` and
+Classic gets it. If it needed an engine they did not have, it is `modern-only`.
+When the answer is not known, it is a question for the original team and for
+nobody else.
+
+### Re-tagging still owed — needs Hjalti
+
+`cut-for-time` was split out of `1998-bug` on 2026-08-08 and no existing entry
+has been moved, because the distinction is *"did we get it wrong"* versus *"did
+we run out of time"* and only the people who were there know which. Both still
+ship to both editions, so nothing is blocked by this — but the two are different
+facts and the record should say the right one.
+
+The six entries currently tagged `1998-bug`, and how they look from here:
+
+| # | Entry | Reads as |
+|---|---|---|
+| 0 | Three lines displayed but never spoken | **`cut-for-time`** — its own text says cut for a pressing deadline |
+| 1 | Walking away looks like climbing a wall | unclear; also carries `modern-only` |
+| 4 | Green speckles from palette drift | `1998-bug` — invisible on correct hardware, so never a decision |
+| 11 | Hand on yourself inconsistent across chapters | `1998-bug` — inconsistency, not an unfinished plan |
+| 12 | Moonwalking | `1998-bug` — owner confirms it annoyed the team at the time |
+| 13 | Sword can't be picked up; hotspot on empty grass | unclear — abandoned plan, or defect? |
+
+Also `docs/unfinished-1998.md` §4 "Built and never aimed" is `cut-for-time` by
+construction — a mechanism wired in 1998 and never pointed at anything is the
+definition of the tag.
+
+**And the question that actually matters more than the re-tagging:** the
+`modern-only` list is currently one entry long. That list is where *"we wanted
+this and wished we had a better engine"* lives, and it is recoverable from
+nobody but the original team. `STOP2LEA`/`STOP2RIA`/`STOP2BAA` — reaching for
+continuous turning and affording only discrete cells — was found in the content
+rather than reported, which suggests there are more.
 
 **The only entries that need a decision from the owner are the ones where we
 cannot tell whether something was intended.** Karli's subtitles being coloured
@@ -116,7 +173,7 @@ recording: the new line is carried entirely by its subtitle.
 
 ---
 
-## 1 — `1998-bug` + `design-improvement` · Walking away looks like climbing a wall
+## 1 — `1998-bug` + `modern-only` · Walking away looks like climbing a wall
 
 **Reported by:** Hjalti, 2026-08-06 — "when Hjalti is walking up the river there
 is no perspective and he doesn't get smaller … it looks like he's climbing a

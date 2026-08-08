@@ -1418,3 +1418,58 @@ Fixed with an explicit Caddy handler ahead of the catch-all, serving the file
 with `no-store` (not `no-cache`: this endpoint answers *right now*, never from a
 cache). Verified after the change: dev `200` with its stamp, prod `404` because
 it has not been promoted yet — which is the honest answer.
+
+---
+
+## 24 — `port-bug`? · UNVERIFIED CAUSE · The subtitles are authored and wired, and none appear
+
+Found 2026-08-08, while adding a readable subtitle strip for the phone.
+
+**The script exists.** Every voiced line in the game has its words and its
+timing in the GML, as `<Sentence text="…" time="…">` children of a
+`SpeechActorMouth`:
+
+| | speech mouths | timed sentences | carrying `acc=` |
+|---|---|---|---|
+| Landnám | 138 | 209 | 138 |
+| Kristnitaka | 193 | 410 | 193 |
+| Siðaskipti | 204 | 442 | 204 |
+| Tyrkjaránið | 173 | 254 | 173 |
+| **total** | **708** | **1,315** | **708 (all)** |
+
+**And it is wired.** All 708 mouths name a text accumulator — `acc="a_Vifill_acc"`
+and so on — every accumulator is declared before the mouth that references it,
+`GMLParser` builds each `<Text>` into an Actor with a `TextActorFace`, and
+`SpeechActorMouth` steps the sentences on the audio's clock and moves the
+accumulator to `textMiddle` (400, 2030, z 2000) on `start()`.
+
+**None of it shows.** Driven in a real browser against the deployed dev site:
+talk to Vífill on the ship, take the first option, watch for 20s. The
+conversation demonstrably advanced — four options became three, so the reaction
+ran and `m_hvaderum` was performed — and no subtitle appeared, on the canvas or
+in the new DOM strip that mirrors it.
+
+Two accumulators are *deliberately* invisible and are not this: `a_Karli_acc`
+and `a_Halldora_acc` are chroma green, so they drew as nothing in 1999 and are
+painted transparent here on purpose (see the note in `GMLParser` `case 'Text'`).
+Vífill's is `color="white"`, and Vífill is who was tested.
+
+**Not diagnosed.** Candidates, cheapest first:
+
+1. `textMiddle.z` is 2000, and the accumulator lives on `t_Corners`
+   (`scene="s_Skipingolfs"`). If that terrain's z range excludes 2000 the actor
+   is placed outside it and never painted. This is the first thing to measure.
+2. `<Text>` parks the actor at `(0, -1000, 0)` and `start()` only repositions it
+   when `this.textFace?.owner` resolves — if `owner` is unset the actor stays
+   parked off-screen and the text updates invisibly.
+3. The accumulator's terrain may not be on stage in the scene being played.
+
+**Why it matters beyond a bug.** The owner asked whether subtitles were possible
+so the game could be played with the sound off — and they were written in 1998,
+for every line. If this has never displayed, then 1,315 authored lines have been
+invisible since the port began, and the subtitle feature is not a feature to
+build but a defect to fix.
+
+`webapp/src/game/Subtitles.ts` is deployed and correct but inert until this is
+resolved: it mirrors `getCurrentSubtitle()`, which reports the same text the
+canvas would be showing.

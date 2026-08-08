@@ -14,10 +14,20 @@
 //   npx playwright install chromium
 //   sudo npx playwright install-deps chromium  # or apt-get the libs directly
 //
-// Then run this file from ~/tools/browser so it can resolve playwright:
-//   node ~/work/timaflakkarinn/tools/browser/phone-shot.mjs <url> <out.png>
+// Run it from anywhere; it resolves playwright out of that directory rather
+// than out of the repo. Override with TT_BROWSER_HOME if it lives elsewhere.
+//   node tools/browser/phone-shot.mjs <url> <out.png>
 //
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+const browserHome = process.env.TT_BROWSER_HOME || `${process.env.HOME}/tools/browser`;
+const requireFrom = createRequire(`${browserHome}/`);
+let chromium;
+try {
+  ({ chromium } = requireFrom('playwright'));
+} catch {
+  console.error(`playwright not found under ${browserHome} — see the setup notes at the top of this file`);
+  process.exit(1);
+}
 
 const args = process.argv.slice(2);
 const url = args[0];

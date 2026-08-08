@@ -14,7 +14,8 @@ const dir = mkdtempSync(join(tmpdir(), 'tt-'));
 
 const cfgOut = join(dir, 'cfg.mjs');
 await build({ entryPoints: ['src/config.ts'], bundle: true, format: 'esm', outfile: cfgOut, logLevel: 'silent' });
-const { resolveInput } = await import(pathToFileURL(cfgOut));
+const SC_CFG = await import(pathToFileURL(cfgOut));
+const { resolveInput } = SC_CFG;
 
 // ONE bundle for everything the game classes share. Bundling StateController
 // and SentenceContainer as separate entry points gives two distinct copies of
@@ -59,6 +60,38 @@ ok('?touch=0 forces pointer on a phone',
   () => assert.equal(resolveInput(loc('https://tt-dev.spliffdonk.com/?touch=0'), coarse), 'pointer'));
 ok('?touch and ?debug are independent axes',
   () => assert.equal(resolveInput(loc('https://tt.spliffdonk.com/?debug=1&touch=1'), none), 'touch'));
+
+// --- canvas subtitles ------------------------------------------------------
+//
+// 1998 painted subtitles, so a browser paints them. A phone does not, because
+// the readable strip under the picture is the subtitle there.
+const { resolveCanvasSubtitles } = SC_CFG;
+const mem = (v) => { const m = { v }; return {
+  getItem: () => m.v ?? null, setItem: (_k, val) => { m.v = val; }, read: () => m.v }; };
+
+ok('a browser paints them by default — 1998 did', () => {
+  assert.equal(resolveCanvasSubtitles('pointer', loc('https://tt.spliffdonk.com/'), mem(null)), true);
+});
+ok('a phone never paints them, whatever is stored', () => {
+  assert.equal(resolveCanvasSubtitles('touch', loc('https://tt.spliffdonk.com/'), mem('1')), false);
+});
+ok('?subs=0 turns them off in a browser', () => {
+  assert.equal(resolveCanvasSubtitles('pointer', loc('https://tt.spliffdonk.com/?subs=0'), mem(null)), false);
+});
+ok('a stored "off" is honoured on a later load', () => {
+  assert.equal(resolveCanvasSubtitles('pointer', loc('https://tt.spliffdonk.com/'), mem('0')), false);
+});
+ok('?subs=0 is remembered', () => {
+  const store = mem(null);
+  resolveCanvasSubtitles('pointer', loc('https://tt.spliffdonk.com/?subs=0'), store);
+  assert.equal(store.read(), '0');
+});
+ok('?subs=1 does not override a phone', () => {
+  assert.equal(resolveCanvasSubtitles('touch', loc('https://tt.spliffdonk.com/?subs=1'), mem(null)), false);
+});
+ok('missing localStorage (Safari private mode) still defaults on', () => {
+  assert.equal(resolveCanvasSubtitles('pointer', loc('https://tt.spliffdonk.com/'), null), true);
+});
 
 // --- the verb rules --------------------------------------------------------
 

@@ -76,12 +76,17 @@ export function resolveInput(
  * Should subtitles be painted into the canvas?
  *
  * On touch: never. The readable strip under the picture is the subtitle there,
- * and the canvas line is ten physical pixels of clutter over the art.
+ * and the canvas line is ten physical pixels of clutter over the art. That is a
+ * presentation choice for a screen 1998 never saw, not a change to the game.
  *
- * In a browser: a setting, OFF by default, per the owner. Override per-load with
- * ?subs=1 / ?subs=0; the choice sticks in localStorage so it survives a reload.
- * (1998 painted them, so off-by-default is a deliberate departure rather than
- * fidelity — worth a taxonomy entry if the classic edition should differ.)
+ * In a browser: ON by default, because 1998 painted them. An earlier cut had
+ * this off by default; the owner corrected it once it was clear that would be a
+ * departure from the original rather than a preference. Nothing in the taxonomy
+ * needs to record it now — on IS the faithful behaviour, and it is what players
+ * would have seen in 1999 had the port not been dropping the text (#24).
+ *
+ * Still switchable, since wanting the picture clean is reasonable: ?subs=0 turns
+ * them off, ?subs=1 back on, and the choice sticks in localStorage.
  */
 export function resolveCanvasSubtitles(
   input: InputMode,
@@ -99,7 +104,8 @@ export function resolveCanvasSubtitles(
     return false;
   }
   if (input === 'touch') return false;
-  return store?.getItem('tt.subs') === '1';
+  // Default on: absent a stored choice, do what 1998 did.
+  return store?.getItem('tt.subs') !== '0';
 }
 
 function safeLocalStorage(): Pick<Storage, 'getItem' | 'setItem'> | null {

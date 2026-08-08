@@ -1303,3 +1303,61 @@ provenance; not a different version.
 the decompiled Java. Worth opening if any question about original engine
 behaviour becomes load-bearing.
 
+
+---
+
+## 22 — `infrastructure` · The transcoded audio exists in exactly one directory, on one machine
+
+Found 2026-08-08 while building the second serving root.
+
+`web_import/GAME_M4A` — the 668 AAC files that are the entire 169 → 33 MiB audio
+win — is **gitignored**, and correctly so: it is derived from the WAV masters and
+is build output, not source. But the consequence had never been stated. Two fresh
+clones made that day contained **zero** `.m4a` files, while the workspace had all
+668. Both serving roots hardlink their audio from that one workspace directory.
+
+So today:
+
+- Every `.M4A` byte the public hears traces to
+  `/home/hjalti/work/timaflakkarinn/web_import/GAME_M4A` on `homeserver`.
+- A `GAME/` overlay **cannot be built on any machine that lacks it**.
+  `tools/make-overlay.sh` refuses with that reason rather than producing a
+  silent, audio-less tree.
+- Losing that directory does not break the running site — the serving roots hold
+  their own hardlinks to the same inodes, so the data survives as long as *any*
+  link does. It breaks the ability to rebuild.
+
+Not urgent, and deliberately not "fixed" by committing it: 35 MB of derived
+output in LFS is the wrong answer, and the owner's standing rule is that build
+output is never `git add`ed.
+
+**The real fix is to make it reproducible**: the WAV → AAC transcode is not in
+`tools/` at all. It was run once, by hand, and the exact `ffmpeg` invocation
+survives only in `specs/000` prose (`libfdk_aac`, and an open question about a
+40 kbps re-run). Until that is a script, the audio pipeline is a step that
+happened rather than a step that can happen again.
+
+Related: `specs/001` "Deployment" and the `--m4a-src` flag on
+`tools/make-overlay.sh`.
+
+---
+
+## 23 — `port-bug` · FIXED · A missing `/version.json` answered 200 with the app HTML
+
+Found and fixed 2026-08-08, immediately on introducing the deploy stamp.
+
+`/version.json` is written into each serving root at publish time and records
+which commit that environment is running. On first test, `tt.spliffdonk.com`
+(which had no such file yet) returned **`200` with `index.html`** rather than
+`404`: the path fell into the SPA catch-all, `try_files {path} /index.html`.
+
+That is the same class of failure the `/assets/*` handler already existed to
+prevent — a missing thing answering cheerfully — but `/assets/*` was the only
+path protected. Anything asking "what is deployed here?" would have received a
+web page and could have parsed it as an answer; a monitor checking for HTTP 200
+would have called an unstamped root healthy.
+
+Fixed with an explicit Caddy handler ahead of the catch-all, serving the file
+with `no-store` (not `no-cache`: this endpoint answers *right now*, never from a
+cache). Verified after the change: dev `200` with its stamp, prod `404` because
+it has not been promoted yet — which is the honest answer.

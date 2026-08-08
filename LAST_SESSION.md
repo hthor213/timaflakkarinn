@@ -1,21 +1,44 @@
-# Last session — 2026-08-06/07 (overnight + morning)
+# Last session — 2026-08-08 (environment split)
 
 ## The milestone
 
-**The game is live at https://tt.spliffdonk.com** (play) and
-**https://tt-dev.spliffdonk.com** (debug). First time Tímaflakkarinn has been on
-a real URL. Verified end to end: app shell, deep links, `image/png` backgrounds,
-`audio/mp4` voice, valid Let's Encrypt on both.
+**There is now a test environment.** Until this session `tt.spliffdonk.com` and
+`tt-dev.spliffdonk.com` were **one Caddy block over one serving root** — "dev"
+was a client-side debug flag reading the hostname, and both URLs served
+byte-identical files from the same directory. Nothing could be tried anywhere
+before the public saw it.
 
-Branch `feat/unify`, pushed to `git.spliffdonk.com`. Not merged to a trunk yet —
-the repo's default branch question is still open.
+| Host | Env | Branch | Directory | Gate |
+|---|---|---|---|---|
+| `tt.spliffdonk.com` | prod | `main` | `/srv/timaflakkarinn/prod/{repo,web}` | `--promote`, plus Erna on art |
+| `tt-dev.spliffdonk.com` | dev | `dev` | `/srv/timaflakkarinn/dev/{repo,web}` | none, deliberately |
 
-**The site is current as of `aec43cc`.** Deployed via the new `tools/deploy.sh`
-and verified: 16 checks passed, gml served byte-identical to master with CRLF
-intact, SPA fallback working, missing assets still 404ing. Everything from the
-overnight session is playable — the Völva prompt, the Irna response, the pointer
-and hit-box fixes, bold-on-hover, spacebar-as-right-button, touch input, the
-Pulser cadence and the freeze escape.
+`dev` and `main` are branches; the two server directories are **independent
+clones**, not git worktrees — a worktree set cannot check out `dev` twice, and
+the workspace is on `dev`. 425 MB each.
+
+**The trunk question is closed.** `feat/unify` was renamed `dev`; `origin/main`
+was a strict ancestor (54 commits behind, tip still the initial commit) so it
+fast-forwarded cleanly. Stale `feat/unify` deleted from the remote.
+
+**Deploying no longer ssh's into itself.** `deploy.sh` had
+`SSH_HOST=hjalti@homeserver` and `REMOTE_REPO=/home/hjalti/work/timaflakkarinn`
+— the working copy it ran from. Every `remote()` was a loopback ssh that died on
+host key verification, and the "server has commits the laptop does not" guard
+compared a directory to itself. It now detects that it *is* the deploy host and
+runs the same snippets in a subshell. The ssh path is untouched for a real
+laptop run.
+
+**Correction to the previous brief:** it said the site was current as of
+`aec43cc`. It was not. The deployed bytes were `473b5a8` — two hours later, and
+the commit containing the screen-space picking fix. This was worked out by
+correlating web-root mtimes against commit timestamps across two timezones,
+which is why each root now writes **`/version.json`** recording env, branch,
+commit and deploy time. "What is live?" is now a question with an answer.
+
+Verified end to end this session: dev deploys clean at **26 checks**, prod
+verifies clean at **14**, and the two hosts serve provably different content
+from the same path.
 
 ## What happened
 
@@ -142,12 +165,31 @@ Recommended camera budget: **±10cm lateral**, 16px differential parallax.
 
 ## Start next session with
 
-Two parallel tracks, agreed with the owner:
+Two parallel tracks, agreed with the owner. **Both now have somewhere to land
+that is not the public site** — this was the blocker the environment split
+removed.
+
+**How to ship, now:**
+
+```
+tools/deploy.sh --env dev                     # test site, no gate
+tools/deploy.sh --env prod --dry-run          # see the plan
+tools/deploy.sh --env prod --promote          # public
+tools/deploy.sh --env prod --verify-only      # read-only health check
+curl https://tt-dev.spliffdonk.com/version.json   # what is running there
+```
+
+Commit at milestones straight to `dev` and push; the deploy source is
+`origin/<branch>`, so an unpushed commit is refused rather than silently
+skipped. A range touching `web_import/GAME/` additionally needs the overlay
+rebuilt (`tools/make-overlay.sh`) and, for prod, `--art-approved`.
 
 **(a) Bug-test.** He plays through and reports; fixes land per the existing
 taxonomy (`1998-bug` / `port-bug` / `missing` / `design-improvement`). Play in
 properly rather than using the debug scene jump — the jump tunnels arrival state
 and leaves no walkable player, which is what defeated two verification attempts.
+Play on **tt-dev** now: it can carry a fix minutes after it lands, and prod stays
+put until promoted.
 
 **(b) Graphics.** Blocked on **D2**. Evidence page:
 https://claude.ai/code/artifact/d37cdbfb-55b7-475d-9af9-8a8b79db4da3
@@ -162,6 +204,10 @@ https://claude.ai/code/artifact/d37cdbfb-55b7-475d-9af9-8a8b79db4da3
    `timaflakkarinn-disc/work/prototype/out/` and is not committed. Proposed
    shape: `art/<SCENE>/{master,superres,generated,approved}/` — the axis that
    matters is which version Erna signed off, not which technique produced it.
+   **`deploy.sh` already enforces that axis**: a prod range touching `art/`
+   outside `art/<scene>/approved/` refuses without `--art-approved "<who, when>"`,
+   which is then printed in the deploy report. The gate exists before the tree
+   does, so the pipeline lands into a rule that already works.
 3. **Audit the 23 authored terrains.** `t_HjaVolvul` ramps 1.031x where
    perspective wants 1.63x, so the problem is not only the 61 uncalibrated ones.
 4. CI running `npm run check` on push.
@@ -184,7 +230,18 @@ https://claude.ai/code/artifact/d37cdbfb-55b7-475d-9af9-8a8b79db4da3
 - **Confirm with the original team (not Halldór)** the two content defects before anyone edits GML:
   the `q_Ahvarerhjorleifur` typo in `s_bless1` and the cut-scene reference
   `q_ToFjolin`.
-- **Repo shape**: `feat/unify` needs a decision — does it become the trunk?
+- ~~**Repo shape**: does `feat/unify` become the trunk?~~ **RESOLVED 2026-08-08.**
+  `dev` is the working branch and publishes to tt-dev; `main` is what the public
+  sees. Promoting is a fast-forward of `main` and an explicit
+  `tools/deploy.sh --env prod --promote`.
+- **The first promote has not happened.** `main` is still at `ff1ebec` and prod
+  is serving it. Everything since — the environment split, the deploy stamp, the
+  rename — is on `dev` only. Nothing on `dev` changes the game itself: the built
+  bundle is byte-identical (`index-BhmtPcbb.js` on both), so promoting is safe
+  whenever wanted, and mostly just gives prod its `version.json`.
+- **The WAV → AAC transcode is not a script.** It was run once by hand and the
+  `ffmpeg` invocation survives only as prose in `specs/000`. The 668 derived
+  files live in one gitignored directory on one machine. See known-issues #22.
 - **The remaster supersedes `docs/ownership-and-provenance.md`'s Phase 1
   framing.** The other IP owners have not been asked.
 

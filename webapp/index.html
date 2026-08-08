@@ -173,6 +173,12 @@
       text-wrap: balance;
     }
     html[data-input="touch"] #subtitle.empty { display: none; }
+    /* Word being spoken. The timing is ESTIMATED from sentence timings — 1998
+       timed per sentence, not per word — so this is a reading aid, not a claim
+       about the recording. Kept gentle for that reason: a hard karaoke fill
+       would assert a precision the data does not have. */
+    #subtitle .w { transition: color 90ms linear; }
+    #subtitle .w.now { color: #ffd479; }
 
     /* The save/load menu, same rows as the dialogue list. */
     #menu-list { display: none; }

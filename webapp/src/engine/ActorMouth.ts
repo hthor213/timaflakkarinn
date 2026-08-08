@@ -40,10 +40,20 @@ const activeMouths = new Set<SimpleActorMouth>();
  * timeline both clear it, so a non-empty face here means "being spoken now".
  */
 export function getCurrentSubtitle(): string | null {
+  return getCurrentSubtitleState()?.text ?? null;
+}
+
+export interface SubtitleState {
+  text: string;
+  /** Index of the word being spoken, ESTIMATED. -1 before the first. */
+  word: number;
+}
+
+export function getCurrentSubtitleState(): SubtitleState | null {
   for (const mouth of activeMouths) {
     if (!(mouth instanceof SpeechActorMouth)) continue;
-    const text = mouth.textFace?.text?.trim();
-    if (text) return text;
+    const state = mouth.getSubtitleState();
+    if (state) return state;
   }
   return null;
 }
@@ -277,6 +287,52 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
     if (this.textFace) {
       this.textFace.setText('');
     }
+  }
+
+  /**
+   * The line being spoken and, ESTIMATED, which word is being said.
+   *
+   * The estimate is the honest part. 1998 timed the content per SENTENCE --
+   * <Sentence text time> says when a line starts and nothing about the words
+   * inside it -- so a word index has to be inferred. This spreads the sentence's
+   * own window across its words by length, one character being roughly one unit
+   * of speaking time, which is a decent proxy in Icelandic and wrong wherever
+   * the actor pauses, breathes or leans on a word.
+   *
+   * The window is measured from this sentence's time to the next one's, and for
+   * the last sentence to the end of the recording. Both come from data we
+   * actually have, so the highlight cannot drift past the end of the line.
+   *
+   * Real per-word timing would need forced alignment of the 668 recordings
+   * against their known text. That is a pipeline job, not a rendering one, and
+   * it would replace only the fraction-to-word step below.
+   */
+  getSubtitleState(): { text: string; word: number } | null {
+    const text = this.textFace?.text?.trim();
+    if (!text) return null;
+
+    const i = this.position - 1;          // position points at the NEXT sentence
+    if (i < 0 || i >= this.sentences.length) return { text, word: -1 };
+
+    const start = this.sentences[i].time;
+    const next = this.sentences[i + 1]?.time;
+    const durationMs = this.getDuration() * 1000;
+    const end = next
+      ?? (durationMs > 0 ? durationMs : start + Math.max(1500, text.length * 60));
+    const span = Math.max(1, end - start);
+
+    const elapsed = performance.now() - this.startTime;
+    const fraction = Math.max(0, Math.min(1, (elapsed - start) / span));
+
+    const words = text.split(/\s+/);
+    const weights = words.map(w => w.length + 1);
+    const total = weights.reduce((a, b) => a + b, 0);
+    let acc = 0;
+    for (let w = 0; w < words.length; w++) {
+      acc += weights[w];
+      if (fraction <= acc / total) return { text, word: w };
+    }
+    return { text, word: words.length - 1 };
   }
 
   // Pulsable interface

@@ -617,6 +617,7 @@ info "  index.html  <- webapp/dist/index.html"
 info "  _headers    <- webapp/dist/_headers"
 info "  video/      <- webapp/dist/video"
 info "  gml/        <- web_import/gml          (NOT dist/gml)"
+info "  version.json<- written here, records what this root is serving"
 info "  GAME/       <- untouched hardlink overlay"
 
 # RS: compare by checksum (-c) and do not propagate mtimes (--no-times).
@@ -680,6 +681,25 @@ if [ "$DRY_RUN" = 1 ]; then
 else
   remote "$PUBLISH_SCRIPT"
   ok "assets/, index.html, _headers, video/, gml/ refreshed"
+
+  # What is actually live here? Until now: unanswerable. Working it out meant
+  # correlating web-root mtimes against commit timestamps, and the session
+  # brief had drifted to naming the wrong commit as live because of it.
+  #
+  # Written at publish time rather than baked into the bundle, so it cannot go
+  # stale relative to what was published, and so a byte-identical rebuild still
+  # records a fresh deploy.
+  DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  remote "cat >$WEB_ROOT/version.json <<'JSON'
+{
+  \"env\":      \"$ENV\",
+  \"branch\":   \"$BRANCH\",
+  \"commit\":   \"$TARGET_SHA\",
+  \"subject\":  $(printf '%s' "$TARGET_SUBJECT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),
+  \"deployed\": \"$DEPLOYED_AT\"
+}
+JSON"
+  ok "version.json records $ENV at ${TARGET_SHA:0:7}"
 fi
 
 fi   # end of the transport/build/publish block skipped by --verify-only
@@ -815,6 +835,21 @@ EOF
   ok "/$SAMPLE_PNG 200, $sz bytes (not an LFS pointer)"
 
   # SPA fallback both ways: routes must resolve, assets must NOT be masked.
+  # The strongest single check available: the site itself states which commit
+  # it is serving, and we assert it is the one we just published. Everything
+  # else here proves a file moved; this proves WHICH VERSION moved.
+  if [ "$VERIFY_ONLY" = 0 ]; then
+    code="$(http "/version.json" "$TMPB" "$TMPH")"
+    [ "$code" = 200 ] || die "GET /version.json returned $code — the deploy stamp is not being served."
+    grep -q "\"commit\": *\"$TARGET_SHA\"" "$TMPB" || die \
+      "/version.json does not report ${TARGET_SHA:0:7}." \
+      "Served: $(tr -d '\n' <"$TMPB" | sed 's/  */ /g')"
+    grep -q "\"env\": *\"$ENV\"" "$TMPB" || die \
+      "/version.json at $BASE_URL reports a different environment than '$ENV'." \
+      "The two hostnames may still be sharing one serving root."
+    ok "/version.json reports env=$ENV commit=${TARGET_SHA:0:7}"
+  fi
+
   code="$(http "/chapter2" "$TMPB" "$TMPH")"
   [ "$code" = 200 ] || die "GET /chapter2 returned $code — try_files fallback is broken, chapters will 404."
   grep -q 'game-container' "$TMPB" || die "/chapter2 did not return the app HTML."

@@ -19,14 +19,13 @@
 #                  recurring failure mode here is *silently stale*, not
 #                  *loudly broken*
 #
-# TWO ENVIRONMENTS. They are separate checkouts and separate serving roots, so
-# dev can sit at a different commit than live -- which is the whole point of a
-# test environment and was impossible when both hostnames shared one root:
+# TWO ENVIRONMENTS. One directory each, holding its own checkout and its own
+# serving root, so dev can sit at a different commit than live -- which is the
+# whole point of a test environment and was impossible when both hostnames
+# shared a single root:
 #
-#   --env dev    branch dev   /srv/timaflakkarinn/checkout-dev   -> web-dev
-#                             https://tt-dev.spliffdonk.com
-#   --env prod   branch main  /srv/timaflakkarinn/checkout-prod  -> web
-#                             https://tt.spliffdonk.com
+#   /srv/timaflakkarinn/dev/{repo,web}    branch dev   tt-dev.spliffdonk.com
+#   /srv/timaflakkarinn/prod/{repo,web}   branch main  tt.spliffdonk.com
 #
 # There is no default. Deploying to the wrong environment because a flag was
 # forgotten is exactly the mistake this file exists to prevent.
@@ -103,14 +102,14 @@ done
 # --- environment -----------------------------------------------------------
 case "$ENV" in
   dev)
-    REMOTE_REPO="/srv/timaflakkarinn/checkout-dev"
-    WEB_ROOT="/srv/timaflakkarinn/web-dev"
+    REMOTE_REPO="/srv/timaflakkarinn/dev/repo"
+    WEB_ROOT="/srv/timaflakkarinn/dev/web"
     [ -n "$BRANCH" ]   || BRANCH="dev"
     [ -n "$BASE_URL" ] || BASE_URL="https://tt-dev.spliffdonk.com"
     ;;
   prod)
-    REMOTE_REPO="/srv/timaflakkarinn/checkout-prod"
-    WEB_ROOT="/srv/timaflakkarinn/web"
+    REMOTE_REPO="/srv/timaflakkarinn/prod/repo"
+    WEB_ROOT="/srv/timaflakkarinn/prod/web"
     [ -n "$BRANCH" ]   || BRANCH="main"
     [ -n "$BASE_URL" ] || BASE_URL="https://tt.spliffdonk.com"
     ;;
@@ -320,7 +319,7 @@ step "Checkout pre-state ($REMOTE_REPO)"
 if [ "$LOCAL_MODE" = 1 ]; then
   [ -d "$REMOTE_REPO/.git" ] || die \
     "$REMOTE_REPO is not a git checkout." \
-    "Each environment has its own: checkout-dev on dev, checkout-prod on main."
+    "Each environment has its own: dev/repo on branch dev, prod/repo on branch main."
   ok "checkout present"
 else
   remote 'echo up' >/dev/null || die "cannot reach $SSH_HOST over ssh."

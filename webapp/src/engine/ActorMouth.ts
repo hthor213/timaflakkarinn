@@ -25,6 +25,29 @@ export interface ActorMouth {
 /** Track all active mouths so we can stop them all at once */
 const activeMouths = new Set<SimpleActorMouth>();
 
+/**
+ * The subtitle currently on screen, if any.
+ *
+ * 1998 wrote subtitles for every voiced line and the port already renders them:
+ * each SpeechActorMouth carries <Sentence text time> children and steps through
+ * them on the audio's clock. 1,315 of them across the four chapters. They are
+ * drawn into the canvas, though, which on a phone means a 22px line inside an
+ * 800x600 frame scaled to a handset — legible on a laptop, not on a phone held
+ * at arm's length, and unreadable is the same as absent if the reason you want
+ * subtitles is that the sound is off.
+ *
+ * The text lives only while the line is playing: stop() and the end of the
+ * timeline both clear it, so a non-empty face here means "being spoken now".
+ */
+export function getCurrentSubtitle(): string | null {
+  for (const mouth of activeMouths) {
+    if (!(mouth instanceof SpeechActorMouth)) continue;
+    const text = mouth.textFace?.text?.trim();
+    if (text) return text;
+  }
+  return null;
+}
+
 export function stopAllAudio(): void {
   for (const mouth of activeMouths) {
     mouth.stop();

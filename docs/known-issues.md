@@ -1421,7 +1421,7 @@ it has not been promoted yet — which is the honest answer.
 
 ---
 
-## 24 — `port-bug`? · UNVERIFIED CAUSE · The subtitles are authored and wired, and none appear
+## 24 — `port-bug` · FIXED · The subtitle was destroyed at the moment the sound started
 
 Found 2026-08-08, while adding a readable subtitle strip for the phone.
 
@@ -1454,15 +1454,39 @@ and `a_Halldora_acc` are chroma green, so they drew as nothing in 1999 and are
 painted transparent here on purpose (see the note in `GMLParser` `case 'Text'`).
 Vífill's is `color="white"`, and Vífill is who was tested.
 
-**Not diagnosed.** Candidates, cheapest first:
+**Diagnosed and fixed, same day.** None of the three candidates was it; all
+three were measured and cleared. `t_Corners` is `zmin="900" zmax="2000"` and
+`contains()` is inclusive, so z=2000 passes; `getPhysicalY` is `y - z`, putting
+the line at screen y=30, top centre, where the hover label demonstrably renders.
+`Actor.addState` does set `face.owner`, so the actor resolves and is positioned.
 
-1. `textMiddle.z` is 2000, and the accumulator lives on `t_Corners`
-   (`scene="s_Skipingolfs"`). If that terrain's z range excludes 2000 the actor
-   is placed outside it and never painted. This is the first thing to measure.
-2. `<Text>` parks the actor at `(0, -1000, 0)` and `start()` only repositions it
-   when `this.textFace?.owner` resolves — if `owner` is unset the actor stays
-   parked off-screen and the text updates invisibly.
-3. The accumulator's terrain may not be on stage in the scene being played.
+The cause was ordering. `SimpleActorMouth.start()` returns EARLY the first time a
+line plays — it kicks off an async `prepare()` and defers `playNow()` to the
+promise — and `playNow()` begins with `this.stop()`, which for a speech mouth
+unregisters the pulser and calls `textFace.setText('')`. The old code set the
+text and registered the timeline in `start()`, before that stop:
+
+    start()      -> subtitle appears
+    ...load...
+    playNow()    -> stop() wipes the text and unregisters the timeline
+    audio plays  -> nothing re-establishes either
+
+So the subtitle was destroyed at the exact moment the sound began. A line with no
+recording returns from `playNow()` *before* that stop, which is why the three
+silent lines of #0 always displayed and everything else looked like it had no
+subtitles at all. Only a replayed line — already prepared, so `playNow` runs
+synchronously inside `start()` — would have shown one.
+
+Fixed by anchoring the timeline in a `playNow()` override, so it starts when the
+audio starts. That also fixes a desync nobody had reported: the sentence clock
+used to start when the load was *requested*, so lines ran ahead of the voice by
+however long the fetch took.
+
+**Verified** in a browser against the dev build: talk to Vífill on the ship, take
+the first option, and six lines appear in order — "Heyrðu Karli!", "Hvað!",
+"Hvað er um að vera?", "Þú ert allt of spenntur Vífill!", "Það hefur ekkert
+markvert gerst hér ...", "... síðan við lögðum af stað frá Noregi í síðasta
+mánuði." Before the fix the same run produced zero.
 
 **Why it matters beyond a bug.** The owner asked whether subtitles were possible
 so the game could be played with the sound off — and they were written in 1998,
@@ -1470,6 +1494,7 @@ for every line. If this has never displayed, then 1,315 authored lines have been
 invisible since the port began, and the subtitle feature is not a feature to
 build but a defect to fix.
 
-`webapp/src/game/Subtitles.ts` is deployed and correct but inert until this is
-resolved: it mirrors `getCurrentSubtitle()`, which reports the same text the
-canvas would be showing.
+Still true and separate: `a_Karli_acc` and `a_Halldora_acc` are chroma green and
+therefore deliberately invisible, so Karli's and Halldóra's lines remain
+unsubtitled by 1998's own choice. Whether to keep that is a `modern-only`
+question, not a defect.

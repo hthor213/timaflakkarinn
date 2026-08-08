@@ -220,15 +220,48 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
   start(): void {
     this.silent = false;
     this.silentDuration = 0;
-    super.start();
-    // Resolve pulser from _pulser if not set (lazy load pattern, like _loader)
+    // Resolve these BEFORE super.start(), because it may run playNow()
+    // synchronously and playNow is what starts the subtitle timeline.
     if (!this.pulser) {
       this.pulser = (this as any)._pulser ?? null;
     }
-    // Position text actor on screen
     if (!this.textActor && this.textFace?.owner) {
       this.textActor = this.textFace.owner;
     }
+    super.start();
+  }
+
+  /**
+   * Start the subtitle timeline when the sound actually starts, not when start()
+   * is called.
+   *
+   * This is the whole of known-issues #24. SimpleActorMouth.start() returns
+   * EARLY the first time a line is played -- it kicks off an async prepare() and
+   * defers playNow() to the promise -- and playNow() begins with this.stop(),
+   * which for a speech mouth unregisters the pulser and clears the text. The old
+   * code set the text and registered the timeline in start(), i.e. before that
+   * stop(), so the sequence was:
+   *
+   *   start()      -> subtitle appears
+   *   ...load...
+   *   playNow()    -> stop() wipes the text and unregisters the timeline
+   *   audio plays  -> nothing re-establishes either
+   *
+   * The subtitle was destroyed at the exact moment the sound began, and nothing
+   * brought it back. A line with no recording returns from playNow() BEFORE that
+   * stop(), which is why the three silent lines of #0 always displayed correctly
+   * and everything else appeared to have no subtitles at all. Only a replayed
+   * line -- already prepared, so playNow runs synchronously inside start() --
+   * would show one.
+   *
+   * Anchoring the timeline here fixes a second thing for free: the sentence
+   * clock now starts with the audio rather than with the request to load it, so
+   * the lines no longer run ahead of the voice by however long the fetch took.
+   */
+  protected playNow(): void {
+    super.playNow();
+    // Runs for both paths on purpose: onNoAudio() has set up silent mode by
+    // now, and updateSpeech() branches on it.
     if (this.textActor) {
       this.textActor.setLocation(this.textMiddle.x, this.textMiddle.y, this.textMiddle.z);
     }

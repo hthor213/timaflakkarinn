@@ -109,11 +109,63 @@ export class AssetLoader {
     return this.audioProbe;
   }
 
+  /**
+   * Tell iOS this is playback audio, not ambient audio.
+   *
+   * iOS silences Web Audio with the hardware Ring/Silent switch and does NOT
+   * silence a <video> element. That single difference is the whole of "the
+   * intro has sound on my phone but the game is mute": the intro is a <video>,
+   * and every voice line, footstep and theme in the game is an AudioContext
+   * buffer source. A laptop has no such switch, so it never reproduces.
+   *
+   * Safari 16.4+ exposes the Audio Session API. Declaring 'playback' puts the
+   * context in the category that ignores the switch, which is what a game
+   * wants — the player turned the ringer off to silence notifications, not to
+   * silence the thing they are looking at. Absent everywhere else, and setting
+   * it is harmless where it is missing.
+   *
+   * Set before the context is constructed, because the category is chosen at
+   * construction.
+   */
+  private declarePlaybackSession(): void {
+    const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (!session) return;
+    try {
+      if (session.type !== 'playback') session.type = 'playback';
+    } catch {
+      /* older Safari exposes it read-only; nothing to do and nothing to report */
+    }
+  }
+
   getAudioContext(): AudioContext {
     if (!this.audioContext) {
+      this.declarePlaybackSession();
       this.audioContext = new AudioContext();
     }
     return this.audioContext;
+  }
+
+  /**
+   * Unlock audio from inside a real user gesture.
+   *
+   * Call this synchronously in the handler — iOS only honours resume() from
+   * within a gesture, and an `await` before it can be enough to lose that.
+   */
+  unlockAudio(): void {
+    this.declarePlaybackSession();
+    const ctx = this.getAudioContext();
+    // A one-frame silent buffer started inside the gesture is the unlock that
+    // actually works on older iOS, where resume() alone leaves the context
+    // running but mute.
+    try {
+      const src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch {
+      /* context in a state that refuses it; resume below is still worth trying */
+    }
+    if (ctx.state === 'suspended') void ctx.resume();
   }
 
   async resumeAudio(): Promise<void> {

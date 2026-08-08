@@ -91,6 +91,11 @@
       max-height: calc(100vw * 3 / 4);
       flex: 0 0 auto;
       aspect-ratio: auto;
+      /* Centre the picture in whatever is left above the bar. Portrait has far
+         more height than a 4:3 frame at full width can use, and the first cut
+         let the bar swallow all of it — four buttons over two thirds of the
+         screen. */
+      margin: auto 0;
     }
     html[data-input="touch"] #game-canvas {
       width: 100%;
@@ -106,12 +111,19 @@
     html[data-input="touch"] #verb-bar {
       display: flex;
       width: 100vw;
-      flex: 1 1 auto;
-      min-height: 88px;
+      /* Fixed and compact. `flex: 1 1 auto` here is what made the bar eat the
+         screen. It needs a thumb-sized row and not one pixel more. */
+      flex: 0 0 auto;
+      height: 78px;
       background: #14100c;
       border-top: 1px solid #3a3025;
+      /* Clear of the home indicator, so the bottom row is not half under it. */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      box-sizing: content-box;
     }
-    html[data-input="touch"] #verb-bar.idle { opacity: 0.45; }
+    /* Dimming the whole bar to 0.45 during a conversation made already-dark
+       labels unreadable. Say "busy" without hiding what the buttons are. */
+    html[data-input="touch"] #verb-bar.idle { opacity: 0.8; }
 
     #verb-bar .verb {
       flex: 1 1 0;
@@ -119,31 +131,40 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
       min-width: 0;
-      padding: 8px 2px;
+      padding: 6px 2px;
       border: 0;
       border-right: 1px solid #2a231b;
       background: transparent;
-      color: #c8a040;
-      font-family: serif;
-      font-size: clamp(13px, 3.6vw, 18px);
+      color: #f0c86a;
+      /* Not the game's serif. These are UI chrome at 15px on a dark ground,
+         where serif strokes go thin and grey out; the label has to be read at
+         a glance mid-game. */
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
       line-height: 1;
-      /* The tap target is the whole cell, which on any phone clears 44px. */
+      /* The tap target is the whole cell — a quarter of the width by 78px, so
+         comfortably past 44px in both directions. */
       -webkit-tap-highlight-color: transparent;
       cursor: pointer;
     }
     #verb-bar .verb:last-child { border-right: 0; }
     #verb-bar .verb svg {
-      width: clamp(26px, 7vw, 38px);
-      height: clamp(26px, 7vw, 38px);
+      /* Smaller than the first cut: the label carries the meaning, the icon
+         only has to make the row scannable. */
+      width: 24px;
+      height: 24px;
     }
     #verb-bar .verb.active {
       background: #c8a040;
       color: #14100c;
     }
     #verb-bar .verb:disabled {
-      color: #5a4c38;
+      /* Legible, plainly inactive. #5a4c38 under a 0.45 bar was invisible. */
+      color: #8d7a55;
       cursor: default;
     }
     #loading {

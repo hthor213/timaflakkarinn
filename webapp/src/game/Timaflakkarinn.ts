@@ -155,6 +155,14 @@ export class Timaflakkarinn {
   /** Fired with each chapter's StateController as it is parsed. See below. */
   onStateControllerReady: (sc: StateController) => void = () => {};
 
+  /**
+   * Unlock audio. Must be called synchronously from inside a user gesture —
+   * see AssetLoader.unlockAudio and the call in main.ts.
+   */
+  unlockAudio(): void {
+    this.loader.unlockAudio();
+  }
+
   /** Declared by <BeginningScene>. Recorded for reference; never auto-displayed. */
   private beginningScene: Scene | null = null;
 

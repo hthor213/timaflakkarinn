@@ -59,6 +59,13 @@ async function main() {
 
   await new Promise<void>(resolve => {
     const handler = () => {
+      // Unlock audio HERE, synchronously, while we are still inside the
+      // gesture. The game registers its own resume listener, but only after
+      // start() is under way -- by which point this handler has already eaten
+      // the first tap, so the context stayed suspended until the player
+      // happened to tap a second time. On a desktop that is invisible because
+      // clicking is constant; on a phone the first thing you hear is missing.
+      game.unlockAudio();
       document.removeEventListener('click', handler);
       document.removeEventListener('keydown', handler);
       resolve();

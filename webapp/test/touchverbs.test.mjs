@@ -16,10 +16,26 @@ const cfgOut = join(dir, 'cfg.mjs');
 await build({ entryPoints: ['src/config.ts'], bundle: true, format: 'esm', outfile: cfgOut, logLevel: 'silent' });
 const { resolveInput } = await import(pathToFileURL(cfgOut));
 
+// ONE bundle for everything the game classes share. Bundling StateController
+// and SentenceContainer as separate entry points gives two distinct copies of
+// the class, and `terrain instanceof SentenceContainer` is then false for a
+// container the test just built — a green-looking failure that says nothing
+// about the code.
 const scOut = join(dir, 'sc.mjs');
-await build({ entryPoints: ['src/game/StateController.ts'], bundle: true, format: 'esm', outfile: scOut, logLevel: 'silent' });
+await build({
+  stdin: {
+    contents:
+      `export * from './src/game/StateController';\n` +
+      `export { SentenceContainer } from './src/game/SentenceContainer';\n` +
+      `export { TextActorFace } from './src/engine/ActorFace';\n`,
+    resolveDir: process.cwd(),
+    loader: 'ts',
+  },
+  bundle: true, format: 'esm', outfile: scOut, logLevel: 'silent',
+});
 const SC = await import(pathToFileURL(scOut));
-const { StateController, MOVING, TAKING, LOOKING, TALKING, FREEZE, USING, CONVERSATING } = SC;
+const { StateController, MOVING, TAKING, LOOKING, TALKING, FREEZE, USING, CONVERSATING,
+        SentenceContainer, TextActorFace } = SC;
 
 let n = 0;
 const ok = (d, f) => { f(); n++; console.log('  ok  ' + d); };
@@ -161,6 +177,65 @@ ok('opening the inventory notifies, even when the state does not change', () => 
   sc.actorClicked(sc.inventoryActor, 0);
   assert.equal(sc.isInventoryOn(), true);
   assert.ok(fired >= 1, 'bar would still be offering all four verbs');
+});
+
+// --- dialogue options offered to the touch list ----------------------------
+
+// A line as the game builds one: an actor in a SentenceContainer whose face
+// carries the text. measureText needs a canvas, which node has not got, so the
+// text is set on the field directly -- the query reads .text, not the metrics.
+function line(text) {
+  const face = new TextActorFace('t');
+  face.text = text;
+  return {
+    name: text, currentFace: face,
+    location: { x: 50, y: 1170, z: 800 },
+    setLocation(x, y, z) { this.location = { x, y, z }; },
+  };
+}
+
+function conversation(texts) {
+  const sc = makeSC();
+  const container = new SentenceContainer('sc_talk');
+  container.actors = texts.map(line);
+  sc.world.currentScene = { name: 's', terrains: [container], onStage() {}, offStage() {} };
+  sc.setState(CONVERSATING);
+  return { sc, container };
+}
+
+ok('the visible options are reported, in stacking order', () => {
+  const { sc } = conversation(['Hvað er um að vera?', 'Hvar erum við?', 'Bless!']);
+  assert.deepEqual(sc.getVisibleSentences().map(s => s.text),
+    ['Hvað er um að vera?', 'Hvar erum við?', 'Bless!']);
+});
+
+ok('hidden options are not offered — hideAll parks them off-screen', () => {
+  const { sc, container } = conversation(['Hvar erum við?', 'Bless!']);
+  container.hideAll();
+  assert.deepEqual(sc.getVisibleSentences(), [],
+    'a container holds lines that are not currently on offer');
+  container.showAll();
+  assert.equal(sc.getVisibleSentences().length, 2);
+});
+
+ok('nothing is offered outside a conversation', () => {
+  const { sc } = conversation(['Bless!']);
+  sc.setState(MOVING);
+  assert.deepEqual(sc.getVisibleSentences(), []);
+});
+
+ok('choosing a row is the same call a click on the canvas makes', () => {
+  const { sc } = conversation(['Bless!']);
+  const [{ actor }] = sc.getVisibleSentences();
+  let ran = 0;
+  sc.talkReactions.set(actor, { perform() { ran++; } });
+  sc.actorClicked(actor, 0);           // exactly what SentenceList does
+  assert.equal(ran, 1, 'the conversation sequence did not run');
+});
+
+ok('blank lines are skipped rather than rendered as empty rows', () => {
+  const { sc } = conversation(['Bless!', '   ', '']);
+  assert.deepEqual(sc.getVisibleSentences().map(s => s.text), ['Bless!']);
 });
 
 ok('VERBS is the same set, in the same order, that doRightButton cycles', () => {

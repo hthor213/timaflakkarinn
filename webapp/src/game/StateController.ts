@@ -5,6 +5,7 @@ import { ScrollingScene } from '../engine/Scene';
 import type { Sequence } from '../engine/Sequence';
 import type { World } from '../engine/World';
 import { TextActorFace } from '../engine/ActorFace';
+import { SentenceContainer } from './SentenceContainer';
 import type { Inventory } from './Inventory';
 
 export const MOVING = 0;
@@ -164,6 +165,43 @@ export class StateController {
 
   isInventoryOn(): boolean {
     return this.inventoryOn;
+  }
+
+  /**
+   * The dialogue options on screen right now, in the order they are stacked.
+   *
+   * On a phone these are the least usable thing in the game: the canvas is
+   * 800x600 scaled to the width of a handset, so a 22px line of dialogue lands
+   * at roughly ten physical pixels, and each option's hit box is that line's
+   * own measured width -- a target a few millimetres tall. This lets the touch
+   * layout re-present the same options as real rows underneath the picture.
+   *
+   * A query, not a second copy of the conversation: the returned actors are the
+   * actors, and choosing one goes back through actorClicked exactly as a click
+   * on the canvas does.
+   *
+   * Visibility is read off position because that is how the game hides them --
+   * SentenceContainer.hideAll parks every line at y = -3000 rather than
+   * detaching it, so a container can hold options that are not currently
+   * offered.
+   */
+  getVisibleSentences(): { actor: Actor; text: string }[] {
+    if (this.state !== CONVERSATING) return [];
+    const scene = this.world.currentScene;
+    if (!scene) return [];
+
+    const out: { actor: Actor; text: string }[] = [];
+    for (const terrain of scene.terrains) {
+      if (!(terrain instanceof SentenceContainer)) continue;
+      for (const actor of terrain.actors) {
+        const face = actor.currentFace;
+        if (!(face instanceof TextActorFace)) continue;
+        if (actor.location.y < 0) continue;      // parked by hideAll
+        const text = face.text.trim();
+        if (text) out.push({ actor, text });
+      }
+    }
+    return out;
   }
 
   /**

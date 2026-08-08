@@ -1,6 +1,7 @@
 import { Timaflakkarinn } from './game/Timaflakkarinn';
 import { resolveMode, resolveInput } from './config';
 import { VerbBar } from './game/VerbBar';
+import { SentenceList } from './game/SentenceList';
 import { parseRoute, DEFAULT_PATH } from './routing';
 
 async function main() {
@@ -44,8 +45,14 @@ async function main() {
   // the 404 authored verb reactions are unreachable. The bar replaces the cycle
   // with a choice. Re-bound per chapter -- see onStateControllerReady.
   if (input === 'touch') {
+    // Order matters: both append to <body>, and reading down the screen should
+    // go picture, then what you can say, then how you can act.
+    const sentences = new SentenceList(document.body);
     const verbBar = new VerbBar(document.body);
-    game.onStateControllerReady = (sc) => verbBar.attach(sc);
+    game.onStateControllerReady = (sc) => {
+      sentences.attach(sc);
+      verbBar.attach(sc);
+    };
   }
 
   game.onLoadingProgress = (text: string, percent: number) => {

@@ -71,3 +71,41 @@ export function resolveInput(
 
   return 'pointer';
 }
+
+/**
+ * Should subtitles be painted into the canvas?
+ *
+ * On touch: never. The readable strip under the picture is the subtitle there,
+ * and the canvas line is ten physical pixels of clutter over the art.
+ *
+ * In a browser: a setting, OFF by default, per the owner. Override per-load with
+ * ?subs=1 / ?subs=0; the choice sticks in localStorage so it survives a reload.
+ * (1998 painted them, so off-by-default is a deliberate departure rather than
+ * fidelity — worth a taxonomy entry if the classic edition should differ.)
+ */
+export function resolveCanvasSubtitles(
+  input: InputMode,
+  loc: Location | URL = window.location,
+  store: Pick<Storage, 'getItem' | 'setItem'> | null = safeLocalStorage(),
+): boolean {
+  const params = new URLSearchParams(loc.search);
+  const explicit = params.get('subs');
+  if (explicit === '1' || explicit === 'true') {
+    store?.setItem('tt.subs', '1');
+    return input !== 'touch';
+  }
+  if (explicit === '0' || explicit === 'false') {
+    store?.setItem('tt.subs', '0');
+    return false;
+  }
+  if (input === 'touch') return false;
+  return store?.getItem('tt.subs') === '1';
+}
+
+function safeLocalStorage(): Pick<Storage, 'getItem' | 'setItem'> | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;   // Safari private mode throws on access
+  }
+}

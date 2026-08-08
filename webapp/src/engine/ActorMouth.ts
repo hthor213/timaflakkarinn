@@ -22,6 +22,25 @@ export interface ActorMouth {
   onFinished?: () => void;
 }
 
+/**
+ * Should subtitles be painted into the canvas?
+ *
+ * On a phone they must not be: the strip under the picture is the readable copy
+ * and the canvas line is ten physical pixels of clutter over the art. In a
+ * browser they are the 1998 presentation and stay available, but default off --
+ * the owner's call, and easy to revisit since it is one flag.
+ *
+ * The text is still tracked either way, so getCurrentSubtitleState() keeps
+ * working and the DOM strip is unaffected. Only the painting is suppressed:
+ * the accumulator actor is simply never moved on stage, which is exactly where
+ * <Text> parks it at parse time.
+ */
+let canvasSubtitles = true;
+
+export function setCanvasSubtitles(on: boolean): void {
+  canvasSubtitles = on;
+}
+
 /** Track all active mouths so we can stop them all at once */
 const activeMouths = new Set<SimpleActorMouth>();
 
@@ -272,7 +291,7 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
     super.playNow();
     // Runs for both paths on purpose: onNoAudio() has set up silent mode by
     // now, and updateSpeech() branches on it.
-    if (this.textActor) {
+    if (this.textActor && canvasSubtitles) {
       this.textActor.setLocation(this.textMiddle.x, this.textMiddle.y, this.textMiddle.z);
     }
     this.position = 0;
@@ -354,7 +373,7 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
       while (this.position < this.sentences.length &&
              elapsed >= this.sentences[this.position].time) {
         this.textFace.setText(this.sentences[this.position].text);
-        if (this.textActor) {
+        if (this.textActor && canvasSubtitles) {
           this.textActor.setLocation(this.textMiddle.x, this.textMiddle.y, this.textMiddle.z);
         }
         this.position++;
@@ -387,7 +406,7 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
       const sentence = this.sentences[this.position];
       this.textFace.setText(sentence.text);
       // Reposition text actor each sentence update
-      if (this.textActor) {
+      if (this.textActor && canvasSubtitles) {
         this.textActor.setLocation(this.textMiddle.x, this.textMiddle.y, this.textMiddle.z);
       }
       this.position++;

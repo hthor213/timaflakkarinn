@@ -1,9 +1,10 @@
 import { Timaflakkarinn } from './game/Timaflakkarinn';
-import { resolveMode, resolveInput } from './config';
+import { resolveMode, resolveInput, resolveCanvasSubtitles } from './config';
 import { VerbBar } from './game/VerbBar';
 import { SentenceList } from './game/SentenceList';
 import { MenuList } from './game/MenuList';
 import { Subtitles } from './game/Subtitles';
+import { setCanvasSubtitles } from './engine/ActorMouth';
 import { parseRoute, DEFAULT_PATH } from './routing';
 
 async function main() {
@@ -26,6 +27,10 @@ async function main() {
   // CSS and has to be in force before the first frame rather than after it.
   const input = resolveInput();
   document.documentElement.dataset.input = input;
+
+  // Phone: the strip under the picture IS the subtitle, so nothing is painted
+  // into the canvas. Browser: off by default, ?subs=1 to turn on.
+  setCanvasSubtitles(resolveCanvasSubtitles(input));
 
   // "/" and anything unrecognised land on the intro. replaceState rather than
   // push, so Back doesn't bounce the player between / and /intro.

@@ -335,7 +335,13 @@ export class SpeechActorMouth extends SimpleActorMouth implements Pulsable {
 
     const start = this.sentences[i].time;
     const next = this.sentences[i + 1]?.time;
-    const durationMs = this.getDuration() * 1000;
+    // getDuration() is ALREADY milliseconds (audioBuffer.duration * 1000).
+    // Multiplying again made the span 1000x too long, so the highlight crawled
+    // and never left the first word. It only showed on lines whose span comes
+    // from the recording -- a single-sentence line, or the LAST sentence of a
+    // multi-sentence one. Lines with a following sentence use next.time and
+    // were always right, which is why most of them looked fine.
+    const durationMs = this.getDuration();
     const end = next
       ?? (durationMs > 0 ? durationMs : start + Math.max(1500, text.length * 60));
     const span = Math.max(1, end - start);

@@ -28,7 +28,8 @@ await build({
     contents:
       `export * from './src/game/StateController';\n` +
       `export { SentenceContainer } from './src/game/SentenceContainer';\n` +
-      `export { TextActorFace } from './src/engine/ActorFace';\n`,
+      `export { TextActorFace } from './src/engine/ActorFace';\n` +
+      `export { SpeechActorMouth } from './src/engine/ActorMouth';\n`,
     resolveDir: process.cwd(),
     loader: 'ts',
   },
@@ -36,7 +37,7 @@ await build({
 });
 const SC = await import(pathToFileURL(scOut));
 const { StateController, MOVING, TAKING, LOOKING, TALKING, FREEZE, USING, CONVERSATING,
-        SentenceContainer, TextActorFace } = SC;
+        SentenceContainer, TextActorFace, SpeechActorMouth } = SC;
 
 let n = 0;
 const ok = (d, f) => { f(); n++; console.log('  ok  ' + d); };
@@ -91,6 +92,61 @@ ok('?subs=1 does not override a phone', () => {
 });
 ok('missing localStorage (Safari private mode) still defaults on', () => {
   assert.equal(resolveCanvasSubtitles('pointer', loc('https://tt.spliffdonk.com/'), null), true);
+});
+
+// --- word highlighting -----------------------------------------------------
+//
+// The highlight is ESTIMATED from sentence timings, but the SPAN it is estimated
+// across must be right. getDuration() already returns milliseconds; multiplying
+// by 1000 again made every span 1000x too long, so the highlight never left the
+// first word. It showed only on lines whose span comes from the recording -- a
+// single-sentence line, or the last sentence of a multi-sentence one -- which is
+// why most lines looked fine and a few were stuck.
+
+function speaking(sentences, { elapsedMs, durationMs }) {
+  const m = new SpeechActorMouth('m_test', 'x.wav');
+  for (const [text, time] of sentences) m.addSentence(text, time);
+  m.textFace = { text: sentences[0][0], setText(t) { this.text = t; } };
+  m.getDuration = () => durationMs;          // milliseconds, as the real one returns
+  m.position = 1;                            // first sentence is the one showing
+  m.startTime = performance.now() - elapsedMs;
+  return m;
+}
+
+ok('a single-sentence line sweeps across the recording, not 1/1000th of it', () => {
+  // 5 words, 2000 ms of audio, 1000 ms in => about halfway through the line.
+  const m = speaking([['Hvað er um að vera?', 0]], { elapsedMs: 1000, durationMs: 2000 });
+  const st = m.getSubtitleState();
+  assert.ok(st.word >= 1 && st.word <= 3,
+    `expected a middle word at the halfway point, got ${st.word}`);
+});
+
+ok('the last sentence of a line also sweeps — it uses the recording length', () => {
+  const m = speaking([['fyrri setning', 0], ['... síðan við lögðum af stað', 1000]],
+                     { elapsedMs: 1900, durationMs: 2000 });
+  m.position = 2;                            // the SECOND sentence is showing
+  m.textFace.text = '... síðan við lögðum af stað';
+  const st = m.getSubtitleState();
+  assert.ok(st.word >= 3, `expected to be near the end, got ${st.word}`);
+});
+
+ok('a sentence with a follower is bounded by the follower, not the recording', () => {
+  // 4s of audio but the next sentence starts at 1000ms: halfway is 500ms.
+  const m = speaking([['eitt tvö þrjú fjögur', 0], ['næsta', 1000]],
+                     { elapsedMs: 500, durationMs: 4000 });
+  const st = m.getSubtitleState();
+  assert.ok(st.word >= 1 && st.word <= 2, `expected mid-line, got ${st.word}`);
+});
+
+ok('the highlight never runs past the end of the line', () => {
+  const m = speaking([['eitt tvö þrjú', 0]], { elapsedMs: 99999, durationMs: 2000 });
+  assert.equal(m.getSubtitleState().word, 2);
+});
+
+ok('before the first sentence nothing is lit', () => {
+  const m = speaking([['eitt tvö', 0]], { elapsedMs: 0, durationMs: 2000 });
+  m.position = 0;
+  assert.equal(m.getSubtitleState().word, -1);
 });
 
 // --- the verb rules --------------------------------------------------------

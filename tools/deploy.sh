@@ -617,6 +617,7 @@ info "  _headers    <- webapp/dist/_headers"
 info "  video/      <- webapp/dist/video"
 info "  gml/        <- web_import/gml          (NOT dist/gml)"
 info "  version.json<- written here, records what this root is serving"
+[ "$ENV" = dev ] && info "  calibrate.html + scene-index.json  <- dev only, the calibration tool"
 info "  GAME/       <- untouched hardlink overlay"
 
 # RS: compare by checksum (-c) and do not propagate mtimes (--no-times).
@@ -639,6 +640,13 @@ $RS --delete webapp/dist/video/     $WEB_ROOT/video/
 # files that make a landed fix look broken. Source is web_import/gml, the
 # authoritative masters -- never webapp/dist/gml.
 $RS --delete web_import/gml/ $WEB_ROOT/gml/
+$(if [ "$ENV" = dev ]; then
+    # The calibration tool. DEV ONLY -- it is a tool, not the game, and has no
+    # business on the public site. Published here rather than left on localhost
+    # so it can be used from any machine. /calibrate is routed to it in Caddy.
+    printf '%s webapp/dist/calibrate.html %s/calibrate.html\n' "$RS" "$WEB_ROOT"
+    printf '%s webapp/dist/scene-index.json %s/scene-index.json\n' "$RS" "$WEB_ROOT"
+  fi)
 EOF
 )
 

@@ -19,3 +19,7 @@ web_import/GAME_BUILD/
 webapp/public/GAME/
 
 .DS_Store
+
+# Derived from the GML masters by tools/pipeline/scene-index.py; regenerated
+# by the npm prebuild hook. Build output, so not committed.
+webapp/public/scene-index.json

@@ -32,12 +32,16 @@ import re
 import json
 import xml.etree.ElementTree as ET
 
-GML_DIR = 'web_import/gml'
+# Resolve from this file, not the working directory: it is run from the repo
+# root by hand, from webapp/ by the npm prebuild hook, and from the checkout by
+# the deploy. All three must find the same masters.
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+GML_DIR = os.path.join(REPO, 'web_import', 'gml')
 
 
 def png_size(served):
     """(w, h) of a served /GAME/... path, straight from the IHDR."""
-    disk = 'web_import' + served
+    disk = os.path.join(REPO, 'web_import') + served
     try:
         with open(disk, 'rb') as f:
             head = f.read(24)

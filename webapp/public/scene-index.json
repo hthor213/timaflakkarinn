@@ -1,0 +1,4495 @@
+{
+ "s_Extro": {
+  "name": "s_Extro",
+  "chapter": "extro",
+  "background": "/GAME/EXTRO/MEDMENID.PNG",
+  "player": null,
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Extro",
+    "scene": "s_Extro",
+    "polygon": [
+     [
+      -1,
+      601
+     ],
+     [
+      801,
+      601
+     ],
+     [
+      801,
+      -1
+     ],
+     [
+      -1,
+      -1
+     ]
+    ],
+    "polygonName": "p_Extro",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "extro",
+    "walkable": false,
+    "walkableMinY": -1
+   }
+  ]
+ },
+ "s_Intro": {
+  "name": "s_Intro",
+  "chapter": "intro",
+  "background": "/GAME/INTRO/MYND1.PNG",
+  "player": null,
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Intro",
+    "scene": "s_Intro",
+    "polygon": [
+     [
+      -1,
+      601
+     ],
+     [
+      801,
+      601
+     ],
+     [
+      801,
+      -1
+     ],
+     [
+      -1,
+      -1
+     ]
+    ],
+    "polygonName": "p_Intro",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "intro",
+    "walkable": false,
+    "walkableMinY": -1
+   }
+  ]
+ },
+ "s_Inventory": {
+  "name": "s_Inventory",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/INVENTOA/INVENTOA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_InventoryBack",
+    "scene": "s_Inventory",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ]
+ },
+ "s_HjaHestasveini": {
+  "name": "s_HjaHestasveini",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/HJAHESTA.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_HjaHestasveini",
+    "scene": "s_HjaHestasveini",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_HjaHestasveinil",
+    "scene": "s_HjaHestasveini",
+    "polygon": [
+     [
+      -600,
+      475
+     ],
+     [
+      -600,
+      601
+     ],
+     [
+      1451,
+      601
+     ],
+     [
+      1451,
+      405
+     ],
+     [
+      801,
+      405
+     ],
+     [
+      455,
+      430
+     ],
+     [
+      420,
+      500
+     ],
+     [
+      275,
+      500
+     ],
+     [
+      240,
+      440
+     ],
+     [
+      -1,
+      475
+     ]
+    ],
+    "polygonName": "p_HjaHestasveini",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 1.0,
+    "scanline1": 600.0,
+    "scanline2": 750.0,
+    "scaling2": 1.1,
+    "chapter": "kristnit",
+    "walkable": true,
+    "walkableMinY": 405
+   },
+   {
+    "name": "t_Corners",
+    "scene": "s_HjaHestasveini",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": 1000,
+    "zmax": 2000,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_States",
+    "x": 0,
+    "y": 1000,
+    "z": 1000,
+    "image": "/GAME/COMMON/GRAPHIC/MOVING.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_SmallInventory",
+    "x": 701,
+    "y": 1000,
+    "z": 1000,
+    "image": "/GAME/COMMON/GRAPHIC/INVENTOA.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_HestaSveinn",
+    "x": 290,
+    "y": 482,
+    "z": 211,
+    "image": "/GAME/KRISTNIA/ANIMATIA/HESTASVA/STOP.PNG",
+    "terrain": "t_HjaHestasveinil",
+    "w": 119,
+    "h": 223,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Logberg": {
+  "name": "s_Logberg",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/LOGBERG.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Logberg",
+    "scene": "s_Logberg",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Logbergl",
+    "scene": "s_Logberg",
+    "polygon": [
+     [
+      -600,
+      460
+     ],
+     [
+      296,
+      400
+     ],
+     [
+      1411,
+      400
+     ],
+     [
+      1411,
+      601
+     ],
+     [
+      -600,
+      601
+     ]
+    ],
+    "polygonName": "p_Logberg",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.6,
+    "scanline1": 500.0,
+    "scanline2": 570.0,
+    "scaling2": 0.7,
+    "chapter": "kristnit",
+    "walkable": true,
+    "walkableMinY": 400
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Eldmadur",
+    "x": 220,
+    "y": 300,
+    "z": 1,
+    "image": "/GAME/KRISTNIA/ANIMATIA/ELDMADUR/STOP.PNG",
+    "terrain": "t_Logbergl",
+    "w": 137,
+    "h": 193,
+    "layer": "b"
+   },
+   {
+    "name": "a_Vikingur",
+    "x": 200,
+    "y": 520,
+    "z": 130,
+    "image": "/GAME/KRISTNIA/ANIMATIA/VIKINGUR/STOP.PNG",
+    "terrain": "t_Logbergl",
+    "w": 72,
+    "h": 150,
+    "layer": "b"
+   },
+   {
+    "name": "a_Snorri",
+    "x": 550,
+    "y": 550,
+    "z": 150,
+    "image": "/GAME/KRISTNIA/ANIMATIA/SNORRI/STOP.PNG",
+    "terrain": "t_Logbergl",
+    "w": 72,
+    "h": 146,
+    "layer": "b"
+   },
+   {
+    "name": "a_Thorshamar",
+    "x": 180,
+    "y": 349,
+    "z": -90,
+    "image": "/GAME/KRISTNIA/GRAPHIC/THORSHAA.PNG",
+    "terrain": "t_Logbergl",
+    "w": 23,
+    "h": 20,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_HeidnarBudir": {
+  "name": "s_HeidnarBudir",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/HEIDNARA.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_HeidnarBudir",
+    "scene": "s_HeidnarBudir",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_HeidnarBudirl",
+    "scene": "s_HeidnarBudir",
+    "polygon": [
+     [
+      1401,
+      601
+     ],
+     [
+      1401,
+      498
+     ],
+     [
+      240,
+      498
+     ],
+     [
+      230,
+      400
+     ],
+     [
+      -150,
+      50
+     ],
+     [
+      -150,
+      460
+     ],
+     [
+      120,
+      480
+     ],
+     [
+      100,
+      601
+     ]
+    ],
+    "polygonName": "p_HeidnarBudir",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.7,
+    "scanline1": 500.0,
+    "scanline2": 570.0,
+    "scaling2": 0.8,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 50
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Peningur",
+    "x": 647,
+    "y": 472,
+    "z": 1,
+    "image": "/GAME/KRISTNIA/GRAPHIC/PENINGUR.PNG",
+    "terrain": "t_HeidnarBudir",
+    "w": 18,
+    "h": 12,
+    "layer": "b"
+   },
+   {
+    "name": "a_Skali",
+    "x": 0,
+    "y": 460,
+    "z": 254,
+    "image": "/GAME/KRISTNIA/GRAPHIC/SKALI.PNG",
+    "terrain": "t_HeidnarBudir",
+    "w": 173,
+    "h": 395,
+    "layer": "c"
+   },
+   {
+    "name": "a_Pokar",
+    "x": 165,
+    "y": 516,
+    "z": 8,
+    "image": "/GAME/KRISTNIA/GRAPHIC/POKAR.PNG",
+    "terrain": "t_HeidnarBudirl",
+    "w": 99,
+    "h": 96,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_KristnarBudir": {
+  "name": "s_KristnarBudir",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/KRISTNAA.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_KristnarBudir",
+    "scene": "s_KristnarBudir",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_KristnarBudirl",
+    "scene": "s_KristnarBudir",
+    "polygon": [
+     [
+      -550,
+      500
+     ],
+     [
+      645,
+      485
+     ],
+     [
+      745,
+      601
+     ],
+     [
+      -550,
+      601
+     ]
+    ],
+    "polygonName": "p_KristnarBudir",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.7,
+    "scanline1": 500.0,
+    "scanline2": 700.0,
+    "scaling2": 0.8,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 485
+   }
+  ]
+ },
+ "s_HjaVolvu": {
+  "name": "s_HjaVolvu",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/HJAVOLVU.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_HjaVolvu",
+    "scene": "s_HjaVolvu",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_HjaVolvul",
+    "scene": "s_HjaVolvu",
+    "polygon": [
+     [
+      250,
+      595
+     ],
+     [
+      300,
+      545
+     ],
+     [
+      495,
+      545
+     ],
+     [
+      507,
+      507
+     ],
+     [
+      801,
+      532
+     ],
+     [
+      1201,
+      532
+     ],
+     [
+      1201,
+      601
+     ],
+     [
+      770,
+      601
+     ],
+     [
+      770,
+      595
+     ]
+    ],
+    "polygonName": "p_HjaVolvu",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 1.0,
+    "scanline1": 500.0,
+    "scanline2": 800.0,
+    "scaling2": 1.1,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 507
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Volva",
+    "x": 325,
+    "y": 180,
+    "z": 1,
+    "image": "/GAME/KRISTNIA/ANIMATIA/VOLVA/STOP.PNG",
+    "terrain": "t_HjaVolvul",
+    "w": 105,
+    "h": 317,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Runir": {
+  "name": "s_Runir",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/RUNIR.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Runir",
+    "scene": "s_Runir",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Runirl",
+    "scene": "s_Runir",
+    "polygon": [
+     [
+      -1,
+      -400
+     ],
+     [
+      801,
+      -400
+     ],
+     [
+      801,
+      601
+     ],
+     [
+      -1,
+      601
+     ]
+    ],
+    "polygonName": "p_Runir",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.7,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": -400
+   }
+  ]
+ },
+ "s_ErnaRunir": {
+  "name": "s_ErnaRunir",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/STORERNA.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_ErnaRunir",
+    "scene": "s_ErnaRunir",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_ErnaRunirl",
+    "scene": "s_ErnaRunir",
+    "polygon": [
+     [
+      -1,
+      -400
+     ],
+     [
+      801,
+      -400
+     ],
+     [
+      801,
+      601
+     ],
+     [
+      -1,
+      601
+     ]
+    ],
+    "polygonName": "p_Runir",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.7,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": -400
+   }
+  ]
+ },
+ "s_Letur": {
+  "name": "s_Letur",
+  "chapter": "kristnit",
+  "background": "/GAME/KRISTNIA/GRAPHIC/LETUR.PNG",
+  "player": "/GAME/KRISTNIA/ANIMATIA/HJALTI/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Letur",
+    "scene": "s_Letur",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Leturl",
+    "scene": "s_Letur",
+    "polygon": [
+     [
+      -1,
+      -400
+     ],
+     [
+      801,
+      -400
+     ],
+     [
+      801,
+      601
+     ],
+     [
+      -1,
+      601
+     ]
+    ],
+    "polygonName": "p_Runir",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.7,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "kristnit",
+    "walkable": false,
+    "walkableMinY": -400
+   }
+  ]
+ },
+ "s_BeginScene": {
+  "name": "s_BeginScene",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/BYRJUNAA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_BeginScene",
+    "scene": "s_BeginScene",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ]
+ },
+ "s_Skipingolfs": {
+  "name": "s_Skipingolfs",
+  "chapter": "landnam",
+  "background": "/GAME/LANDNAM/GRAPHIC/SKIPINGA/SKIPINGA.PNG",
+  "player": "/GAME/LANDNAM/ANIMATIA/VIFILL/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Skipingolfs",
+    "scene": "s_Skipingolfs",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Skipingolfsl",
+    "scene": "s_Skipingolfs",
+    "polygon": [
+     [
+      65,
+      850
+     ],
+     [
+      93,
+      530
+     ],
+     [
+      213,
+      451
+     ],
+     [
+      250,
+      489
+     ],
+     [
+      330,
+      460
+     ],
+     [
+      334,
+      415
+     ],
+     [
+      490,
+      418
+     ],
+     [
+      532,
+      533
+     ],
+     [
+      608,
+      599
+     ]
+    ],
+    "polygonName": "p_Skipingolfs",
+    "zmin": -1,
+    "zmax": 800,
+    "defaultscaling": 1.0,
+    "scanline1": 600.0,
+    "scanline2": 400.0,
+    "scaling2": 0.95,
+    "chapter": "landnam",
+    "walkable": true,
+    "walkableMinY": 415
+   },
+   {
+    "name": "t_Corners",
+    "scene": "s_Skipingolfs",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": 900,
+    "zmax": 2000,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Segl1",
+    "x": 0,
+    "y": 600,
+    "z": 600,
+    "image": "/GAME/LANDNAM/GRAPHIC/SKIPINGA/SEGL1.PNG",
+    "terrain": "t_Skipingolfs",
+    "w": 800,
+    "h": 256,
+    "layer": "c"
+   },
+   {
+    "name": "a_Segl2",
+    "x": 0,
+    "y": 600,
+    "z": 344,
+    "image": "/GAME/LANDNAM/GRAPHIC/SKIPINGA/SEGL2.PNG",
+    "terrain": "t_Skipingolfs",
+    "w": 181,
+    "h": 344,
+    "layer": "c"
+   },
+   {
+    "name": "a_Rope",
+    "x": 393,
+    "y": 448,
+    "z": 10,
+    "image": "/GAME/LANDNAM/GRAPHIC/SKIPINGA/ROPE.PNG",
+    "terrain": "t_Skipingolfsl",
+    "w": 95,
+    "h": 63,
+    "layer": "b"
+   },
+   {
+    "name": "a_Sula",
+    "x": 480,
+    "y": 120,
+    "z": 10,
+    "image": "/GAME/LANDNAM/GRAPHIC/SULA_SKA.PNG",
+    "terrain": "t_Skipingolfs",
+    "w": 171,
+    "h": 406,
+    "layer": "b"
+   },
+   {
+    "name": "a_States",
+    "x": 0,
+    "y": 1000,
+    "z": 1000,
+    "image": "/GAME/COMMON/GRAPHIC/MOVING.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_SmallInventory",
+    "x": 701,
+    "y": 1500,
+    "z": 1500,
+    "image": "/GAME/COMMON/GRAPHIC/INVENTOA.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_Map": {
+  "name": "s_Map",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/MAPKOPAA.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_map",
+    "scene": "s_Map",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": 0,
+    "zmax": 20,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_map",
+    "x": 0,
+    "y": 1010,
+    "z": 1010,
+    "image": "/GAME/COMMON/GRAPHIC/MAP/MAP.PNG",
+    "terrain": "t_map",
+    "w": 800,
+    "h": 600,
+    "layer": "c"
+   },
+   {
+    "name": "a_Skal",
+    "x": 265,
+    "y": 1400,
+    "z": 1000,
+    "image": "/GAME/SIDASKIA/GRAPHIC/SKALHOLT.PNG",
+    "terrain": "t_map",
+    "w": 47,
+    "h": 13,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Ingolfshofdi": {
+  "name": "s_Ingolfshofdi",
+  "chapter": "landnam",
+  "background": "/GAME/LANDNAM/GRAPHIC/INGOLFSA/INGOLFSA.PNG",
+  "player": "/GAME/LANDNAM/ANIMATIA/VIFILL/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Ingolfshofdi",
+    "scene": "s_Ingolfshofdi",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Ingolfshofdil",
+    "scene": "s_Ingolfshofdi",
+    "polygon": [
+     [
+      -250,
+      599
+     ],
+     [
+      -250,
+      483
+     ],
+     [
+      0,
+      483
+     ],
+     [
+      177,
+      424
+     ],
+     [
+      260,
+      424
+     ],
+     [
+      260,
+      470
+     ],
+     [
+      680,
+      476
+     ],
+     [
+      688,
+      541
+     ],
+     [
+      799,
+      550
+     ],
+     [
+      799,
+      599
+     ]
+    ],
+    "polygonName": "p_Ingolfshofdi",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.65,
+    "scanline1": 580.0,
+    "scanline2": 420.0,
+    "scaling2": 0.55,
+    "chapter": "landnam",
+    "walkable": true,
+    "walkableMinY": 424
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Kudungur",
+    "x": 758,
+    "y": 542,
+    "z": 10,
+    "image": "/GAME/LANDNAM/GRAPHIC/INGOLFSA/KUDUNGUR.PNG",
+    "terrain": "t_Ingolfshofdi",
+    "w": 38,
+    "h": 31,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Hjorleifshofdi": {
+  "name": "s_Hjorleifshofdi",
+  "chapter": "landnam",
+  "background": "/GAME/LANDNAM/GRAPHIC/HJORLEIA/HJORLEIA.PNG",
+  "player": "/GAME/LANDNAM/ANIMATIA/VIFILL/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Hjorleifshofdi",
+    "scene": "s_Hjorleifshofdi",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Hjorleifshofdil",
+    "scene": "s_Hjorleifshofdi",
+    "polygon": [
+     [
+      -400,
+      599
+     ],
+     [
+      -400,
+      373
+     ],
+     [
+      0,
+      373
+     ],
+     [
+      175,
+      314
+     ],
+     [
+      600,
+      280
+     ],
+     [
+      1300,
+      280
+     ],
+     [
+      1300,
+      368
+     ],
+     [
+      799,
+      368
+     ],
+     [
+      618,
+      500
+     ],
+     [
+      545,
+      512
+     ],
+     [
+      545,
+      599
+     ]
+    ],
+    "polygonName": "p_Hjorleifshofdi",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.7,
+    "scanline1": 600.0,
+    "scanline2": 200.0,
+    "scaling2": 0.58,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 280
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Bush",
+    "x": 531,
+    "y": 645,
+    "z": 200,
+    "image": "/GAME/LANDNAM/GRAPHIC/HJORLEIA/RUNNI.PNG",
+    "terrain": "t_Hjorleifshofdil",
+    "w": 220,
+    "h": 155,
+    "layer": "c"
+   },
+   {
+    "name": "a_Blom",
+    "x": 163,
+    "y": 44,
+    "z": -200,
+    "image": "/GAME/LANDNAM/GRAPHIC/HJORLEIA/BLOM.PNG",
+    "terrain": "t_Hjorleifshofdi",
+    "w": 37,
+    "h": 65,
+    "layer": "b"
+   },
+   {
+    "name": "a_DeigurHnifur",
+    "x": 115,
+    "y": 370,
+    "z": 10,
+    "image": "/GAME/LANDNAM/GRAPHIC/HJORLEIA/DEIGURHA.PNG",
+    "terrain": "t_Hjorleifshofdi",
+    "w": 29,
+    "h": 23,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_SudurThjorsa": {
+  "name": "s_SudurThjorsa",
+  "chapter": "landnam",
+  "background": "/GAME/LANDNAM/GRAPHIC/SUDURTHA/RIVERLOA.PNG",
+  "player": "/GAME/LANDNAM/ANIMATIA/VIFILL/STOP.PNG",
+  "width": 800,
+  "height": 1500,
+  "terrains": [
+   {
+    "name": "t_SudurThjorsa",
+    "scene": "s_SudurThjorsa",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": true,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_SudurThjorsal",
+    "scene": "s_SudurThjorsa",
+    "polygon": [
+     [
+      350,
+      1499
+     ],
+     [
+      204,
+      1130
+     ],
+     [
+      416,
+      560
+     ],
+     [
+      451,
+      380
+     ],
+     [
+      313,
+      0
+     ],
+     [
+      313,
+      -250
+     ],
+     [
+      690,
+      -250
+     ],
+     [
+      690,
+      0
+     ],
+     [
+      708,
+      126
+     ],
+     [
+      725,
+      184
+     ],
+     [
+      725,
+      241
+     ],
+     [
+      706,
+      241
+     ],
+     [
+      654,
+      351
+     ],
+     [
+      620,
+      502
+     ],
+     [
+      659,
+      627
+     ],
+     [
+      692,
+      877
+     ],
+     [
+      799,
+      897
+     ],
+     [
+      1400,
+      897
+     ],
+     [
+      1400,
+      1499
+     ]
+    ],
+    "polygonName": "p_SudurThjorsa",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": -250
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Grein",
+    "x": 730,
+    "y": 187,
+    "z": 15,
+    "image": "/GAME/LANDNAM/GRAPHIC/SUDURTHA/GREIN.PNG",
+    "terrain": "t_SudurThjorsal",
+    "w": 44,
+    "h": 50,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_NordurThjorsa": {
+  "name": "s_NordurThjorsa",
+  "chapter": "landnam",
+  "background": "/GAME/LANDNAM/GRAPHIC/NORDURTA/NORDURTA.PNG",
+  "player": "/GAME/LANDNAM/ANIMATIA/VIFILL/STOP.PNG",
+  "width": 1200,
+  "height": 900,
+  "terrains": [
+   {
+    "name": "t_NordurThjorsa",
+    "scene": "s_NordurThjorsa",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_AusturNordurThjorsal",
+    "scene": "s_NordurThjorsa",
+    "polygon": [
+     [
+      704,
+      899
+     ],
+     [
+      571,
+      780
+     ],
+     [
+      374,
+      630
+     ],
+     [
+      385,
+      600
+     ],
+     [
+      817,
+      600
+     ],
+     [
+      946,
+      708
+     ],
+     [
+      1000,
+      775
+     ],
+     [
+      1037,
+      899
+     ],
+     [
+      1037,
+      1500
+     ],
+     [
+      704,
+      1500
+     ]
+    ],
+    "polygonName": "p_AusturNordurThjorsa",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 600
+   },
+   {
+    "name": "t_VesturNordurThjorsal",
+    "scene": "s_NordurThjorsa",
+    "polygon": [
+     [
+      -250,
+      215
+     ],
+     [
+      240,
+      212
+     ],
+     [
+      240,
+      612
+     ],
+     [
+      240,
+      759
+     ],
+     [
+      240,
+      899
+     ],
+     [
+      -250,
+      899
+     ]
+    ],
+    "polygonName": "p_VesturNordurThjorsa",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 212
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_NordurThjorsa2",
+    "x": 800,
+    "y": -1,
+    "z": -1,
+    "image": "/GAME/LANDNAM/GRAPHIC/NORDURTA/NORDURTB.PNG",
+    "terrain": "t_NordurThjorsa",
+    "w": 400,
+    "h": 900,
+    "layer": "b"
+   },
+   {
+    "name": "a_Tre1",
+    "x": 500,
+    "y": 330,
+    "z": 0,
+    "image": "/GAME/LANDNAM/GRAPHIC/NORDURTA/TRE1.PNG",
+    "terrain": "t_AusturNordurThjorsal",
+    "w": 128,
+    "h": 269,
+    "layer": "b"
+   },
+   {
+    "name": "a_Tre2",
+    "x": 593,
+    "y": 295,
+    "z": 0,
+    "image": "/GAME/LANDNAM/GRAPHIC/NORDURTA/TRE2.PNG",
+    "terrain": "t_AusturNordurThjorsal",
+    "w": 127,
+    "h": 282,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Reykjavik": {
+  "name": "s_Reykjavik",
+  "chapter": "landnam",
+  "background": "/GAME/LANDNAM/GRAPHIC/REYKJAVA/REYKJAVA.PNG",
+  "player": "/GAME/LANDNAM/ANIMATIA/VIFILL/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Reykjavik",
+    "scene": "s_Reykjavik",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Reykjavikl",
+    "scene": "s_Reykjavik",
+    "polygon": [
+     [
+      500,
+      452
+     ],
+     [
+      1200,
+      456
+     ],
+     [
+      1200,
+      600
+     ],
+     [
+      160,
+      600
+     ],
+     [
+      160,
+      555
+     ],
+     [
+      520,
+      555
+     ]
+    ],
+    "polygonName": "p_Reykjavik",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.65,
+    "scanline1": 580.0,
+    "scanline2": 400.0,
+    "scaling2": 0.6,
+    "chapter": "landnam",
+    "walkable": false,
+    "walkableMinY": 452
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_IngibjorgSolrun",
+    "x": 681,
+    "y": 600,
+    "z": 199,
+    "image": "/GAME/LANDNAM/GRAPHIC/REYKJAVA/RUNNI.PNG",
+    "terrain": "t_Reykjavik",
+    "w": 119,
+    "h": 199,
+    "layer": "c"
+   },
+   {
+    "name": "a_Sula1",
+    "x": 172,
+    "y": 427,
+    "z": 0,
+    "image": "/GAME/LANDNAM/GRAPHIC/REYKJAVA/SULA1.PNG",
+    "terrain": "t_Reykjavik",
+    "w": 234,
+    "h": 74,
+    "layer": "b"
+   },
+   {
+    "name": "a_Sula2",
+    "x": 127,
+    "y": 468,
+    "z": 0,
+    "image": "/GAME/LANDNAM/GRAPHIC/REYKJAVA/SULA2.PNG",
+    "terrain": "t_Reykjavik",
+    "w": 344,
+    "h": 94,
+    "layer": "b"
+   },
+   {
+    "name": "a_Sula3",
+    "x": 333,
+    "y": 358,
+    "z": 0,
+    "image": "/GAME/LANDNAM/GRAPHIC/REYKJAVA/SULA3.PNG",
+    "terrain": "t_Reykjavik",
+    "w": 131,
+    "h": 61,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_HjaBryta": {
+  "name": "s_HjaBryta",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/HJABRYTA.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_HjaBryta",
+    "scene": "s_HjaBryta",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_HjaBrytal",
+    "scene": "s_HjaBryta",
+    "polygon": [
+     [
+      -1,
+      577
+     ],
+     [
+      293,
+      396
+     ],
+     [
+      1000,
+      393
+     ],
+     [
+      1000,
+      465
+     ],
+     [
+      465,
+      465
+     ],
+     [
+      320,
+      600
+     ],
+     [
+      -1,
+      600
+     ]
+    ],
+    "polygonName": "p_HjaBrytal",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.85,
+    "scanline1": 425.0,
+    "scanline2": 570.0,
+    "scaling2": 1.0,
+    "chapter": "sidaskip",
+    "walkable": true,
+    "walkableMinY": 393
+   },
+   {
+    "name": "t_Corners",
+    "scene": "s_HjaBryta",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": 800,
+    "zmax": 2000,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Bord",
+    "x": 317,
+    "y": 542,
+    "z": 200,
+    "image": "/GAME/SIDASKIA/GRAPHIC/BORD.PNG",
+    "terrain": "t_HjaBrytal",
+    "w": 481,
+    "h": 265,
+    "layer": "c"
+   },
+   {
+    "name": "a_Kollur",
+    "x": 312,
+    "y": 425,
+    "z": 1,
+    "image": "/GAME/SIDASKIA/GRAPHIC/KOLLUR.PNG",
+    "terrain": "t_HjaBrytal",
+    "w": 91,
+    "h": 104,
+    "layer": "b"
+   },
+   {
+    "name": "a_States",
+    "x": 0,
+    "y": 20000,
+    "z": 20000,
+    "image": "/GAME/COMMON/GRAPHIC/MOVING.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_SmallInventory",
+    "x": 701,
+    "y": 900,
+    "z": 900,
+    "image": "/GAME/COMMON/GRAPHIC/INVENTOA.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_Oddur",
+    "x": 445,
+    "y": 550,
+    "z": 280,
+    "image": "/GAME/SIDASKIA/ANIMATIA/ODDUR/STOP.PNG",
+    "terrain": "t_HjaBrytal",
+    "w": 178,
+    "h": 178,
+    "layer": "c"
+   },
+   {
+    "name": "a_Brytinn",
+    "x": 648,
+    "y": 550,
+    "z": 290,
+    "image": "/GAME/SIDASKIA/ANIMATIA/BRYTINN/STOP.PNG",
+    "terrain": "t_HjaBrytal",
+    "w": 148,
+    "h": 188,
+    "layer": "b"
+   },
+   {
+    "name": "a_Fuli",
+    "x": 378,
+    "y": 759,
+    "z": 500,
+    "image": "/GAME/SIDASKIA/ANIMATIA/FULI/STOP.PNG",
+    "terrain": "t_HjaBrytal",
+    "w": 214,
+    "h": 347,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_FyrirUtan": {
+  "name": "s_FyrirUtan",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/FYRIRUTA.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 1600,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_FyrirUtan",
+    "scene": "s_FyrirUtan",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_FyrirUtanl",
+    "scene": "s_FyrirUtan",
+    "polygon": [
+     [
+      -1,
+      425
+     ],
+     [
+      485,
+      190
+     ],
+     [
+      1060,
+      190
+     ],
+     [
+      1160,
+      420
+     ],
+     [
+      1315,
+      520
+     ],
+     [
+      1482,
+      601
+     ],
+     [
+      290,
+      601
+     ],
+     [
+      290,
+      1300
+     ],
+     [
+      -1,
+      1300
+     ]
+    ],
+    "polygonName": "p_FyrirUtan",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.65,
+    "scanline1": 290.0,
+    "scanline2": 580.0,
+    "scaling2": 0.85,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 190
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_FyrirUtan2",
+    "x": 800,
+    "y": 0,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/FYRIRUTB.PNG",
+    "terrain": "t_FyrirUtan",
+    "w": 800,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_Skilti",
+    "x": 319,
+    "y": 589,
+    "z": 1,
+    "image": "/GAME/SIDASKIA/GRAPHIC/SKILTI.PNG",
+    "terrain": "t_FyrirUtanl",
+    "w": 126,
+    "h": 116,
+    "layer": "b"
+   },
+   {
+    "name": "a_Ogmundur",
+    "x": 846,
+    "y": 405,
+    "z": 1,
+    "image": "/GAME/SIDASKIA/ANIMATIA/OGMUNDUR/STOP.PNG",
+    "terrain": "t_FyrirUtanl",
+    "w": 85,
+    "h": 200,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Kirkja": {
+  "name": "s_Kirkja",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/KIRKJA1.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 1200,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Kirkja",
+    "scene": "s_Kirkja",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Kirkjal",
+    "scene": "s_Kirkja",
+    "polygon": [
+     [
+      -1,
+      542
+     ],
+     [
+      415,
+      495
+     ],
+     [
+      684,
+      540
+     ],
+     [
+      880,
+      540
+     ],
+     [
+      1050,
+      601
+     ],
+     [
+      215,
+      601
+     ],
+     [
+      215,
+      1111
+     ],
+     [
+      -1,
+      1111
+     ]
+    ],
+    "polygonName": "p_Kirkjal",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 1.0,
+    "scanline1": 490.0,
+    "scanline2": 590.0,
+    "scaling2": 1.0,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 495
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Kirkja2",
+    "x": 800,
+    "y": 0,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/KIRKJA2.PNG",
+    "terrain": "t_Kirkja",
+    "w": 400,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_Silfur",
+    "x": 291,
+    "y": 344,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/SILFUR.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 37,
+    "h": 85,
+    "layer": "b"
+   },
+   {
+    "name": "a_Engill",
+    "x": 101,
+    "y": 273,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/ENGILL.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 66,
+    "h": 134,
+    "layer": "b"
+   },
+   {
+    "name": "a_Kaleikur",
+    "x": 251,
+    "y": 401,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/KALEIKUR.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 18,
+    "h": 30,
+    "layer": "b"
+   },
+   {
+    "name": "a_Salmabok",
+    "x": 337,
+    "y": 414,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/TESTAMEC.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 37,
+    "h": 16,
+    "layer": "b"
+   },
+   {
+    "name": "a_Mariumynd",
+    "x": 975,
+    "y": 246,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/MARIUMYB.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 44,
+    "h": 99,
+    "layer": "b"
+   },
+   {
+    "name": "a_Kjaftakelling",
+    "x": 813,
+    "y": 306,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/ANIMATIA/KJAFTAKA/STOP.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 89,
+    "h": 111,
+    "layer": "b"
+   },
+   {
+    "name": "a_Kjaftakelling2",
+    "x": 827,
+    "y": 477,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/ANIMATIA/KJAFTAKA/FAETUR.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 59,
+    "h": 33,
+    "layer": "b"
+   },
+   {
+    "name": "a_Radsmadur",
+    "x": 890,
+    "y": 350,
+    "z": 100,
+    "image": "/GAME/SIDASKIA/ANIMATIA/RADSMADA/STOP.PNG",
+    "terrain": "t_Kirkjal",
+    "w": 104,
+    "h": 296,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Skrifstofa": {
+  "name": "s_Skrifstofa",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/SKRIFSTA.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Skrifstofa",
+    "scene": "s_Skrifstofa",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Skrifstofal",
+    "scene": "s_Skrifstofa",
+    "polygon": [
+     [
+      -1,
+      503
+     ],
+     [
+      237,
+      503
+     ],
+     [
+      353,
+      321
+     ],
+     [
+      582,
+      321
+     ],
+     [
+      700,
+      410
+     ],
+     [
+      801,
+      427
+     ],
+     [
+      1101,
+      427
+     ],
+     [
+      1101,
+      1200
+     ],
+     [
+      -1,
+      1200
+     ]
+    ],
+    "polygonName": "p_Skrifstofa",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.82,
+    "scanline1": 330.0,
+    "scanline2": 570.0,
+    "scaling2": 1.0,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 321
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Galdrabok",
+    "x": 656,
+    "y": 129,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/GALDRABB.PNG",
+    "terrain": "t_Skrifstofal",
+    "w": 36,
+    "h": 41,
+    "layer": "b"
+   },
+   {
+    "name": "a_Kollur7",
+    "x": 627,
+    "y": 410,
+    "z": 1,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/KOLLUR7.PNG",
+    "terrain": "t_Skrifstofal",
+    "w": 78,
+    "h": 84,
+    "layer": "b"
+   },
+   {
+    "name": "a_Baekur88",
+    "x": 675,
+    "y": 153,
+    "z": 30,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/BAEKUR.PNG",
+    "terrain": "t_Skrifstofal",
+    "w": 22,
+    "h": 48,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Svefnherbergi": {
+  "name": "s_Svefnherbergi",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/SVEFNHEA.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Svefnherbergi",
+    "scene": "s_Svefnherbergi",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Svefnherbergil",
+    "scene": "s_Svefnherbergi",
+    "polygon": [
+     [
+      -1,
+      500
+     ],
+     [
+      160,
+      399
+     ],
+     [
+      336,
+      399
+     ],
+     [
+      518,
+      601
+     ],
+     [
+      -1,
+      601
+     ],
+     [
+      -1,
+      500
+     ]
+    ],
+    "polygonName": "p_Svefnherbergil",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.92,
+    "scanline1": 445.0,
+    "scanline2": 595.0,
+    "scaling2": 1.0,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 399
+   }
+  ]
+ },
+ "s_Kopavogur": {
+  "name": "s_Kopavogur",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/KOPAVOGA.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Kopavogur",
+    "scene": "s_Kopavogur",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Kopavogurl",
+    "scene": "s_Kopavogur",
+    "polygon": [
+     [
+      -600,
+      440
+     ],
+     [
+      150,
+      440
+     ],
+     [
+      490,
+      370
+     ],
+     [
+      801,
+      370
+     ],
+     [
+      801,
+      480
+     ],
+     [
+      590,
+      601
+     ],
+     [
+      -600,
+      601
+     ]
+    ],
+    "polygonName": "p_Kopavogur",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 0.85,
+    "scanline1": 400.0,
+    "scanline2": 570.0,
+    "scaling2": 1.0,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 370
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Krossfiskur",
+    "x": 308,
+    "y": 271,
+    "z": 0,
+    "image": "/GAME/SIDASKIA/ANIMATIA/KROSSFIA/STOP.PNG",
+    "terrain": "t_Kopavogurl",
+    "w": 81,
+    "h": 88,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Askur": {
+  "name": "s_Askur",
+  "chapter": "sidaskip",
+  "background": "/GAME/SIDASKIA/GRAPHIC/ASKUR.PNG",
+  "player": "/GAME/SIDASKIA/ANIMATIA/GISSUR/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Askur",
+    "scene": "s_Askur",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": 0,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Askurl",
+    "scene": "s_Askur",
+    "polygon": [
+     [
+      -1,
+      -1
+     ],
+     [
+      -1,
+      600
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      800,
+      -1
+     ]
+    ],
+    "polygonName": "p_Askurl",
+    "zmin": 0,
+    "zmax": 800,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "sidaskip",
+    "walkable": false,
+    "walkableMinY": -1
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_PeningarAskur",
+    "x": 248,
+    "y": 2,
+    "z": -300,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/PENINGAR.PNG",
+    "terrain": "t_Askur",
+    "w": 132,
+    "h": 39,
+    "layer": "b"
+   },
+   {
+    "name": "a_SkaeriAskur",
+    "x": 242,
+    "y": 193,
+    "z": 1,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/SKARI.PNG",
+    "terrain": "t_Askur",
+    "w": 133,
+    "h": 149,
+    "layer": "b"
+   },
+   {
+    "name": "a_TolurAskur",
+    "x": 308,
+    "y": 170,
+    "z": -100,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/TOLUR.PNG",
+    "terrain": "t_Askur",
+    "w": 50,
+    "h": 45,
+    "layer": "b"
+   },
+   {
+    "name": "a_TvinniAskur",
+    "x": 363,
+    "y": 160,
+    "z": -100,
+    "image": "/GAME/SIDASKIA/GRAPHIC/HLUTIR/TVINNI.PNG",
+    "terrain": "t_Askur",
+    "w": 72,
+    "h": 62,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Kot": {
+  "name": "s_Kot",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/ANIMATIA/TUNNALEA/TUNNALEB.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 1200,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Kot",
+    "scene": "s_Kot",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Kotl",
+    "scene": "s_Kot",
+    "polygon": [
+     [
+      0,
+      601
+     ],
+     [
+      0,
+      370
+     ],
+     [
+      390,
+      370
+     ],
+     [
+      410,
+      415
+     ],
+     [
+      560,
+      415
+     ],
+     [
+      600,
+      395
+     ],
+     [
+      765,
+      395
+     ],
+     [
+      1200,
+      601
+     ]
+    ],
+    "polygonName": "p_Kot",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 1.0,
+    "scanline1": 600.0,
+    "scanline2": 385.0,
+    "scaling2": 0.75,
+    "chapter": "tyrkran",
+    "walkable": true,
+    "walkableMinY": 370
+   },
+   {
+    "name": "t_Corners",
+    "scene": "s_Kot",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": 1000,
+    "zmax": 2000,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Kot1",
+    "x": 0,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/KOT1.PNG",
+    "terrain": "t_Kot",
+    "w": 800,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_Kot2",
+    "x": 800,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/KOT2.PNG",
+    "terrain": "t_Kot",
+    "w": 400,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_Bord",
+    "x": 189,
+    "y": 544,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/BORD.PNG",
+    "terrain": "t_Kotl",
+    "w": 377,
+    "h": 414,
+    "layer": "c"
+   },
+   {
+    "name": "a_Trog",
+    "x": 850,
+    "y": 473,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/TROG.PNG",
+    "terrain": "t_Kotl",
+    "w": 114,
+    "h": 151,
+    "layer": "b"
+   },
+   {
+    "name": "a_Tappi",
+    "x": 709,
+    "y": 430,
+    "z": 20,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/TAPPI.PNG",
+    "terrain": "t_Kotl",
+    "w": 16,
+    "h": 19,
+    "layer": "b"
+   },
+   {
+    "name": "a_Tunna",
+    "x": 700,
+    "y": 420,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/TUNNA.PNG",
+    "terrain": "t_Kotl",
+    "w": 127,
+    "h": 164,
+    "layer": "c"
+   },
+   {
+    "name": "a_Askur",
+    "x": 196,
+    "y": 151,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/ASKUR.PNG",
+    "terrain": "t_Kotl",
+    "w": 72,
+    "h": 56,
+    "layer": "b"
+   },
+   {
+    "name": "a_Braud",
+    "x": 129,
+    "y": 186,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KOT/BRAUD.PNG",
+    "terrain": "t_Kotl",
+    "w": 46,
+    "h": 22,
+    "layer": "b"
+   },
+   {
+    "name": "a_States",
+    "x": 0,
+    "y": 1000,
+    "z": 1000,
+    "image": "/GAME/COMMON/GRAPHIC/MOVING.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_SmallInventory",
+    "x": 701,
+    "y": 900,
+    "z": 900,
+    "image": "/GAME/COMMON/GRAPHIC/INVENTOA.PNG",
+    "terrain": "t_Corners",
+    "w": 112,
+    "h": 84,
+    "layer": "c"
+   },
+   {
+    "name": "a_Mamma",
+    "x": 520,
+    "y": 450,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/ANIMATIA/MAMMA/STOP.PNG",
+    "terrain": "t_Kotl",
+    "w": 213,
+    "h": 328,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_UtanHusid": {
+  "name": "s_UtanHusid",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/UTANHUSA/UTANHUSA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 1600,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_UtanHusid",
+    "scene": "s_UtanHusid",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 0.6,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": true,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_UtanHusidl",
+    "scene": "s_UtanHusid",
+    "polygon": [
+     [
+      -200,
+      600
+     ],
+     [
+      -200,
+      500
+     ],
+     [
+      80,
+      500
+     ],
+     [
+      200,
+      535
+     ],
+     [
+      400,
+      460
+     ],
+     [
+      510,
+      410
+     ],
+     [
+      700,
+      330
+     ],
+     [
+      1340,
+      330
+     ],
+     [
+      1450,
+      490
+     ],
+     [
+      1800,
+      490
+     ],
+     [
+      1800,
+      600
+     ]
+    ],
+    "polygonName": "p_UtanHusid",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.6,
+    "scanline1": 520.0,
+    "scanline2": 320.0,
+    "scaling2": 0.5,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 330
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_UtanHusid2",
+    "x": 800,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHUSA/UTANHUSB.PNG",
+    "terrain": "t_UtanHusid",
+    "w": 800,
+    "h": 600,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_DansktHus": {
+  "name": "s_DansktHus",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/DANSKTHA/DANSKTHA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 1200,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_DansktHus",
+    "scene": "s_DansktHus",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_DansktHusl",
+    "scene": "s_DansktHus",
+    "polygon": [
+     [
+      520,
+      430
+     ],
+     [
+      760,
+      430
+     ],
+     [
+      900,
+      430
+     ],
+     [
+      1060,
+      500
+     ],
+     [
+      1060,
+      530
+     ],
+     [
+      390,
+      530
+     ]
+    ],
+    "polygonName": "p_DansktHus",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 1.0,
+    "scanline1": 600.0,
+    "scanline2": 420.0,
+    "scaling2": 0.82,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 430
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_DansktHus2",
+    "x": 800,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DANSKTHA/DANSKTHB.PNG",
+    "terrain": "t_DansktHus",
+    "w": 400,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_PokarOgFata",
+    "x": 968,
+    "y": 600,
+    "z": 178,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DANSKTHA/POKAROGA.PNG",
+    "terrain": "t_DansktHusl",
+    "w": 232,
+    "h": 178,
+    "layer": "c"
+   },
+   {
+    "name": "a_DonskTunna",
+    "x": 200,
+    "y": 600,
+    "z": 184,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DANSKTHA/DONSKTUA.PNG",
+    "terrain": "t_DansktHusl",
+    "w": 231,
+    "h": 184,
+    "layer": "c"
+   },
+   {
+    "name": "a_Prik",
+    "x": 550,
+    "y": 470,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DANSKTHA/PRIK.PNG",
+    "terrain": "t_DansktHusl",
+    "w": 75,
+    "h": 75,
+    "layer": "b"
+   },
+   {
+    "name": "a_Strakur",
+    "x": 893,
+    "y": 520,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/ANIMATIA/STRAKUR/STOP.PNG",
+    "terrain": "t_DansktHusl",
+    "w": 94,
+    "h": 268,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_UtanDanskaHusid": {
+  "name": "s_UtanDanskaHusid",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/UTANDANA/UTANDANA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_UtanDanskaHusid",
+    "scene": "s_UtanDanskaHusid",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 0.6,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": true,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_UtanDanskaHusidl",
+    "scene": "s_UtanDanskaHusid",
+    "polygon": [
+     [
+      -1,
+      420
+     ],
+     [
+      -200,
+      420
+     ],
+     [
+      -200,
+      590
+     ],
+     [
+      663,
+      590
+     ],
+     [
+      663,
+      424
+     ],
+     [
+      552,
+      368
+     ],
+     [
+      552,
+      316
+     ],
+     [
+      800,
+      316
+     ],
+     [
+      800,
+      242
+     ],
+     [
+      342,
+      242
+     ],
+     [
+      250,
+      360
+     ]
+    ],
+    "polygonName": "p_UtanDanskaHusid",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.7,
+    "scanline1": 600.0,
+    "scanline2": 350.0,
+    "scaling2": 0.5,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 242
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Hus",
+    "x": 532,
+    "y": 375,
+    "z": 339,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANDANA/HUS.PNG",
+    "terrain": "t_UtanDanskaHusid",
+    "w": 268,
+    "h": 460,
+    "layer": "c"
+   },
+   {
+    "name": "a_Tunnur",
+    "x": 677,
+    "y": 516,
+    "z": 130,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANDANA/TUNNUR.PNG",
+    "terrain": "t_UtanDanskaHusid",
+    "w": 124,
+    "h": 214,
+    "layer": "c"
+   },
+   {
+    "name": "a_KonaMadurDaud",
+    "x": 539,
+    "y": 490,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANDANA/KONAMADA.PNG",
+    "terrain": "t_UtanDanskaHusid",
+    "w": 235,
+    "h": 66,
+    "layer": "c"
+   },
+   {
+    "name": "a_StrakurDaudur",
+    "x": 471,
+    "y": 380,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANDANA/STRAKURA.PNG",
+    "terrain": "t_UtanDanskaHusid",
+    "w": 155,
+    "h": 39,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_Fjaran": {
+  "name": "s_Fjaran",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/FJARAN/FJARAN1.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 1200,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Fjaran",
+    "scene": "s_Fjaran",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 0.6,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Fjaranl",
+    "scene": "s_Fjaran",
+    "polygon": [
+     [
+      200,
+      600
+     ],
+     [
+      200,
+      520
+     ],
+     [
+      860,
+      480
+     ],
+     [
+      1050,
+      410
+     ],
+     [
+      1200,
+      410
+     ],
+     [
+      1400,
+      410
+     ],
+     [
+      1400,
+      480
+     ],
+     [
+      1200,
+      480
+     ],
+     [
+      1060,
+      600
+     ],
+     [
+      1060,
+      1000
+     ],
+     [
+      680,
+      1000
+     ],
+     [
+      680,
+      600
+     ],
+     [
+      450,
+      600
+     ],
+     [
+      450,
+      1000
+     ],
+     [
+      200,
+      1000
+     ]
+    ],
+    "polygonName": "p_Fjaran",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.6,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": true,
+    "walkableMinY": 410
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Fjaran2",
+    "x": 800,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/FJARAN/FJARAN2.PNG",
+    "terrain": "t_Fjaran",
+    "w": 400,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_Klettar1",
+    "x": 0,
+    "y": 600,
+    "z": 255,
+    "image": "/GAME/TYRKJARA/GRAPHIC/FJARAN/KLETTAR1.PNG",
+    "terrain": "t_Fjaran",
+    "w": 227,
+    "h": 255,
+    "layer": "c"
+   },
+   {
+    "name": "a_Klettar2",
+    "x": 442,
+    "y": 744,
+    "z": 255,
+    "image": "/GAME/TYRKJARA/GRAPHIC/FJARAN/KLETTAR2.PNG",
+    "terrain": "t_Fjaran",
+    "w": 251,
+    "h": 111,
+    "layer": "c"
+   },
+   {
+    "name": "a_Klettar3",
+    "x": 1043,
+    "y": 672,
+    "z": 255,
+    "image": "/GAME/TYRKJARA/GRAPHIC/FJARAN/KLETTAR3.PNG",
+    "terrain": "t_Fjaran",
+    "w": 157,
+    "h": 183,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_Dekkid": {
+  "name": "s_Dekkid",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/DEKKID/DEKKID1.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 1200,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Dekkid",
+    "scene": "s_Dekkid",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 0.75,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Dekkidl",
+    "scene": "s_Dekkid",
+    "polygon": [
+     [
+      880,
+      400
+     ],
+     [
+      880,
+      350
+     ],
+     [
+      1000,
+      350
+     ],
+     [
+      1000,
+      550
+     ],
+     [
+      730,
+      500
+     ],
+     [
+      640,
+      598
+     ],
+     [
+      35,
+      598
+     ],
+     [
+      143,
+      498
+     ],
+     [
+      124,
+      476
+     ],
+     [
+      264,
+      406
+     ],
+     [
+      322,
+      418
+     ],
+     [
+      535,
+      360
+     ]
+    ],
+    "polygonName": "p_Dekkid",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.7,
+    "scanline1": 380.0,
+    "scanline2": 600.0,
+    "scaling2": 0.8,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 350
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Dekkid2",
+    "x": 800,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DEKKID/DEKKID2.PNG",
+    "terrain": "t_Dekkid",
+    "w": 400,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_Glerflaska",
+    "x": 470,
+    "y": 525,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DEKKID/GLERFLAA.PNG",
+    "terrain": "t_Dekkidl",
+    "w": 55,
+    "h": 59,
+    "layer": "b"
+   },
+   {
+    "name": "a_Las",
+    "x": 220,
+    "y": 280,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DEKKID/LAS.PNG",
+    "terrain": "t_Dekkidl",
+    "w": 64,
+    "h": 57,
+    "layer": "b"
+   },
+   {
+    "name": "a_Lok",
+    "x": 1025,
+    "y": 555,
+    "z": 200,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DEKKID/LOK1.PNG",
+    "terrain": "t_Dekkidl",
+    "w": 148,
+    "h": 166,
+    "layer": "b"
+   },
+   {
+    "name": "a_Edalsteinn",
+    "x": 1082,
+    "y": 420,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/GRAPHIC/DEKKID/EDALSTEA.PNG",
+    "terrain": "t_Dekkidl",
+    "w": 24,
+    "h": 26,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Kaetan": {
+  "name": "s_Kaetan",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/KAETAN/KAETAN.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Kaetan",
+    "scene": "s_Kaetan",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 0.9,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Kaetanl",
+    "scene": "s_Kaetan",
+    "polygon": [
+     [
+      260,
+      600
+     ],
+     [
+      140,
+      460
+     ],
+     [
+      360,
+      480
+     ],
+     [
+      470,
+      460
+     ],
+     [
+      590,
+      390
+     ],
+     [
+      800,
+      450
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      800,
+      1100
+     ],
+     [
+      260,
+      1100
+     ]
+    ],
+    "polygonName": "p_Kaetan",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.95,
+    "scanline1": 600.0,
+    "scanline2": 430.0,
+    "scaling2": 0.88,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 390
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Frontur1",
+    "x": 0,
+    "y": 600,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR1.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 315,
+    "h": 152,
+    "layer": "c"
+   },
+   {
+    "name": "a_Frontur2",
+    "x": 0,
+    "y": 752,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR2.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 103,
+    "h": 195,
+    "layer": "c"
+   },
+   {
+    "name": "a_Frontur3",
+    "x": 0,
+    "y": 947,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR3.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 257,
+    "h": 253,
+    "layer": "c"
+   },
+   {
+    "name": "a_Frontur4",
+    "x": 463,
+    "y": 600,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR4.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 337,
+    "h": 81,
+    "layer": "c"
+   },
+   {
+    "name": "a_Frontur5",
+    "x": 571,
+    "y": 681,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR5.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 229,
+    "h": 172,
+    "layer": "c"
+   },
+   {
+    "name": "a_Frontur6",
+    "x": 690,
+    "y": 853,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR6.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 110,
+    "h": 270,
+    "layer": "c"
+   },
+   {
+    "name": "a_Frontur7",
+    "x": 429,
+    "y": 1123,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/KAETAN/FRONTUR7.PNG",
+    "terrain": "t_Kaetanl",
+    "w": 371,
+    "h": 77,
+    "layer": "c"
+   }
+  ]
+ },
+ "s_UtanHelli": {
+  "name": "s_UtanHelli",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/UTANHELA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 800,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_UtanHelli",
+    "scene": "s_UtanHelli",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 1.0,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_UtanHellil",
+    "scene": "s_UtanHelli",
+    "polygon": [
+     [
+      -200,
+      600
+     ],
+     [
+      -200,
+      500
+     ],
+     [
+      0,
+      500
+     ],
+     [
+      290,
+      490
+     ],
+     [
+      550,
+      410
+     ],
+     [
+      800,
+      530
+     ],
+     [
+      1000,
+      530
+     ],
+     [
+      1000,
+      600
+     ]
+    ],
+    "polygonName": "p_UtanHelli",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 1.0,
+    "scanline1": 600.0,
+    "scanline2": 460.0,
+    "scaling2": 0.9,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 410
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Steinn1",
+    "x": 200,
+    "y": 206,
+    "z": 6,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/STEINN1.PNG",
+    "terrain": "t_UtanHelli",
+    "w": 34,
+    "h": 20,
+    "layer": "b"
+   },
+   {
+    "name": "a_Steinn2",
+    "x": 230,
+    "y": 205,
+    "z": 5,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/STEINN1.PNG",
+    "terrain": "t_UtanHelli",
+    "w": 34,
+    "h": 20,
+    "layer": "b"
+   },
+   {
+    "name": "a_Steinn3",
+    "x": 260,
+    "y": 204,
+    "z": 4,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/STEINN1.PNG",
+    "terrain": "t_UtanHelli",
+    "w": 34,
+    "h": 20,
+    "layer": "b"
+   },
+   {
+    "name": "a_Steinn4",
+    "x": 290,
+    "y": 203,
+    "z": 3,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/STEINN1.PNG",
+    "terrain": "t_UtanHelli",
+    "w": 34,
+    "h": 20,
+    "layer": "b"
+   },
+   {
+    "name": "a_Steinn5",
+    "x": 320,
+    "y": 202,
+    "z": 2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/STEINN1.PNG",
+    "terrain": "t_UtanHelli",
+    "w": 34,
+    "h": 20,
+    "layer": "b"
+   },
+   {
+    "name": "a_Steinn6",
+    "x": 350,
+    "y": 201,
+    "z": 1,
+    "image": "/GAME/TYRKJARA/GRAPHIC/UTANHELA/STEINN1.PNG",
+    "terrain": "t_UtanHelli",
+    "w": 34,
+    "h": 20,
+    "layer": "b"
+   }
+  ]
+ },
+ "s_Innihellir": {
+  "name": "s_Innihellir",
+  "chapter": "tyrkran",
+  "background": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/INNIHELA.PNG",
+  "player": "/GAME/TYRKJARA/ANIMATIA/SIGRUN/STOP.PNG",
+  "width": 1200,
+  "height": 600,
+  "terrains": [
+   {
+    "name": "t_Innihellir",
+    "scene": "s_Innihellir",
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      800,
+      0
+     ],
+     [
+      800,
+      600
+     ],
+     [
+      0,
+      600
+     ]
+    ],
+    "polygonName": "p_All",
+    "zmin": -7,
+    "zmax": -1,
+    "defaultscaling": 0.65,
+    "scanline1": null,
+    "scanline2": null,
+    "scaling2": null,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 0
+   },
+   {
+    "name": "t_Innihellirl",
+    "scene": "s_Innihellir",
+    "polygon": [
+     [
+      200,
+      550
+     ],
+     [
+      0,
+      550
+     ],
+     [
+      0,
+      355
+     ],
+     [
+      190,
+      355
+     ],
+     [
+      259,
+      290
+     ],
+     [
+      0,
+      290
+     ],
+     [
+      0,
+      190
+     ],
+     [
+      282,
+      191
+     ],
+     [
+      292,
+      253
+     ],
+     [
+      340,
+      320
+     ],
+     [
+      530,
+      350
+     ],
+     [
+      720,
+      400
+     ],
+     [
+      810,
+      400
+     ],
+     [
+      850,
+      330
+     ],
+     [
+      1160,
+      330
+     ],
+     [
+      1200,
+      600
+     ]
+    ],
+    "polygonName": "p_Innihellir",
+    "zmin": -1,
+    "zmax": 1500,
+    "defaultscaling": 0.75,
+    "scanline1": 600.0,
+    "scanline2": 370.0,
+    "scaling2": 0.65,
+    "chapter": "tyrkran",
+    "walkable": false,
+    "walkableMinY": 190
+   }
+  ],
+  "objects": [
+   {
+    "name": "a_Innihellir2",
+    "x": 800,
+    "y": -2,
+    "z": -2,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/INNIHELB.PNG",
+    "terrain": "t_Innihellir",
+    "w": 400,
+    "h": 600,
+    "layer": "b"
+   },
+   {
+    "name": "a_HellisFrontur1",
+    "x": 0,
+    "y": 600,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR1.PNG",
+    "terrain": "t_Innihellir",
+    "w": 285,
+    "h": 50,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur2",
+    "x": 285,
+    "y": 600,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR2.PNG",
+    "terrain": "t_Innihellir",
+    "w": 528,
+    "h": 153,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur3",
+    "x": 813,
+    "y": 600,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR3.PNG",
+    "terrain": "t_Innihellir",
+    "w": 387,
+    "h": 132,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur4",
+    "x": 1117,
+    "y": 732,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR4.PNG",
+    "terrain": "t_Innihellir",
+    "w": 83,
+    "h": 260,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur5",
+    "x": 1062,
+    "y": 992,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR5.PNG",
+    "terrain": "t_Innihellir",
+    "w": 138,
+    "h": 208,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur6a",
+    "x": 226,
+    "y": 1033,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTURA.PNG",
+    "terrain": "t_Innihellir",
+    "w": 800,
+    "h": 167,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur6b",
+    "x": 1026,
+    "y": 1033,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTURB.PNG",
+    "terrain": "t_Innihellir",
+    "w": 36,
+    "h": 167,
+    "layer": "b"
+   },
+   {
+    "name": "a_HellisFrontur7",
+    "x": 0,
+    "y": 912,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR7.PNG",
+    "terrain": "t_Innihellir",
+    "w": 226,
+    "h": 288,
+    "layer": "c"
+   },
+   {
+    "name": "a_HellisFrontur8",
+    "x": 0,
+    "y": 650,
+    "z": 600,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FRONTUR8.PNG",
+    "terrain": "t_Innihellir",
+    "w": 112,
+    "h": 262,
+    "layer": "c"
+   },
+   {
+    "name": "a_Feluklettur",
+    "x": 52,
+    "y": 302,
+    "z": 256,
+    "image": "/GAME/TYRKJARA/GRAPHIC/INNIHELA/FELUKLEA.PNG",
+    "terrain": "t_Innihellirl",
+    "w": 217,
+    "h": 307,
+    "layer": "c"
+   },
+   {
+    "name": "a_Pabbi",
+    "x": 514,
+    "y": 373,
+    "z": 1,
+    "image": "/GAME/TYRKJARA/ANIMATIA/AUKAPERA/PABBI/STOP.PNG",
+    "terrain": "t_Innihellirl",
+    "w": 96,
+    "h": 228,
+    "layer": "c"
+   },
+   {
+    "name": "a_Kalli1",
+    "x": 395,
+    "y": 348,
+    "z": 1,
+    "image": "/GAME/TYRKJARA/ANIMATIA/AUKAPERA/KALL1.PNG",
+    "terrain": "t_Innihellirl",
+    "w": 70,
+    "h": 235,
+    "layer": "b"
+   },
+   {
+    "name": "a_Kalli2",
+    "x": 626,
+    "y": 400,
+    "z": 1,
+    "image": "/GAME/TYRKJARA/ANIMATIA/AUKAPERA/KALL2.PNG",
+    "terrain": "t_Innihellirl",
+    "w": 94,
+    "h": 232,
+    "layer": "b"
+   },
+   {
+    "name": "a_Prestsfru",
+    "x": 890,
+    "y": 385,
+    "z": 1,
+    "image": "/GAME/TYRKJARA/ANIMATIA/AUKAPERA/PRESTSFA.PNG",
+    "terrain": "t_Innihellirl",
+    "w": 68,
+    "h": 221,
+    "layer": "b"
+   },
+   {
+    "name": "a_Jon",
+    "x": 785,
+    "y": 422,
+    "z": 0,
+    "image": "/GAME/TYRKJARA/ANIMATIA/JON/STOP.PNG",
+    "terrain": "t_Innihellirl",
+    "w": 84,
+    "h": 249,
+    "layer": "c"
+   }
+  ]
+ }
+}

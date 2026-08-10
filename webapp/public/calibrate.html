@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8">
+<title>Tímaflakkarinn — perspective calibration</title>
+<!--
+  Per-background perspective calibration, and a look at the four layers.
+
+  WHAT IT PRODUCES. The engine's entire notion of depth on a terrain is four
+  numbers:
+
+      <SimplePseudo3DTerrain defaultscaling="D" scanline1="A"
+                             scanline2="B" scaling2="S"/>
+
+  The character is D times size at screen line A and S times at line B, linear
+  in between and beyond (Terrain.setScalingParameters / getScaling). Nothing
+  else is consumed. So calibrating a background means: put him on two lines,
+  size him until each looks right, copy the four numbers into the GML.
+
+  47 of the 70 scene terrains have no ramp at all and scale by a constant, which
+  is why characters do not shrink with depth. Two of the calibrated ones are
+  suspect -- t_HjaVolvul ramps 1.031x where perspective wants about 1.63x.
+
+  THE METRE TOOL is not consumed by the engine and is not needed to fix the
+  classic game. It is for the remaster: click two points on the ground, say how
+  far apart they are, and the page can show the character standing N metres
+  back. That is the "does that look right?" check, and it is the beginning of a
+  metric ground plane for 2.8D.
+
+  LAYERS, per the owner's model: (a) the plate, (b) objects the character can
+  never get behind, (c) objects he can walk behind, (d) characters. (b) and (c)
+  are decided in tools/pipeline/scene-index.py by asking whether the walkable
+  polygon reaches further back than the object AT THE OBJECT'S OWN X -- 68 are
+  (b), 49 are (c). Only (c) needs real depth in the remaster; (b) can be baked
+  onto the plate.
+
+  Dev tool. Served by `npm run dev` and deliberately NOT in the deploy
+  allowlist -- it is not part of the game.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #14100c; color: #e8dcc0; font: 13px/1.45 system-ui, sans-serif; display: flex; height: 100vh; }
+  aside { width: 240px; flex: 0 0 auto; overflow-y: auto; border-right: 1px solid #3a3025; padding: 10px; }
+  aside h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8d7a55; margin: 12px 0 4px; }
+  aside button { display: block; width: 100%; text-align: left; padding: 5px 7px; border: 0; border-radius: 3px;
+                 background: transparent; color: #e8dcc0; font: inherit; cursor: pointer; }
+  aside button:hover { background: #241c12; }
+  aside button.on { background: #c8a040; color: #14100c; }
+  aside .dot { float: right; font-size: 11px; }
+  aside .no { color: #d08a5a; }
+  main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+  #bar { padding: 8px 12px; border-bottom: 1px solid #3a3025; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  #bar label { color: #8d7a55; }
+  #bar input[type=number] { width: 76px; background: #241c12; color: #e8dcc0; border: 1px solid #5a4526;
+                            border-radius: 3px; padding: 3px 5px; font: inherit; }
+  #bar button { background: #c8a040; color: #14100c; border: 0; border-radius: 3px; padding: 5px 10px;
+                font: inherit; font-weight: 600; cursor: pointer; }
+  #bar button.ghost { background: transparent; color: #c8a040; border: 1px solid #5a4526; font-weight: 400; }
+  #wrap { flex: 1 1 auto; overflow: auto; padding: 14px; }
+  #stage { position: relative; transform-origin: top left; }
+  #stage img.bg { display: block; image-rendering: pixelated; }
+  .obj { position: absolute; border: 1px solid; font-size: 10px; color: #fff; pointer-events: none;
+         text-shadow: 0 0 3px #000; }
+  .obj.b { border-color: #6aa9ff; background: rgba(106,169,255,.10); }
+  .obj.c { border-color: #ffa04a; background: rgba(255,160,74,.10); }
+  .obj span { position: absolute; top: -1px; left: 1px; }
+  .scan { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #c8a040; cursor: ns-resize; }
+  .scan b { position: absolute; left: 4px; top: -16px; font-size: 11px; color: #c8a040; background: #14100c; padding: 0 4px; }
+  .char { position: absolute; image-rendering: pixelated; transform-origin: bottom left; pointer-events: none; }
+  .char.ghost { opacity: .5; filter: hue-rotate(150deg); }
+  svg.poly { position: absolute; inset: 0; pointer-events: none; }
+  #out { border-top: 1px solid #3a3025; padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 12px;
+         color: #9fd08a; white-space: pre-wrap; word-break: break-all; }
+  #hint { color: #8d7a55; padding: 0 12px 8px; font-size: 12px; }
+</style>
+</head>
+<body>
+<aside id="list"></aside>
+<main>
+  <div id="bar">
+    <span id="title" style="font-weight:600"></span>
+    <label>defaultscaling <input type="number" id="d" step="0.01" min="0.05" max="4"></label>
+    <label>scanline1 <input type="number" id="a" step="1"></label>
+    <label>scaling2 <input type="number" id="s" step="0.01" min="0.05" max="4"></label>
+    <label>scanline2 <input type="number" id="b" step="1"></label>
+    <label>zoom <input type="number" id="z" step="0.05" min="0.2" max="3" value="1"></label>
+    <button id="copy">Copy GML</button>
+    <button class="ghost" id="reset">Reset</button>
+    <button class="ghost" id="metre">Set scale (2 clicks)</button>
+    <label><input type="checkbox" id="showObjs" checked> objects</label>
+    <label><input type="checkbox" id="showPoly" checked> walkable</label>
+  </div>
+  <div id="wrap"><div id="stage"></div></div>
+  <div id="hint"></div>
+  <pre id="out"></pre>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+let scenes = {}, cur = null, curT = null, metrePts = [], metres = null, zoom = 1;
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+fetch('/scene-index.json').then(r => r.json()).then(d => {
+  scenes = d;
+  buildList();
+  const first = Object.values(scenes).find(s => s.terrains.some(t => t.polygon.length));
+  select(first ? first.name : Object.keys(scenes)[0]);
+});
+
+function buildList() {
+  const byChapter = {};
+  for (const s of Object.values(scenes)) (byChapter[s.chapter] ||= []).push(s);
+  const el = $('#list');
+  el.innerHTML = '';
+  for (const ch of Object.keys(byChapter).sort()) {
+    const h = document.createElement('h2'); h.textContent = ch; el.appendChild(h);
+    for (const s of byChapter[ch].sort((x, y) => x.name.localeCompare(y.name))) {
+      const done = s.terrains.some(t => t.scanline1);
+      const btn = document.createElement('button');
+      btn.dataset.scene = s.name;
+      btn.innerHTML = s.name.replace(/^s_/, '') +
+        `<span class="dot ${done ? '' : 'no'}">${done ? '✓' : '—'}</span>`;
+      btn.onclick = () => select(s.name);
+      el.appendChild(btn);
+    }
+  }
+}
+
+function select(name) {
+  cur = scenes[name];
+  // Pick the FLOOR, not the backdrop's full-screen terrain. In order of how
+  // much the content actually tells us: terrains that host MovingActors are
+  // where characters stand (authoritative, but only 10 scenes declare any);
+  // then anything already calibrated; then the "t_Xl" naming the content uses
+  // for a floor layer; then any polygon that is not the whole screen.
+  curT = cur.terrains.find(t => t.walkable)
+      || cur.terrains.find(t => t.scanline1)
+      || cur.terrains.find(t => /l$/.test(t.name) && t.polygon.length)
+      || cur.terrains.find(t => t.polygon.length && t.polygonName !== 'p_All')
+      || cur.terrains.find(t => t.polygon.length)
+      || cur.terrains[0];
+  metrePts = []; metres = null;
+  document.querySelectorAll('#list button').forEach(b => b.classList.toggle('on', b.dataset.scene === name));
+  $('#title').textContent = name + '  ·  ' + curT.name;
+  $('#d').value = curT.defaultscaling ?? 1;
+  $('#a').value = curT.scanline1 ?? Math.round(cur.height * 0.95);
+  $('#b').value = curT.scanline2 ?? Math.round(cur.height * 0.60);
+  $('#s').value = curT.scaling2 ?? (curT.defaultscaling ?? 1) * 0.7;
+  render();
+}
+
+function vals() {
+  return { d: +$('#d').value, a: +$('#a').value, b: +$('#b').value, s: +$('#s').value };
+}
+
+function render() {
+  if (!cur) return;
+  const v = vals();
+  zoom = +$('#z').value || 1;
+  const st = $('#stage');
+  st.style.transform = `scale(${zoom})`;
+  st.style.width = cur.width + 'px';
+  st.style.height = cur.height + 'px';
+  st.innerHTML = '';
+
+  const bg = document.createElement('img');
+  bg.className = 'bg'; bg.src = cur.background; bg.width = cur.width; bg.height = cur.height;
+  st.appendChild(bg);
+
+  if ($('#showPoly').checked && curT.polygon.length) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'poly');
+    svg.setAttribute('width', cur.width); svg.setAttribute('height', cur.height);
+    const pg = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    pg.setAttribute('points', curT.polygon.map(p => p.join(',')).join(' '));
+    pg.setAttribute('fill', 'rgba(120,190,30,.12)');
+    pg.setAttribute('stroke', '#78be1e');
+    svg.appendChild(pg); st.appendChild(svg);
+  }
+
+  if ($('#showObjs').checked) for (const o of (cur.objects || [])) {
+    const d = document.createElement('div');
+    d.className = 'obj ' + o.layer;
+    // Actors are top-left anchored at (x, y - z), the same rule the backdrop
+    // follows: it sits at (0,-1,-1) and lands at (0,0).
+    d.style.left = o.x + 'px';
+    d.style.top = (o.y - o.z) + 'px';
+    d.style.width = (o.w || 20) + 'px';
+    d.style.height = (o.h || 20) + 'px';
+    d.innerHTML = `<span>${o.layer}·${o.name.replace(/^a_/, '')}</span>`;
+    st.appendChild(d);
+  }
+
+  for (const [line, scale, label] of [[v.a, v.d, 'scanline1'], [v.b, v.s, 'scanline2']]) {
+    const ln = document.createElement('div');
+    ln.className = 'scan'; ln.style.top = line + 'px';
+    ln.innerHTML = `<b>${label} ${Math.round(line)} · ${scale.toFixed(3)}×</b>`;
+    ln.onpointerdown = e => drag(e, label === 'scanline1' ? '#a' : '#b');
+    st.appendChild(ln);
+    st.appendChild(character(line, scale));
+  }
+
+  // "N metres back" ghost, once a scale is known.
+  if (metres && metres.pxPerM) {
+    const backY = v.a - 5 * metres.pxPerM;
+    if (backY > 0) {
+      const g = character(backY, scalingAt(backY), true);
+      st.appendChild(g);
+    }
+  }
+
+  out();
+}
+
+function scalingAt(y) {
+  const v = vals();
+  if (v.a === v.b) return v.d;
+  const aCoef = (v.d - v.s) / (v.a - v.b);
+  const bCoef = v.s - aCoef * v.b;
+  return aCoef * y + bCoef;
+}
+
+// The sprites are chroma-keyed green plates; the game keys them at load. Do the
+// same here or the character shows as a green slab and you cannot judge his size
+// against the art at all.
+const keyed = new Map();
+function chromaKey(src) {
+  if (keyed.has(src)) return keyed.get(src);
+  const out = { url: src };
+  keyed.set(src, out);
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const g = c.getContext('2d');
+    g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height);
+    const px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      // Generous on purpose: this is a preview, and the 1998 plates carry
+      // palette drift around the key (known-issues #4).
+      if (px[i + 1] > 150 && px[i] < 130 && px[i + 2] < 130) px[i + 3] = 0;
+    }
+    g.putImageData(d, 0, 0);
+    out.url = c.toDataURL();
+    render();
+  };
+  im.src = src;
+  return out;
+}
+
+function character(y, scale, ghost) {
+  const img = document.createElement('img');
+  img.className = 'char' + (ghost ? ' ghost' : '');
+  img.src = cur.player ? chromaKey(cur.player).url : '';
+  img.style.left = (cur.width * 0.5) + 'px';
+  img.style.top = y + 'px';
+  img.style.transform = `translateY(-100%) scale(${scale})`;
+  return img;
+}
+
+function drag(e, sel) {
+  e.preventDefault();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => {
+    $(sel).value = Math.round(clamp((ev.clientY - st.top) / zoom, 0, cur.height));
+    render();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+function out() {
+  const v = vals();
+  const ramp = v.a === v.b ? 1 : Math.abs(v.d / v.s);
+  $('#out').textContent =
+    `<SimplePseudo3DTerrain name="${curT.name}" scene="${cur.name}" polygon="${curT.polygonName}"\n` +
+    `\tzmin="${curT.zmin}" zmax="${curT.zmax}" defaultscaling="${v.d}"\n` +
+    `\tscanline1="${v.a}" scanline2="${v.b}" scaling2="${v.s}"/>` +
+    `\n\n; front/back size ratio ${ramp.toFixed(3)}×` +
+    (metres ? `   ·   ${metres.pxPerM.toFixed(1)} px per metre at the front` : '') +
+    (curT.scanline1 ? `\n; was: scanline1="${curT.scanline1}" scanline2="${curT.scanline2}" scaling2="${curT.scaling2}"`
+                    : `\n; was: UNCALIBRATED (constant ${curT.defaultscaling}×)`);
+}
+
+$('#wrap').addEventListener('click', e => {
+  if (!metrePts.pending) return;
+  const st = $('#stage').getBoundingClientRect();
+  metrePts.push([(e.clientX - st.left) / zoom, (e.clientY - st.top) / zoom]);
+  if (metrePts.length === 2) {
+    const m = parseFloat(prompt('How many metres between those two points?', '5'));
+    if (m > 0) {
+      const dy = Math.abs(metrePts[1][1] - metrePts[0][1]) || 1;
+      metres = { pxPerM: dy / m };
+    }
+    metrePts = []; metrePts.pending = false;
+    $('#hint').textContent = metres ? `Scale set: ${metres.pxPerM.toFixed(1)} px per metre. The faded figure is 5 m behind scanline1.` : '';
+    render();
+  }
+});
+$('#metre').onclick = () => {
+  metrePts = []; metrePts.pending = true;
+  $('#hint').textContent = 'Click two points on the ground, then give the distance in metres.';
+};
+
+for (const id of ['#d', '#a', '#b', '#s', '#z']) $(id).oninput = render;
+for (const id of ['#showObjs', '#showPoly']) $(id).onchange = render;
+$('#reset').onclick = () => select(cur.name);
+$('#copy').onclick = () => navigator.clipboard.writeText($('#out').textContent.split('\n\n')[0]);
+</script>
+</body>
+</html>

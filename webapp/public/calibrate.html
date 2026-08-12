@@ -21,6 +21,18 @@
   is why characters do not shrink with depth. Two of the calibrated ones are
   suspect -- t_HjaVolvul ramps 1.031x where perspective wants about 1.63x.
 
+  THE VANISHING POINT. The engine's scale is linear in y -- and so is a pinhole
+  camera over a flat floor, with scale hitting zero exactly at the horizon. The
+  lerp's zero IS the vanishing line: the four numbers have always encoded a
+  perspective camera, whether 1998 knew it or not. So the horizon is drawn as a
+  derived, draggable line; dragging it keeps the front anchor (scanline1,
+  defaultscaling) and rewrites scaling2 = d*(b-yh)/(a-yh). One size judgement at
+  the front plus one horizon replaces guessing both scalings. The grid rails
+  converge on the VP, and the depth lines sit at equal ground steps -- for a
+  flat floor 1/(y-yh) advances by a constant per step, no focal length needed.
+  "Show him" drops the real player sprite on the plane, draggable, scaling
+  continuously by getScaling's own formula: the does-that-look-right check.
+
   THE METRE TOOL is not consumed by the engine and is not needed to fix the
   classic game. It is for the remaster: click two points on the ground, say how
   far apart they are, and the page can show the character standing N metres
@@ -66,8 +78,15 @@
   .obj span { position: absolute; top: -1px; left: 1px; }
   .scan { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #c8a040; cursor: ns-resize; }
   .scan b { position: absolute; left: 4px; top: -16px; font-size: 11px; color: #c8a040; background: #14100c; padding: 0 4px; }
+  .scan.hz { border-top: 1px solid #6aa9ff; }
+  .scan.hz b { color: #6aa9ff; left: auto; right: 4px; }
+  .vp { position: absolute; width: 11px; height: 11px; margin: -6px 0 0 -6px; border: 1px solid #6aa9ff;
+        background: rgba(106,169,255,.35); cursor: move; }
   .char { position: absolute; image-rendering: pixelated; transform-origin: bottom left; pointer-events: none; }
   .char.ghost { opacity: .5; filter: hue-rotate(150deg); }
+  .char.free { pointer-events: auto; cursor: grab; transform-origin: 50% 100%; }
+  .tag { position: absolute; font-size: 11px; color: #6aa9ff; background: #14100c; padding: 0 4px; pointer-events: none; }
+  svg.grid { position: absolute; inset: 0; pointer-events: none; }
   svg.poly { position: absolute; inset: 0; pointer-events: none; }
   #out { border-top: 1px solid #3a3025; padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 12px;
          color: #9fd08a; white-space: pre-wrap; word-break: break-all; }
@@ -87,6 +106,8 @@
     <button id="copy">Copy GML</button>
     <button class="ghost" id="reset">Reset</button>
     <button class="ghost" id="metre">Set scale (2 clicks)</button>
+    <button class="ghost" id="him">Show him</button>
+    <label><input type="checkbox" id="showGrid" checked> grid</label>
     <label><input type="checkbox" id="showObjs" checked> objects</label>
     <label><input type="checkbox" id="showPoly" checked> walkable</label>
   </div>
@@ -97,6 +118,9 @@
 <script>
 const $ = s => document.querySelector(s);
 let scenes = {}, cur = null, curT = null, metrePts = [], metres = null, zoom = 1;
+let him = null;      // {x, y}: feet of the draggable check figure, world px
+let vpx = null;      // vanishing point x -- visual only, the engine has no lateral term
+let draftYh = null;  // horizon guess while the terrain is still flat (d === s)
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -140,6 +164,8 @@ function select(name) {
       || cur.terrains.find(t => t.polygon.length)
       || cur.terrains[0];
   metrePts = []; metres = null;
+  him = null; vpx = null; draftYh = null;
+  $('#him').textContent = 'Show him';
   document.querySelectorAll('#list button').forEach(b => b.classList.toggle('on', b.dataset.scene === name));
   $('#title').textContent = name + '  ·  ' + curT.name;
   $('#d').value = curT.defaultscaling ?? 1;
@@ -191,6 +217,28 @@ function render() {
     st.appendChild(d);
   }
 
+  // The vanishing line and its grid. Drawn before the scanlines so their
+  // handles stay on top.
+  const yh = impliedHorizon() ?? (draftYh ??= Math.round(cur.height * 0.4));
+  if (vpx === null) vpx = Math.round(cur.width / 2);
+  if ($('#showGrid').checked && yh < cur.height - 20) {
+    st.appendChild(grid(yh));
+    // A weak ramp puts the implied horizon far above the frame (Extro:
+    // y=-530). The grid uses the true value; the handle is clamped into the
+    // frame so it can still be grabbed and dragged where it belongs.
+    const yhDisp = clamp(yh, 8, cur.height - 24);
+    const hz = document.createElement('div');
+    hz.className = 'scan hz'; hz.style.top = yhDisp + 'px';
+    hz.innerHTML = `<b>horizon ${Math.round(yh)} · 0×` +
+      (impliedHorizon() === null ? ' · drag to set the ramp' : yhDisp !== yh ? ' · off-frame, drag down' : '') + '</b>';
+    hz.onpointerdown = dragHorizon;
+    st.appendChild(hz);
+    const vp = document.createElement('div');
+    vp.className = 'vp'; vp.style.left = vpx + 'px'; vp.style.top = yhDisp + 'px';
+    vp.onpointerdown = dragVP;
+    st.appendChild(vp);
+  }
+
   for (const [line, scale, label] of [[v.a, v.d, 'scanline1'], [v.b, v.s, 'scanline2']]) {
     const ln = document.createElement('div');
     ln.className = 'scan'; ln.style.top = line + 'px';
@@ -200,9 +248,35 @@ function render() {
     st.appendChild(character(line, scale));
   }
 
-  // "N metres back" ghost, once a scale is known.
+  if (him) {
+    const k = Math.max(0.02, scalingAt(him.y));
+    const img = document.createElement('img');
+    img.className = 'char free';
+    img.src = cur.player ? chromaKey(cur.player).url : '';
+    img.style.left = him.x + 'px';
+    img.style.top = him.y + 'px';
+    img.style.transform = `translate(-50%,-100%) scale(${k})`;
+    img.onpointerdown = dragHim;
+    st.appendChild(img);
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
+    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}×`;
+    st.appendChild(tag);
+  }
+
+  // "N metres back" ghost, once a scale is known. Perspective-correct when a
+  // horizon exists: equal ground steps are equal steps in 1/(y-yh), the same
+  // rule the grid uses. Linear fallback when the terrain is flat.
   if (metres && metres.pxPerM) {
-    const backY = v.a - 5 * metres.pxPerM;
+    const ih = impliedHorizon();
+    let backY;
+    if (ih !== null && v.a - metres.pxPerM > ih) {
+      const u = y => 1 / (y - ih);
+      backY = ih + 1 / (u(v.a) + 5 * (u(v.a - metres.pxPerM) - u(v.a)));
+    } else {
+      backY = v.a - 5 * metres.pxPerM;
+    }
     if (backY > 0) {
       const g = character(backY, scalingAt(backY), true);
       st.appendChild(g);
@@ -210,6 +284,50 @@ function render() {
   }
 
   out();
+}
+
+// The engine's scale is linear in y; a pinhole camera over a flat floor is
+// linear in y too, reaching zero AT the horizon. The lerp's zero is therefore
+// the vanishing line: yh = (s*a - d*b)/(s - d). Null when flat (no ramp).
+function impliedHorizon() {
+  const v = vals();
+  if (v.d === v.s || v.a === v.b) return null;
+  const yh = (v.s * v.a - v.d * v.b) / (v.s - v.d);
+  return yh < Math.min(v.a, v.b) ? yh : null;   // a "horizon" below the floor is an inverted ramp, not a camera
+}
+
+// Drag the horizon: the front anchor (scanline1, defaultscaling) holds, and
+// scaling2 is derived instead of guessed. scale(y) ∝ (y - yh).
+function setHorizon(yh) {
+  const v = vals();
+  yh = Math.min(yh, Math.min(v.a, v.b) - 10);
+  $('#s').value = Math.max(0.02, v.d * (v.b - yh) / (v.a - yh)).toFixed(3);
+  draftYh = null;
+  render();
+}
+
+function grid(yh) {
+  const W = cur.width, H = cur.height;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'grid');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const add = (x1, y1, x2, y2, op) => {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', `rgba(106,169,255,${op})`);
+    svg.appendChild(l);
+  };
+  // Cell size at the bottom edge: 1 metre when the metre tool has run.
+  const S = Math.min(metres?.pxPerM || Math.round(W / 10), (H - yh) / 2);
+  for (let i = -Math.ceil(W / S); i <= Math.ceil(W / S); i++)
+    add(vpx + i * S, H, vpx, yh, .4);                     // rails, converging on the VP
+  const u0 = 1 / (H - yh), du = 1 / (H - S - yh) - u0;    // equal ground steps: 1/(y-yh) is arithmetic
+  for (let n = 0, y = H; n < 80 && y > yh + 3; n++) {
+    y = yh + 1 / (u0 + n * du);
+    add(0, y, W, y, n ? .3 : .5);
+  }
+  return svg;
 }
 
 function scalingAt(y) {
@@ -270,6 +388,37 @@ function drag(e, sel) {
   addEventListener('pointermove', move); addEventListener('pointerup', up);
 }
 
+function dragHorizon(e) {
+  e.preventDefault();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => setHorizon((ev.clientY - st.top) / zoom);
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+function dragVP(e) {
+  e.preventDefault(); e.stopPropagation();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => {
+    vpx = Math.round(clamp((ev.clientX - st.left) / zoom, -cur.width, cur.width * 2));
+    setHorizon((ev.clientY - st.top) / zoom);
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+function dragHim(e) {
+  e.preventDefault();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => {
+    him.x = clamp((ev.clientX - st.left) / zoom, 0, cur.width);
+    him.y = clamp((ev.clientY - st.top) / zoom, 1, cur.height);
+    render();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
 function out() {
   const v = vals();
   const ramp = v.a === v.b ? 1 : Math.abs(v.d / v.s);
@@ -279,6 +428,9 @@ function out() {
     `\tscanline1="${v.a}" scanline2="${v.b}" scaling2="${v.s}"/>` +
     `\n\n; front/back size ratio ${ramp.toFixed(3)}×` +
     (metres ? `   ·   ${metres.pxPerM.toFixed(1)} px per metre at the front` : '') +
+    `\n; implied horizon ${(() => { const h = impliedHorizon();
+      return h === null ? 'NONE — flat, characters do not shrink with depth'
+           : `y=${Math.round(h)}${h < 0 ? ' (above the frame — ramp weaker than the art’s perspective?)' : ''}`; })()}` +
     (curT.scanline1 ? `\n; was: scanline1="${curT.scanline1}" scanline2="${curT.scanline2}" scaling2="${curT.scaling2}"`
                     : `\n; was: UNCALIBRATED (constant ${curT.defaultscaling}×)`);
 }
@@ -302,9 +454,18 @@ $('#metre').onclick = () => {
   metrePts = []; metrePts.pending = true;
   $('#hint').textContent = 'Click two points on the ground, then give the distance in metres.';
 };
+$('#him').onclick = () => {
+  if (!cur || !cur.player) return;
+  him = him ? null : { x: cur.width * 0.5, y: +$('#a').value };
+  $('#him').textContent = him ? 'Hide him' : 'Show him';
+  $('#hint').textContent = him
+    ? 'Drag him along the floor — his size follows the ramp. Drag the horizon (or the square handle) to set the vanishing point; scaling2 is derived from it, scanline1 stays the front anchor.'
+    : '';
+  render();
+};
 
 for (const id of ['#d', '#a', '#b', '#s', '#z']) $(id).oninput = render;
-for (const id of ['#showObjs', '#showPoly']) $(id).onchange = render;
+for (const id of ['#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
 $('#reset').onclick = () => select(cur.name);
 $('#copy').onclick = () => navigator.clipboard.writeText($('#out').textContent.split('\n\n')[0]);
 </script>

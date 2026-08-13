@@ -274,11 +274,12 @@ function render() {
     img.style.top = him.y + 'px';
     img.style.transform = `translate(-50%,-100%) scale(${k})`;
     img.onpointerdown = dragHim;
+    img.onwheel = wheelHim;
     st.appendChild(img);
     const tag = document.createElement('div');
     tag.className = 'tag';
     tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
-    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}×`;
+    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}× · scroll to size`;
     st.appendChild(tag);
   }
 
@@ -485,6 +486,23 @@ function dragVP(e) {
   addEventListener('pointermove', move); addEventListener('pointerup', up);
 }
 
+// Resize him in place: the judgement "he is THIS big HERE" -- made against
+// whatever reference the art offers, walkable or not -- is written back into
+// the ramp. On scanline1 it sets defaultscaling itself; anywhere else the
+// line through the front anchor and this (y, scale) point is evaluated at
+// scanline2. The in-game reference pair re-renders as the consequence.
+function wheelHim(e) {
+  e.preventDefault();
+  const v = vals();
+  const k = Math.max(0.02, scalingAt(him.y) * (e.deltaY < 0 ? 1.02 : 1 / 1.02));
+  if (Math.abs(him.y - v.a) < 15) {
+    $('#d').value = k.toFixed(3);
+  } else {
+    $('#s').value = Math.max(0.02, v.d + (k - v.d) * (v.b - v.a) / (him.y - v.a)).toFixed(3);
+  }
+  render();
+}
+
 function dragHim(e) {
   e.preventDefault();
   const st = $('#stage').getBoundingClientRect();
@@ -540,7 +558,7 @@ $('#him').onclick = () => {
   him = him ? null : { x: (nearPt[0] + farPt[0]) / 2, y: (nearPt[1] + farPt[1]) / 2 };
   $('#him').textContent = him ? 'Hide him' : 'Show him';
   $('#hint').textContent = him
-    ? 'Drag him along the floor — his size follows the ramp. Drag the horizon (or the square handle) to set the vanishing point; scaling2 is derived from it, scanline1 stays the front anchor.'
+    ? 'Drag him anywhere — next to any reference in the art, walkable or not. Scroll over him to resize; that size at that spot is written into the ramp and the blue in-game pair shows the result. The horizon (or square handle) sets the same thing by vanishing point.'
     : '';
   render();
 };

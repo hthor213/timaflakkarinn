@@ -124,8 +124,11 @@
   .tag { position: absolute; font-size: 11px; color: #6aa9ff; background: #14100c; padding: 0 4px; pointer-events: none; }
   svg.grid { position: absolute; inset: 0; pointer-events: none; }
   svg.poly { position: absolute; inset: 0; pointer-events: none; }
+  /* Fixed height, its own scrollbar: the readout must not eat the stage's
+     room, and fitZoom needs the wrap's size to be stable before render. */
   #out { border-top: 1px solid #3a3025; padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 12px;
-         color: #9fd08a; white-space: pre-wrap; word-break: break-all; }
+         color: #9fd08a; white-space: pre-wrap; word-break: break-all;
+         height: 150px; flex: 0 0 auto; overflow-y: auto; }
   #hint { color: #8d7a55; padding: 0 12px 8px; font-size: 12px; }
 </style>
 </head>
@@ -148,11 +151,14 @@
     <label>zoom <input type="number" id="z" step="0.05" min="0.2" max="3" value="1"></label>
     <h3>actions</h3>
     <button id="copy">Copy GML</button>
+    <button class="ghost" id="fit">Fit to window</button>
     <button class="ghost" id="reset">Reset</button>
+    <button class="ghost" id="clearPins">Clear pins</button>
     <button class="ghost" id="metre">Set scale (2 clicks)</button>
     <button class="ghost" id="him">Show him</button>
     <h3>show</h3>
     <label class="chk"><input type="checkbox" id="showRef" checked> him in game</label>
+    <label class="chk"><input type="checkbox" id="showPins" checked> pins</label>
     <label class="chk"><input type="checkbox" id="showGrid" checked> grid</label>
     <label class="chk"><input type="checkbox" id="showObjs" checked> objects</label>
     <label class="chk"><input type="checkbox" id="showPoly" checked> walkable</label>
@@ -218,6 +224,7 @@ function select(name) {
   $('#a').value = curT.scanline1 ?? Math.round(cur.height * 0.95);
   $('#b').value = curT.scanline2 ?? Math.round(cur.height * 0.60);
   $('#s').value = curT.scaling2 ?? (curT.defaultscaling ?? 1) * 0.7;
+  fitZoom();
   render();
 }
 
@@ -312,8 +319,10 @@ function render() {
   }
 
   // The pinned judgements, sepia. Each keeps the size it was given -- pins are
-  // samples, the fit moves the numbers, never the evidence.
-  for (let i = 0; i < pins.length; i++) {
+  // samples, the fit moves the numbers, never the evidence. Hideable: a scene
+  // full of figures makes the terrain unreadable, and hiding the evidence
+  // does not remove it.
+  if ($('#showPins').checked) for (let i = 0; i < pins.length; i++) {
     const pn = pins[i];
     const img = document.createElement('img');
     img.className = 'char pin';
@@ -822,7 +831,8 @@ function dragHim(e) {
   const move = ev => {
     him.x = clamp((ev.clientX - st.left) / zoom, 0, cur.width);
     him.y = clamp((ev.clientY - st.top) / zoom, 1, cur.height);
-    him.k = null;   // moving re-reads the field; a pending size is a judgement about ONE spot
+    // A pending size SURVIVES repositioning -- resizing him and then placing
+    // him must not snap back to the field (owner report). Esc discards it.
     render();
   };
   const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
@@ -885,12 +895,36 @@ function setMode(m) {
   $('#mModern').classList.toggle('on', m === 'modern');
   if (him) him.k = null;
   $('#hint').textContent = m === 'modern'
-    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Corner handles or scroll set a PENDING size; double-click pins it into the terrain. The four numbers keep tracking the best linear fit for Classic.'
+    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Corner handles or scroll set a PENDING size; it survives dragging him into place, double-click pins it, Esc discards it. The four numbers keep tracking the best linear fit for Classic.'
     : 'Classic: the engine’s y-ramp. Corner handles or scroll write the four numbers directly; pins fit them.';
   render();
 }
 $('#mClassic').onclick = () => setMode('classic');
 $('#mModern').onclick = () => setMode('modern');
+
+// Zoom the stage to the space it actually has -- a laptop could not see the
+// whole room. Runs on every scene select; the zoom input still overrides.
+function fitZoom() {
+  if (!cur) return;
+  const w = $('#wrap');
+  const z = Math.min(1, (w.clientWidth - 28) / cur.width, (w.clientHeight - 28) / cur.height);
+  $('#z').value = Math.max(0.2, Math.floor(z * 100) / 100);
+}
+$('#fit').onclick = () => { fitZoom(); render(); };
+
+// Clear the pins but KEEP the fitted numbers -- unlike Reset, which returns
+// to the authored GML. For starting a fresh set of judgements over a fit you
+// want to keep testing.
+$('#clearPins').onclick = () => {
+  pins = []; tpsCache = null;
+  $('#hint').textContent = 'Pins cleared — the four numbers keep the last fit. Reset returns to the authored GML.';
+  render();
+};
+
+// Esc discards a pending (unpinned) size; he snaps back to the field.
+addEventListener('keydown', e => {
+  if (e.key === 'Escape' && him && him.k != null) { him.k = null; render(); }
+});
 
 $('#him').onclick = () => {
   if (!cur || !playerSprite()) return;
@@ -906,7 +940,7 @@ $('#him').onclick = () => {
 };
 
 for (const id of ['#d', '#a', '#b', '#s', '#z']) $(id).oninput = render;
-for (const id of ['#showRef', '#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
+for (const id of ['#showRef', '#showPins', '#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
 $('#reset').onclick = () => select(cur.name);
 $('#copy').onclick = () => navigator.clipboard.writeText(
   $('#out').textContent.split('\n\n')[0] +

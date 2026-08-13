@@ -42,6 +42,17 @@
   engine cannot express. That tilt and the fit residual are recorded for the
   remaster, and tell you whether the painted floor is a plane at all.
 
+  CLASSIC / MODERN. One interface, two models, the same pins -- the owner's
+  "we do it all at once". Classic previews what the 1999 engine can express:
+  getScaling is a*y + b (verified in Terrain.ts:50 and the decompiled Java),
+  front-to-back only, no lateral term. Modern previews the terrain the pins
+  define: a thin-plate spline -- three pins are exactly the (possibly tilted)
+  plane, every further pin bends the ground locally through its judgement.
+  The plane grid gives way to iso-scale contours, straight where the ground is
+  planar and bending where it is not. In Modern the wheel sets a PENDING size
+  and only double-click writes -- the pins ARE the modern format; the four
+  numbers keep tracking the best linear fit, so one session yields both.
+
   THE METRE TOOL is not consumed by the engine and is not needed to fix the
   classic game. It is for the remaster: click two points on the ground, say how
   far apart they are, and the page can show the character standing N metres
@@ -77,6 +88,7 @@
   #bar button { background: #c8a040; color: #14100c; border: 0; border-radius: 3px; padding: 5px 10px;
                 font: inherit; font-weight: 600; cursor: pointer; }
   #bar button.ghost { background: transparent; color: #c8a040; border: 1px solid #5a4526; font-weight: 400; }
+  #bar button.ghost.on { background: #c8a040; color: #14100c; font-weight: 600; }
   #wrap { flex: 1 1 auto; overflow: auto; padding: 14px; }
   #stage { position: relative; transform-origin: top left; }
   #stage img.bg { display: block; image-rendering: pixelated; }
@@ -110,6 +122,7 @@
 <main>
   <div id="bar">
     <span id="title" style="font-weight:600"></span>
+    <span><button class="ghost on" id="mClassic">Classic</button><button class="ghost" id="mModern">Modern</button></span>
     <label>defaultscaling <input type="number" id="d" step="0.01" min="0.05" max="4"></label>
     <label>scanline1 <input type="number" id="a" step="1"></label>
     <label>scaling2 <input type="number" id="s" step="0.01" min="0.05" max="4"></label>
@@ -135,6 +148,8 @@ let him = null;      // {x, y}: feet of the draggable check figure, world px
 let vpx = null;      // vanishing point x -- visual only, the engine has no lateral term
 let draftYh = null;  // horizon guess while the terrain is still flat (d === s)
 let pins = [];       // {x, y, k} size judgements, pinned by double-clicking him
+let mode = 'classic'; // classic: y-ramp, the engine's plane · modern: TPS terrain through the pins
+let tpsCache = null;  // solved spline, invalidated when the pins change
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -232,10 +247,12 @@ function render() {
   }
 
   // The vanishing line and its grid. Drawn before the scanlines so their
-  // handles stay on top.
+  // handles stay on top. In Modern the plane grid gives way to the terrain's
+  // own contours, and the horizon handle with it -- the field is set by pins.
   const yh = impliedHorizon() ?? (draftYh ??= Math.round(cur.height * 0.4));
   if (vpx === null) vpx = Math.round(cur.width / 2);
-  if ($('#showGrid').checked && yh < cur.height - 20) {
+  if ($('#showGrid').checked && mode === 'modern') st.appendChild(contourSvg());
+  if ($('#showGrid').checked && mode === 'classic' && yh < cur.height - 20) {
     st.appendChild(grid(yh));
     // A weak ramp puts the implied horizon far above the frame (Extro:
     // y=-530). The grid uses the true value; the handle is clamped into the
@@ -266,7 +283,7 @@ function render() {
   // 1998 authored some of those beyond the room (t_HjaVolvul: scanline2=800 in
   // a 600-high room), and a reference below the frame is no reference.
   if ($('#showRef').checked) for (const [pt, label] of refPoints()) {
-    const k = Math.max(0.02, scalingAt(pt[1]));
+    const k = fieldAt(pt[0], pt[1]);
     const g = character(pt[1], k, true);
     g.style.left = pt[0] + 'px';
     st.appendChild(g);
@@ -298,7 +315,10 @@ function render() {
   }
 
   if (him) {
-    const k = Math.max(0.02, scalingAt(him.y));
+    // In Modern a wheel-resize is a PENDING judgement (him.k) until pinned --
+    // the pins are the modern format, nothing else is written. Classic writes
+    // the four numbers on the spot, so there him.k stays null.
+    const k = Math.max(0.02, him.k ?? fieldAt(him.x, him.y));
     const img = document.createElement('img');
     img.className = 'char free';
     const sprite = playerSprite();
@@ -309,14 +329,17 @@ function render() {
     img.onpointerdown = dragHim;
     img.onwheel = wheelHim;
     img.ondblclick = () => {
-      pins.push({ x: him.x, y: him.y, k: Math.max(0.02, scalingAt(him.y)) });
+      const near = pins.find(pn => Math.hypot(pn.x - him.x, pn.y - him.y) < 8);
+      if (near) near.k = k; else pins.push({ x: him.x, y: him.y, k });
+      him.k = null;
       fitPins();
     };
     st.appendChild(img);
     const tag = document.createElement('div');
     tag.className = 'tag';
     tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
-    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}× · scroll to size · dblclick to pin`;
+    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}×` +
+      (him.k != null && mode === 'modern' ? ' · PENDING — dblclick to pin' : ' · scroll to size · dblclick to pin');
     st.appendChild(tag);
   }
 
@@ -544,8 +567,15 @@ function dragVP(e) {
 // scanline2. The in-game reference pair re-renders as the consequence.
 function wheelHim(e) {
   e.preventDefault();
+  const fac = e.deltaY < 0 ? 1.02 : 1 / 1.02;
+  // Modern: the resize is a pending judgement; only pinning writes anything.
+  if (mode === 'modern') {
+    him.k = Math.max(0.02, (him.k ?? fieldAt(him.x, him.y)) * fac);
+    render();
+    return;
+  }
   const v = vals();
-  const k = Math.max(0.02, scalingAt(him.y) * (e.deltaY < 0 ? 1.02 : 1 / 1.02));
+  const k = Math.max(0.02, scalingAt(him.y) * fac);
   if (Math.abs(him.y - v.a) < 15) {
     $('#d').value = k.toFixed(3);
   } else {
@@ -597,12 +627,119 @@ function planeFit() {
   return { p, q, r, res };
 }
 
+// One scale for any position, whichever model is active. Classic reads the
+// engine's own y-ramp; Modern reads the thin-plate spline through the pins --
+// three pins are exactly the (possibly tilted) plane, and every further pin
+// bends the terrain locally through its judgement. Fewer than three pins has
+// no surface to speak of, so Modern falls back to the ramp.
+function fieldAt(x, y) {
+  if (mode === 'modern') {
+    const f = tps();
+    if (f) return Math.max(0.02, f(x, y));
+  }
+  return Math.max(0.02, scalingAt(y));
+}
+
+function tps() {
+  if (pins.length < 3) return null;
+  const sig = JSON.stringify(pins);
+  if (tpsCache && tpsCache.sig === sig) return tpsCache.f;
+  const n = pins.length;
+  const U = r2 => r2 > 0 ? 0.5 * r2 * Math.log(r2) : 0;   // r^2 ln r, via ln(r^2)
+  const A = [], B = [];
+  for (let i = 0; i < n; i++) {
+    A[i] = [];
+    for (let j = 0; j < n; j++) {
+      const dx = pins[i].x - pins[j].x, dy = pins[i].y - pins[j].y;
+      A[i][j] = U(dx * dx + dy * dy);
+    }
+    A[i][n] = 1; A[i][n + 1] = pins[i].x; A[i][n + 2] = pins[i].y;
+    B[i] = pins[i].k;
+  }
+  for (let r = 0; r < 3; r++) {
+    A[n + r] = [];
+    for (let j = 0; j < n; j++) A[n + r][j] = r === 0 ? 1 : r === 1 ? pins[j].x : pins[j].y;
+    for (let c = 0; c < 3; c++) A[n + r][n + c] = 0;
+    B[n + r] = 0;
+  }
+  const w = solve(A, B);
+  const f = w && ((x, y) => {
+    let s = w[n] + w[n + 1] * x + w[n + 2] * y;
+    for (let i = 0; i < n; i++) {
+      const dx = x - pins[i].x, dy = y - pins[i].y;
+      s += w[i] * U(dx * dx + dy * dy);
+    }
+    return s;
+  });
+  tpsCache = { sig, f };
+  return f;
+}
+
+// Gaussian elimination with partial pivoting; null on a singular system
+// (coincident pins -- prevented at pin time, but never trusted).
+function solve(A, B) {
+  const n = B.length, M = A.map((row, i) => [...row, B[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-10) return null;
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = M[r][c] / M[c][c];
+      for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+    }
+  }
+  return M.map((row, i) => row[n] / M[i][i]);
+}
+
+// The terrain made visible: iso-scale contour lines of the field. Straight and
+// evenly ramped on a plane; bending wherever a pin has bent the ground.
+function contourSvg() {
+  const W = cur.width, H = cur.height, step = 16;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'grid');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  let lo = Infinity, hi = -Infinity;
+  for (let y = 0; y <= H; y += step) for (let x = 0; x <= W; x += step) {
+    const k = fieldAt(x, y);
+    if (k < lo) lo = k; if (k > hi) hi = k;
+  }
+  if (!(hi > lo + 1e-6)) return svg;
+  for (let i = 1; i <= 12; i++) {
+    const level = lo + (hi - lo) * i / 13;
+    let d = '', pen = false;
+    for (let x = 0; x <= W; x += step) {
+      let prev = fieldAt(x, H), found = null;
+      for (let y = H - step; y >= -step; y -= step) {
+        const v = fieldAt(x, Math.max(0, y));
+        if ((prev - level) * (v - level) <= 0 && prev !== v) {
+          found = Math.max(0, y) + step * (level - v) / (prev - v);
+          break;
+        }
+        prev = v;
+      }
+      if (found === null) { pen = false; continue; }
+      d += (pen ? 'L' : 'M') + x + ' ' + found.toFixed(1);
+      pen = true;
+    }
+    if (!d) continue;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(159,208,138,.45)');
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
 function dragHim(e) {
   e.preventDefault();
   const st = $('#stage').getBoundingClientRect();
   const move = ev => {
     him.x = clamp((ev.clientX - st.left) / zoom, 0, cur.width);
     him.y = clamp((ev.clientY - st.top) / zoom, 1, cur.height);
+    him.k = null;   // moving re-reads the field; a pending size is a judgement about ONE spot
     render();
   };
   const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
@@ -621,6 +758,8 @@ function out() {
     `\n; implied horizon ${(() => { const h = impliedHorizon();
       return h === null ? 'NONE — flat, characters do not shrink with depth'
            : `y=${Math.round(h)}${h < 0 ? ' (above the frame — ramp weaker than the art’s perspective?)' : ''}`; })()}` +
+    (mode === 'modern' ? `\n; mode: MODERN preview — terrain is the thin-plate spline through the pins;` +
+      ` the four numbers above stay the best linear fit the 1999 engine can drink` : '') +
     (pins.length ? `\n; pins: ${pins.length}${pins.length >= 2 ? ' — the four numbers are the fit through them' : ''}` +
       (() => { const pf = planeFit();
         return pf ? `\n; full plane from pins: lateral tilt ${(pf.p * 100).toFixed(3)}× per 100px` +
@@ -654,6 +793,22 @@ $('#metre').onclick = () => {
   metrePts = []; metrePts.pending = true;
   $('#hint').textContent = 'Click two points on the ground, then give the distance in metres.';
 };
+// One interface, two models, same pins. Classic previews the engine's y-ramp;
+// Modern previews the TPS terrain the pins define. Classic numbers keep being
+// fitted either way -- one session yields both outputs.
+function setMode(m) {
+  mode = m;
+  $('#mClassic').classList.toggle('on', m === 'classic');
+  $('#mModern').classList.toggle('on', m === 'modern');
+  if (him) him.k = null;
+  $('#hint').textContent = m === 'modern'
+    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Scroll sets a PENDING size; double-click pins it into the terrain. The four numbers keep tracking the best linear fit for Classic.'
+    : 'Classic: the engine’s y-ramp. Scroll writes the four numbers directly; pins fit them.';
+  render();
+}
+$('#mClassic').onclick = () => setMode('classic');
+$('#mModern').onclick = () => setMode('modern');
+
 $('#him').onclick = () => {
   if (!cur || !playerSprite()) return;
   // Start him between the two references -- mid-floor, not on scanline1,

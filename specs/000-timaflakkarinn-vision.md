@@ -433,6 +433,27 @@ Two things make it cheaper still:
 Output must be GML the existing parser already accepts — the tool emits content,
 not a new format. Runs locally against `web_import/GAME`; no network, no service.
 
+**Status 2026-08-13: the scaling half is built and live** at
+`tt-dev.spliffdonk.com/calibrate` (dev only; `webapp/public/calibrate.html`,
+scene index derived by `tools/pipeline/scene-index.py` as an npm prebuild).
+It outgrew the proposal in one direction: a draggable reference figure with
+Photoshop-style corner handles, sized against anything in the art, and
+**pins** — (x, y, scale) judgements that are the primary artifact. Two pins
+fit the engine's four numbers exactly; Copy GML emits the element plus the
+pins as an XML comment, so the parser contract holds. A Classic/Modern
+toggle previews, from the same pins, either the 1999 y-ramp or a thin-plate
+spline terrain (Modern-only by the D8 test: `getScaling` is `a*y + b`,
+verified in `Terrain.ts:50` and the decompiled Java — no lateral term, so
+tilted or curved ground is beyond the 1999 engine by construction). Two
+constraints discovered: the ramp's zero IS the vanishing line, so the four
+numbers have always encoded a pinhole camera and a horizon drag can derive
+`scaling2`; and 1998 authored some scanlines and polygons beyond the room
+(`t_HjaVolvul` scanline2=800 in a 600px room, `p_HjaVolvu` to x=1201 in an
+800px room), so in-frame clamping is part of any honest overlay. **The
+ordering half — sorting layers, seeding from z + an AI depth pass — is not
+started**, and none of the ~60 calibrations have been authored yet: the tool
+exists, the hour of authoring has not happened.
+
 ## Open
 
 - **Point-and-click under a cutting camera** (D5 × D3). Unsolved, and the

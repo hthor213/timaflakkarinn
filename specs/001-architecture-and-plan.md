@@ -313,6 +313,8 @@ generates the rest of `docs/known-issues.md` — those requirements cannot be
 gathered without a playable build.
 
 - [ ] Depth authoring tool (see 000) → 60 terrain calibrations + depth ordering
+      — scaling half of the tool live at `/calibrate` on tt-dev (2026-08-13);
+      ordering half not started; 0 of ~60 calibrations authored yet
 - [ ] Contact shadows — highest perceptual win per unit effort
 - [ ] `GuessQuantum`: dialog, `trim()`, `erna`, plus the Irna response
 - [ ] Recover the five hardcoded PNGs from Halldór
@@ -388,12 +390,14 @@ SPA fallback serves the app on a deep link, so `/chapter1..4` resolve rather
 than 404:
 
 - [x] `curl -sf https://tt.spliffdonk.com/chapter2 | grep -q game-canvas`
-- [ ] `python3 tools/lint_gml.py web_import` — currently **5 issues**, all
+- [ ] `python3 tools/lint_gml.py web_import` — currently **6 issues**, all
       pre-existing 1998/1999 content gaps, none introduced by the rebuild:
-      3 voice lines absent from the archival master (need the CD ISO),
-      1 typo'd quantum reference in `s_bless1`, 1 reference to a cut scene.
-      Deliberately left red rather than relaxed — the gaps are real and two of
-      them need Halldór's confirmation before anyone edits content
+      4 voice lines absent from the archival master (need the CD ISO;
+      `m_ErnaEkkiIrna` joined the list when the Irna near-miss response was
+      wired, 2026-08-08), 1 typo'd quantum reference in `s_bless1`,
+      1 reference to a cut scene. Deliberately left red rather than relaxed —
+      the gaps are real and two of them need the original team's confirmation
+      (not Halldór's — he was never on the team) before anyone edits content
 - [ ] The game runs on a phone by touch — **no longer blocked**: Pointer Events
       landed 2026-08-07 with 10 regression cases, and the engine no longer has a
       mouse-only path. Unchecked because nobody has held an actual phone; it is a

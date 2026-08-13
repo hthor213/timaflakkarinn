@@ -105,4 +105,6 @@ engine untouched since — the session's only product changes are
 `calibrate.html`, a dev-only page outside the game bundle).
 `lint_gml.py web_import`: **red, 6 issues, deliberately** — all 1998/1999
 content gaps, now correctly counted in `specs/001`.
-tt-dev serves `fa71daf` (verified via `/version.json` and live probe).
+tt-dev serves `5f4e1ed` (verified via live probe) — three post-checkpoint UX
+fixes from laptop use: pending size survives placement (Esc discards), pins
+hideable + Clear-pins-keep-fit, and auto-fit zoom so the whole room shows.

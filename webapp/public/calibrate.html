@@ -80,15 +80,24 @@
   aside button.on { background: #c8a040; color: #14100c; }
   aside .dot { float: right; font-size: 11px; }
   aside .no { color: #d08a5a; }
-  main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
-  #bar { padding: 8px 12px; border-bottom: 1px solid #3a3025; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-  #bar label { color: #8d7a55; }
-  #bar input[type=number] { width: 76px; background: #241c12; color: #e8dcc0; border: 1px solid #5a4526;
-                            border-radius: 3px; padding: 3px 5px; font: inherit; }
-  #bar button { background: #c8a040; color: #14100c; border: 0; border-radius: 3px; padding: 5px 10px;
-                font: inherit; font-weight: 600; cursor: pointer; }
-  #bar button.ghost { background: transparent; color: #c8a040; border: 1px solid #5a4526; font-weight: 400; }
-  #bar button.ghost.on { background: #c8a040; color: #14100c; font-weight: 600; }
+  main { flex: 1 1 auto; display: flex; flex-direction: row; min-width: 0; }
+  #center { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+  /* Controls live in a right-hand panel beside the stage -- a laptop screen
+     cut a single top row off after Reset; the space to the right of the game
+     was free the whole time. */
+  #ctrl { width: 200px; flex: 0 0 auto; border-left: 1px solid #3a3025; padding: 10px;
+          overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+  #ctrl h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8d7a55; margin: 8px 0 0; }
+  #ctrl label { color: #8d7a55; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  #ctrl input[type=number] { width: 72px; background: #241c12; color: #e8dcc0; border: 1px solid #5a4526;
+                             border-radius: 3px; padding: 3px 5px; font: inherit; }
+  #ctrl label.chk { justify-content: flex-start; color: #e8dcc0; }
+  #ctrl button { background: #c8a040; color: #14100c; border: 0; border-radius: 3px; padding: 6px 10px;
+                 font: inherit; font-weight: 600; cursor: pointer; width: 100%; text-align: center; }
+  #ctrl button.ghost { background: transparent; color: #c8a040; border: 1px solid #5a4526; font-weight: 400; }
+  #ctrl button.ghost.on { background: #c8a040; color: #14100c; font-weight: 600; }
+  #ctrl .duo { display: flex; gap: 6px; }
+  #title { font-weight: 600; }
   #wrap { flex: 1 1 auto; overflow: auto; padding: 14px; }
   #stage { position: relative; transform-origin: top left; }
   #stage img.bg { display: block; image-rendering: pixelated; }
@@ -120,26 +129,31 @@
 <body>
 <aside id="list"></aside>
 <main>
-  <div id="bar">
-    <span id="title" style="font-weight:600"></span>
-    <span><button class="ghost on" id="mClassic">Classic</button><button class="ghost" id="mModern">Modern</button></span>
+  <div id="center">
+    <div id="wrap"><div id="stage"></div></div>
+    <div id="hint"></div>
+    <pre id="out"></pre>
+  </div>
+  <div id="ctrl">
+    <span id="title"></span>
+    <div class="duo"><button class="ghost on" id="mClassic">Classic</button><button class="ghost" id="mModern">Modern</button></div>
+    <h3>terrain</h3>
     <label>defaultscaling <input type="number" id="d" step="0.01" min="0.05" max="4"></label>
     <label>scanline1 <input type="number" id="a" step="1"></label>
     <label>scaling2 <input type="number" id="s" step="0.01" min="0.05" max="4"></label>
     <label>scanline2 <input type="number" id="b" step="1"></label>
     <label>zoom <input type="number" id="z" step="0.05" min="0.2" max="3" value="1"></label>
+    <h3>actions</h3>
     <button id="copy">Copy GML</button>
     <button class="ghost" id="reset">Reset</button>
     <button class="ghost" id="metre">Set scale (2 clicks)</button>
     <button class="ghost" id="him">Show him</button>
-    <label><input type="checkbox" id="showRef" checked> him in game</label>
-    <label><input type="checkbox" id="showGrid" checked> grid</label>
-    <label><input type="checkbox" id="showObjs" checked> objects</label>
-    <label><input type="checkbox" id="showPoly" checked> walkable</label>
+    <h3>show</h3>
+    <label class="chk"><input type="checkbox" id="showRef" checked> him in game</label>
+    <label class="chk"><input type="checkbox" id="showGrid" checked> grid</label>
+    <label class="chk"><input type="checkbox" id="showObjs" checked> objects</label>
+    <label class="chk"><input type="checkbox" id="showPoly" checked> walkable</label>
   </div>
-  <div id="wrap"><div id="stage"></div></div>
-  <div id="hint"></div>
-  <pre id="out"></pre>
 </main>
 <script>
 const $ = s => document.querySelector(s);

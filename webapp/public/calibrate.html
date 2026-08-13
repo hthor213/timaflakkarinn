@@ -33,6 +33,15 @@
   "Show him" drops the real player sprite on the plane, draggable, scaling
   continuously by getScaling's own formula: the does-that-look-right check.
 
+  THE PINS. The resize is the interaction, the plane is the output. Park him
+  beside any reference the art offers, scroll him to the right size, and
+  double-click to pin that judgement -- a size for a position. Two pins ARE
+  the engine's plane and are written into the four numbers exactly. Three or
+  more are least-squared, and additionally fit the full plane k = px + qy + r,
+  whose zero line is a vanishing line that may tilt: lateral perspective the
+  engine cannot express. That tilt and the fit residual are recorded for the
+  remaster, and tell you whether the painted floor is a plane at all.
+
   THE METRE TOOL is not consumed by the engine and is not needed to fix the
   classic game. It is for the remaster: click two points on the ground, say how
   far apart they are, and the page can show the character standing N metres
@@ -85,6 +94,9 @@
   .char { position: absolute; image-rendering: pixelated; transform-origin: bottom left; pointer-events: none; }
   .char.ghost { opacity: .5; filter: hue-rotate(150deg); }
   .char.free { pointer-events: auto; cursor: grab; transform-origin: 50% 100%; }
+  .char.pin { pointer-events: auto; cursor: pointer; transform-origin: 50% 100%;
+              opacity: .45; filter: sepia(1) saturate(2.5) hue-rotate(-25deg); }
+  .tag.warm { color: #d08a5a; }
   .tag { position: absolute; font-size: 11px; color: #6aa9ff; background: #14100c; padding: 0 4px; pointer-events: none; }
   svg.grid { position: absolute; inset: 0; pointer-events: none; }
   svg.poly { position: absolute; inset: 0; pointer-events: none; }
@@ -122,6 +134,7 @@ let scenes = {}, cur = null, curT = null, metrePts = [], metres = null, zoom = 1
 let him = null;      // {x, y}: feet of the draggable check figure, world px
 let vpx = null;      // vanishing point x -- visual only, the engine has no lateral term
 let draftYh = null;  // horizon guess while the terrain is still flat (d === s)
+let pins = [];       // {x, y, k} size judgements, pinned by double-clicking him
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -165,7 +178,7 @@ function select(name) {
       || cur.terrains.find(t => t.polygon.length)
       || cur.terrains[0];
   metrePts = []; metres = null;
-  him = null; vpx = null; draftYh = null;
+  him = null; vpx = null; draftYh = null; pins = [];
   $('#him').textContent = 'Show him';
   document.querySelectorAll('#list button').forEach(b => b.classList.toggle('on', b.dataset.scene === name));
   $('#title').textContent = name + '  ·  ' + curT.name;
@@ -264,6 +277,26 @@ function render() {
     st.appendChild(tag);
   }
 
+  // The pinned judgements, sepia. Each keeps the size it was given -- pins are
+  // samples, the fit moves the numbers, never the evidence.
+  for (let i = 0; i < pins.length; i++) {
+    const pn = pins[i];
+    const img = document.createElement('img');
+    img.className = 'char pin';
+    const sprite = playerSprite();
+    img.src = sprite ? chromaKey(sprite).url : '';
+    img.style.left = pn.x + 'px'; img.style.top = pn.y + 'px';
+    img.style.transform = `translate(-50%,-100%) scale(${pn.k})`;
+    img.title = 'click to remove';
+    img.onpointerdown = e => { e.stopPropagation(); pins.splice(i, 1); fitPins(); };
+    st.appendChild(img);
+    const tag = document.createElement('div');
+    tag.className = 'tag warm';
+    tag.style.left = (pn.x + 8) + 'px'; tag.style.top = (pn.y + 4) + 'px';
+    tag.textContent = `pin ${pn.k.toFixed(3)}×`;
+    st.appendChild(tag);
+  }
+
   if (him) {
     const k = Math.max(0.02, scalingAt(him.y));
     const img = document.createElement('img');
@@ -275,12 +308,30 @@ function render() {
     img.style.transform = `translate(-50%,-100%) scale(${k})`;
     img.onpointerdown = dragHim;
     img.onwheel = wheelHim;
+    img.ondblclick = () => {
+      pins.push({ x: him.x, y: him.y, k: Math.max(0.02, scalingAt(him.y)) });
+      fitPins();
+    };
     st.appendChild(img);
     const tag = document.createElement('div');
     tag.className = 'tag';
     tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
-    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}× · scroll to size`;
+    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}× · scroll to size · dblclick to pin`;
     st.appendChild(tag);
+  }
+
+  // With three or more pins the art gets a say the engine cannot express: the
+  // full plane k = px + qy + r, whose zero is a vanishing LINE that may tilt.
+  const pf = planeFit();
+  if (pf && $('#showGrid').checked && Math.abs(pf.q) > 1e-9) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'grid');
+    svg.setAttribute('width', cur.width); svg.setAttribute('height', cur.height);
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', 0); l.setAttribute('y1', -pf.r / pf.q);
+    l.setAttribute('x2', cur.width); l.setAttribute('y2', -(pf.p * cur.width + pf.r) / pf.q);
+    l.setAttribute('stroke', '#d08a5a'); l.setAttribute('stroke-dasharray', '6 4');
+    svg.appendChild(l); st.appendChild(svg);
   }
 
   // "N metres back" ghost, once a scale is known. Perspective-correct when a
@@ -503,6 +554,49 @@ function wheelHim(e) {
   render();
 }
 
+// Two pins make the plane exactly; more make it least-squares in y. The
+// engine's anchor lines stay put -- the fitted line is written as new values
+// AT scanline1 and scanline2, which is the same line in the engine's terms.
+function fitPins() {
+  if (pins.length >= 2) {
+    const n = pins.length;
+    let sy = 0, sk = 0, syy = 0, syk = 0;
+    for (const { y, k } of pins) { sy += y; sk += k; syy += y * y; syk += y * k; }
+    const den = n * syy - sy * sy;
+    if (Math.abs(den) > 1e-6) {
+      const al = (n * syk - sy * sk) / den, be = (sk - al * sy) / n;
+      const v = vals();
+      $('#d').value = Math.max(0.02, al * v.a + be).toFixed(3);
+      $('#s').value = Math.max(0.02, al * v.b + be).toFixed(3);
+    }
+  }
+  render();
+}
+
+// Least-squares plane k = px + qy + r over all pins -- the "size for each
+// position" the owner described. The engine consumes none of the x term; the
+// tilt and residual are for the remaster, and for judging whether the art's
+// floor is really a plane at all.
+function planeFit() {
+  if (pins.length < 3) return null;
+  let Sxx = 0, Sxy = 0, Sx = 0, Syy = 0, Sy = 0, Sxk = 0, Syk = 0, Sk = 0;
+  for (const { x, y, k } of pins) {
+    Sxx += x * x; Sxy += x * y; Sx += x; Syy += y * y; Sy += y;
+    Sxk += x * k; Syk += y * k; Sk += k;
+  }
+  const A = [[Sxx, Sxy, Sx], [Sxy, Syy, Sy], [Sx, Sy, pins.length]];
+  const det = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+               - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+               + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(A);
+  if (Math.abs(D) < 1e-3) return null;   // collinear pins: no plane yet
+  const B = [Sxk, Syk, Sk];
+  const [p, q, r] = [0, 1, 2].map(c =>
+    det(A.map((row, i) => row.map((cell, j) => j === c ? B[i] : cell))) / D);
+  const res = Math.sqrt(pins.reduce((a, pn) => a + (p * pn.x + q * pn.y + r - pn.k) ** 2, 0) / pins.length);
+  return { p, q, r, res };
+}
+
 function dragHim(e) {
   e.preventDefault();
   const st = $('#stage').getBoundingClientRect();
@@ -527,6 +621,16 @@ function out() {
     `\n; implied horizon ${(() => { const h = impliedHorizon();
       return h === null ? 'NONE — flat, characters do not shrink with depth'
            : `y=${Math.round(h)}${h < 0 ? ' (above the frame — ramp weaker than the art’s perspective?)' : ''}`; })()}` +
+    (pins.length ? `\n; pins: ${pins.length}${pins.length >= 2 ? ' — the four numbers are the fit through them' : ''}` +
+      (() => { const pf = planeFit();
+        return pf ? `\n; full plane from pins: lateral tilt ${(pf.p * 100).toFixed(3)}× per 100px` +
+          ` · fit ±${pf.res.toFixed(3)} — the engine has no lateral term; this is for the remaster` : ''; })() +
+      // The samples themselves ride along with Copy GML: they are the
+      // measurement, the fit is derived. 20 points up a riverbank are the
+      // ground truth a spline or the remaster's terrain mesh gets fitted
+      // through later; the classic engine only drinks the linear fit.
+      pins.map(pn => `\n; pin x=${Math.round(pn.x)} y=${Math.round(pn.y)} scale=${pn.k.toFixed(3)}`).join('')
+      : '') +
     (curT.scanline1 ? `\n; was: scanline1="${curT.scanline1}" scanline2="${curT.scanline2}" scaling2="${curT.scaling2}"`
                     : `\n; was: UNCALIBRATED (constant ${curT.defaultscaling}×)`);
 }
@@ -558,7 +662,7 @@ $('#him').onclick = () => {
   him = him ? null : { x: (nearPt[0] + farPt[0]) / 2, y: (nearPt[1] + farPt[1]) / 2 };
   $('#him').textContent = him ? 'Hide him' : 'Show him';
   $('#hint').textContent = him
-    ? 'Drag him anywhere — next to any reference in the art, walkable or not. Scroll over him to resize; that size at that spot is written into the ramp and the blue in-game pair shows the result. The horizon (or square handle) sets the same thing by vanishing point.'
+    ? 'Drag him anywhere — next to any reference in the art, walkable or not. Scroll to resize, double-click to pin the judgement. Two pins make the plane; more make a fit, and expose the lateral tilt the engine cannot express. Click a pin to remove it.'
     : '';
   render();
 };
@@ -566,7 +670,12 @@ $('#him').onclick = () => {
 for (const id of ['#d', '#a', '#b', '#s', '#z']) $(id).oninput = render;
 for (const id of ['#showRef', '#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
 $('#reset').onclick = () => select(cur.name);
-$('#copy').onclick = () => navigator.clipboard.writeText($('#out').textContent.split('\n\n')[0]);
+$('#copy').onclick = () => navigator.clipboard.writeText(
+  $('#out').textContent.split('\n\n')[0] +
+  // The samples travel with the element, as legal XML: they are the
+  // measurement, the four numbers only the linear fit through them.
+  (pins.length ? `\n<!-- calibration pins (x,y,scale): ${
+    pins.map(pn => `${Math.round(pn.x)},${Math.round(pn.y)},${pn.k.toFixed(3)}`).join(' ')} -->` : ''));
 </script>
 </body>
 </html>

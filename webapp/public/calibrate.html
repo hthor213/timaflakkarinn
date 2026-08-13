@@ -365,7 +365,7 @@ function render() {
     tag.className = 'tag';
     tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
     tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}×` +
-      (him.k != null && mode === 'modern' ? ' · PENDING — dblclick to pin' : ' · drag a corner to size · dblclick to pin');
+      (him.k != null && mode === 'modern' ? ' · PENDING — dblclick to pin · shift-drag keeps it' : ' · drag a corner to size · dblclick to pin');
     st.appendChild(tag);
 
     // Photoshop-style bounding box: corner handles resize him, proportions
@@ -831,8 +831,12 @@ function dragHim(e) {
   const move = ev => {
     him.x = clamp((ev.clientX - st.left) / zoom, 0, cur.width);
     him.y = clamp((ev.clientY - st.top) / zoom, 1, cur.height);
-    // A pending size SURVIVES repositioning -- resizing him and then placing
-    // him must not snap back to the field (owner report). Esc discards it.
+    // Shift-drag keeps a pending size (resize, then place, then pin); a plain
+    // drag re-reads the field so he tracks the terrain in both modes. Keeping
+    // it unconditionally froze him in Modern -- the Magic Mouse fires phantom
+    // wheel ticks while grabbing, so a pending appeared without being asked
+    // for and he stopped scaling with the grid.
+    if (!ev.shiftKey) him.k = null;
     render();
   };
   const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
@@ -895,7 +899,7 @@ function setMode(m) {
   $('#mModern').classList.toggle('on', m === 'modern');
   if (him) him.k = null;
   $('#hint').textContent = m === 'modern'
-    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Corner handles or scroll set a PENDING size; it survives dragging him into place, double-click pins it, Esc discards it. The four numbers keep tracking the best linear fit for Classic.'
+    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Corner handles or scroll set a PENDING size; shift-drag places him without losing it, double-click pins it, Esc or a plain drag drops it back onto the terrain. The four numbers keep tracking the best linear fit for Classic.'
     : 'Classic: the engine’s y-ramp. Corner handles or scroll write the four numbers directly; pins fit them.';
   render();
 }

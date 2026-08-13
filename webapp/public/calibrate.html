@@ -107,6 +107,7 @@
     <button class="ghost" id="reset">Reset</button>
     <button class="ghost" id="metre">Set scale (2 clicks)</button>
     <button class="ghost" id="him">Show him</button>
+    <label><input type="checkbox" id="showRef" checked> him in game</label>
     <label><input type="checkbox" id="showGrid" checked> grid</label>
     <label><input type="checkbox" id="showObjs" checked> objects</label>
     <label><input type="checkbox" id="showPoly" checked> walkable</label>
@@ -245,14 +246,30 @@ function render() {
     ln.innerHTML = `<b>${label} ${Math.round(line)} · ${scale.toFixed(3)}×</b>`;
     ln.onpointerdown = e => drag(e, label === 'scanline1' ? '#a' : '#b');
     st.appendChild(ln);
-    st.appendChild(character(line, scale));
+  }
+
+  // The in-game reference pair, blue: how getScaling sizes him at the nearest
+  // and farthest WALKABLE spots. It used to stand on the raw scanlines, but
+  // 1998 authored some of those beyond the room (t_HjaVolvul: scanline2=800 in
+  // a 600-high room), and a reference below the frame is no reference.
+  if ($('#showRef').checked) for (const [pt, label] of refPoints()) {
+    const k = Math.max(0.02, scalingAt(pt[1]));
+    const g = character(pt[1], k, true);
+    g.style.left = pt[0] + 'px';
+    st.appendChild(g);
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.style.left = (pt[0] + 8) + 'px'; tag.style.top = (pt[1] + 4) + 'px';
+    tag.textContent = `in game, ${label} · ${k.toFixed(3)}×`;
+    st.appendChild(tag);
   }
 
   if (him) {
     const k = Math.max(0.02, scalingAt(him.y));
     const img = document.createElement('img');
     img.className = 'char free';
-    img.src = cur.player ? chromaKey(cur.player).url : '';
+    const sprite = playerSprite();
+    img.src = sprite ? chromaKey(sprite).url : '';
     img.style.left = him.x + 'px';
     img.style.top = him.y + 'px';
     img.style.transform = `translate(-50%,-100%) scale(${k})`;
@@ -330,6 +347,32 @@ function grid(yh) {
   return svg;
 }
 
+// Where the reference pair stands: the walkable polygon's nearest and farthest
+// vertices, clamped into frame. Falls back to the scanlines (clamped) when the
+// terrain has no polygon.
+function refPoints() {
+  const cl = p => [clamp(p[0], 50, cur.width - 50), clamp(p[1], 20, cur.height)];
+  if (curT.polygon.length) {
+    const ys = curT.polygon.map(p => p[1]);
+    // Centroid x, not the extreme vertex -- the deepest vertex is a corner,
+    // and the near figure ended up standing half outside the room on it.
+    // Offset the pair sideways so the bigger near figure cannot hide the far.
+    const cx = curT.polygon.reduce((a, p) => a + p[0], 0) / curT.polygon.length;
+    return [[cl([cx - 70, Math.max(...ys)]), 'near'], [cl([cx + 70, Math.min(...ys)]), 'far']];
+  }
+  const v = vals();
+  return [[cl([cur.width * 0.35, v.a]), 'near'], [cl([cur.width * 0.65, v.b]), 'far']];
+}
+
+// The player sprite is the same figure in every chapter; a scene that never
+// shows him (s_Extro, s_Intro) has none in the index, so borrow one -- the
+// button must not silently do nothing.
+function playerSprite() {
+  if (cur.player) return cur.player;
+  for (const s of Object.values(scenes)) if (s.player) return s.player;
+  return null;
+}
+
 function scalingAt(y) {
   const v = vals();
   if (v.a === v.b) return v.d;
@@ -370,7 +413,8 @@ function chromaKey(src) {
 function character(y, scale, ghost) {
   const img = document.createElement('img');
   img.className = 'char' + (ghost ? ' ghost' : '');
-  img.src = cur.player ? chromaKey(cur.player).url : '';
+  const sprite = playerSprite();
+  img.src = sprite ? chromaKey(sprite).url : '';
   img.style.left = (cur.width * 0.5) + 'px';
   img.style.top = y + 'px';
   img.style.transform = `translateY(-100%) scale(${scale})`;
@@ -455,8 +499,10 @@ $('#metre').onclick = () => {
   $('#hint').textContent = 'Click two points on the ground, then give the distance in metres.';
 };
 $('#him').onclick = () => {
-  if (!cur || !cur.player) return;
-  him = him ? null : { x: cur.width * 0.5, y: +$('#a').value };
+  if (!cur || !playerSprite()) return;
+  // Start him on the nearest walkable spot, in frame -- not on scanline1,
+  // which can sit below the room.
+  him = him ? null : { x: cur.width * 0.5, y: refPoints()[0][0][1] };
   $('#him').textContent = him ? 'Hide him' : 'Show him';
   $('#hint').textContent = him
     ? 'Drag him along the floor — his size follows the ramp. Drag the horizon (or the square handle) to set the vanishing point; scaling2 is derived from it, scanline1 stays the front anchor.'
@@ -465,7 +511,7 @@ $('#him').onclick = () => {
 };
 
 for (const id of ['#d', '#a', '#b', '#s', '#z']) $(id).oninput = render;
-for (const id of ['#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
+for (const id of ['#showRef', '#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
 $('#reset').onclick = () => select(cur.name);
 $('#copy').onclick = () => navigator.clipboard.writeText($('#out').textContent.split('\n\n')[0]);
 </script>

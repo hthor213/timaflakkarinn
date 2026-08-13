@@ -352,16 +352,50 @@ function grid(yh) {
 // terrain has no polygon.
 function refPoints() {
   const cl = p => [clamp(p[0], 50, cur.width - 50), clamp(p[1], 20, cur.height)];
-  if (curT.polygon.length) {
+  if (curT.polygon.length >= 3) {
+    // Stand INSIDE the polygon -- he cannot leave it in the game, so a
+    // reference outside it lies. Centroid x was not enough: at the extreme y
+    // the centroid's column can be outside entirely (s_Extro's bottom corner,
+    // s_Logberg's far ghost on the hillside). Intersect a horizontal line just
+    // inside the extreme y with the polygon and stand mid-span, which is
+    // inside by construction.
     const ys = curT.polygon.map(p => p[1]);
-    // Centroid x, not the extreme vertex -- the deepest vertex is a corner,
-    // and the near figure ended up standing half outside the room on it.
-    // Offset the pair sideways so the bigger near figure cannot hide the far.
-    const cx = curT.polygon.reduce((a, p) => a + p[0], 0) / curT.polygon.length;
-    return [[cl([cx - 70, Math.max(...ys)]), 'near'], [cl([cx + 70, Math.min(...ys)]), 'far']];
+    // Walk inward from the extreme until the line cuts a real span. The +0.5
+    // dodges vertices sitting exactly on the sample line, whose crossing
+    // parity otherwise double-counts (t_HjaVolvul put the near figure outside).
+    // Clip each span to the visible frame BEFORE the midpoint: p_HjaVolvu runs
+    // to x=1201 in an 800-wide room, so the polygon's own middle can be
+    // off-canvas, and clamping after the fact pushed him back outside it.
+    const pick = (from, dir) => {
+      for (let off = 6; off <= 60; off += 4) {
+        const y0 = from + dir * off + 0.5;
+        const span = widestSpanAt(y0);
+        if (!span) continue;
+        const lo = Math.max(span[0], 50), hi = Math.min(span[1], cur.width - 50);
+        if (hi - lo > 24) return [(lo + hi) / 2, y0];
+      }
+      return null;
+    };
+    const near = pick(Math.max(...ys), -1), far = pick(Math.min(...ys), +1);
+    if (near && far) return [[cl(near), 'near'], [cl(far), 'far']];
   }
   const v = vals();
   return [[cl([cur.width * 0.35, v.a]), 'near'], [cl([cur.width * 0.65, v.b]), 'far']];
+}
+
+// The widest interior interval of the walkable polygon on the horizontal line
+// y = y0, by edge crossing parity. Null when the line misses the polygon.
+function widestSpanAt(y0) {
+  const P = curT.polygon, xs = [];
+  for (let i = 0; i < P.length; i++) {
+    const [x1, y1] = P[i], [x2, y2] = P[(i + 1) % P.length];
+    if ((y1 <= y0) !== (y2 <= y0)) xs.push(x1 + (y0 - y1) * (x2 - x1) / (y2 - y1));
+  }
+  xs.sort((a, b) => a - b);
+  let best = null;
+  for (let i = 0; i + 1 < xs.length; i += 2)
+    if (!best || xs[i + 1] - xs[i] > best[1] - best[0]) best = [xs[i], xs[i + 1]];
+  return best;
 }
 
 // The player sprite is the same figure in every chapter; a scene that never
@@ -500,9 +534,10 @@ $('#metre').onclick = () => {
 };
 $('#him').onclick = () => {
   if (!cur || !playerSprite()) return;
-  // Start him on the nearest walkable spot, in frame -- not on scanline1,
+  // Start him between the two references -- mid-floor, not on scanline1,
   // which can sit below the room.
-  him = him ? null : { x: cur.width * 0.5, y: refPoints()[0][0][1] };
+  const [[nearPt], [farPt]] = refPoints();
+  him = him ? null : { x: (nearPt[0] + farPt[0]) / 2, y: (nearPt[1] + farPt[1]) / 2 };
   $('#him').textContent = him ? 'Hide him' : 'Show him';
   $('#hint').textContent = him
     ? 'Drag him along the floor — his size follows the ramp. Drag the horizon (or the square handle) to set the vanishing point; scaling2 is derived from it, scanline1 stays the front anchor.'

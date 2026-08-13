@@ -118,6 +118,9 @@
   .char.pin { pointer-events: auto; cursor: pointer; transform-origin: 50% 100%;
               opacity: .45; filter: sepia(1) saturate(2.5) hue-rotate(-25deg); }
   .tag.warm { color: #d08a5a; }
+  .box { position: absolute; border: 1px dashed rgba(232,220,192,.8); pointer-events: none; }
+  .hnd { position: absolute; width: 9px; height: 9px; margin: -5px 0 0 -5px;
+         background: #e8dcc0; border: 1px solid #14100c; }
   .tag { position: absolute; font-size: 11px; color: #6aa9ff; background: #14100c; padding: 0 4px; pointer-events: none; }
   svg.grid { position: absolute; inset: 0; pointer-events: none; }
   svg.poly { position: absolute; inset: 0; pointer-events: none; }
@@ -265,7 +268,7 @@ function render() {
   // own contours, and the horizon handle with it -- the field is set by pins.
   const yh = impliedHorizon() ?? (draftYh ??= Math.round(cur.height * 0.4));
   if (vpx === null) vpx = Math.round(cur.width / 2);
-  if ($('#showGrid').checked && mode === 'modern') st.appendChild(contourSvg());
+  if ($('#showGrid').checked && mode === 'modern') st.appendChild(carpetSvg());
   if ($('#showGrid').checked && mode === 'classic' && yh < cur.height - 20) {
     st.appendChild(grid(yh));
     // A weak ramp puts the implied horizon far above the frame (Extro:
@@ -353,8 +356,31 @@ function render() {
     tag.className = 'tag';
     tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
     tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}×` +
-      (him.k != null && mode === 'modern' ? ' · PENDING — dblclick to pin' : ' · scroll to size · dblclick to pin');
+      (him.k != null && mode === 'modern' ? ' · PENDING — dblclick to pin' : ' · drag a corner to size · dblclick to pin');
     st.appendChild(tag);
+
+    // Photoshop-style bounding box: corner handles resize him, proportions
+    // locked by construction (one scale factor). For the Magic Mouse, whose
+    // scroll is too twitchy to size with -- the wheel still works too.
+    const dims = sprite ? chromaKey(sprite) : null;
+    if (dims && dims.w) {
+      const bw = dims.w * k, bh = dims.h * k;
+      const box = document.createElement('div');
+      box.className = 'box';
+      box.style.left = (him.x - bw / 2) + 'px';
+      box.style.top = (him.y - bh) + 'px';
+      box.style.width = bw + 'px'; box.style.height = bh + 'px';
+      st.appendChild(box);
+      for (const [hx, hy, cursor] of [[0, 0, 'nwse'], [1, 0, 'nesw'], [0, 1, 'nesw'], [1, 1, 'nwse']]) {
+        const hd = document.createElement('div');
+        hd.className = 'hnd';
+        hd.style.left = (him.x - bw / 2 + hx * bw) + 'px';
+        hd.style.top = (him.y - bh + hy * bh) + 'px';
+        hd.style.cursor = cursor + '-resize';
+        hd.onpointerdown = e => dragScale(e, k);
+        st.appendChild(hd);
+      }
+    }
   }
 
   // With three or more pins the art gets a say the engine cannot express: the
@@ -510,10 +536,11 @@ function scalingAt(y) {
 const keyed = new Map();
 function chromaKey(src) {
   if (keyed.has(src)) return keyed.get(src);
-  const out = { url: src };
+  const out = { url: src, w: 0, h: 0 };
   keyed.set(src, out);
   const im = new Image();
   im.onload = () => {
+    out.w = im.naturalWidth; out.h = im.naturalHeight;
     const c = document.createElement('canvas');
     c.width = im.naturalWidth; c.height = im.naturalHeight;
     const g = c.getContext('2d');
@@ -579,23 +606,37 @@ function dragVP(e) {
 // the ramp. On scanline1 it sets defaultscaling itself; anywhere else the
 // line through the front anchor and this (y, scale) point is evaluated at
 // scanline2. The in-game reference pair re-renders as the consequence.
+// One write path for every sizing gesture (wheel, corner drag). Modern: the
+// size is a pending judgement; only pinning writes. Classic: written on the
+// spot -- on scanline1 into defaultscaling, elsewhere solved into scaling2.
+function applySize(k) {
+  k = Math.max(0.02, k);
+  if (mode === 'modern') {
+    him.k = k;
+  } else {
+    const v = vals();
+    if (Math.abs(him.y - v.a) < 15) $('#d').value = k.toFixed(3);
+    else $('#s').value = Math.max(0.02, v.d + (k - v.d) * (v.b - v.a) / (him.y - v.a)).toFixed(3);
+  }
+  render();
+}
+
 function wheelHim(e) {
   e.preventDefault();
   const fac = e.deltaY < 0 ? 1.02 : 1 / 1.02;
-  // Modern: the resize is a pending judgement; only pinning writes anything.
-  if (mode === 'modern') {
-    him.k = Math.max(0.02, (him.k ?? fieldAt(him.x, him.y)) * fac);
-    render();
-    return;
-  }
-  const v = vals();
-  const k = Math.max(0.02, scalingAt(him.y) * fac);
-  if (Math.abs(him.y - v.a) < 15) {
-    $('#d').value = k.toFixed(3);
-  } else {
-    $('#s').value = Math.max(0.02, v.d + (k - v.d) * (v.b - v.a) / (him.y - v.a)).toFixed(3);
-  }
-  render();
+  applySize((mode === 'modern' ? (him.k ?? fieldAt(him.x, him.y)) : scalingAt(him.y)) * fac);
+}
+
+// Corner-handle resize, anchored at his feet: the new scale is the ratio of
+// the pointer's distance from the anchor to where the grab started.
+function dragScale(e, k0) {
+  e.preventDefault(); e.stopPropagation();
+  const st = $('#stage').getBoundingClientRect();
+  const ax = st.left + him.x * zoom, ay = st.top + him.y * zoom;
+  const d0 = Math.max(8, Math.hypot(e.clientX - ax, e.clientY - ay));
+  const move = ev => applySize(k0 * Math.hypot(ev.clientX - ax, ev.clientY - ay) / d0);
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
 }
 
 // Two pins make the plane exactly; more make it least-squares in y. The
@@ -707,42 +748,70 @@ function solve(A, B) {
   return M.map((row, i) => row[n] / M[i][i]);
 }
 
-// The terrain made visible: iso-scale contour lines of the field. Straight and
-// evenly ramped on a plane; bending wherever a pin has bent the ground.
-function contourSvg() {
-  const W = cur.width, H = cur.height, step = 16;
+// The terrain carpet, replacing iso-contours which read as "the same straight
+// lines" on any near-planar field. Rows sit at equal GROUND depth: each is
+// marched up from the last by the LOCAL scale (28 screen px per step at 1.0x),
+// so rows bunch where the ground recedes and spread where it is near. Columns
+// are a ground-step apart along each row, marched outward from centre. On a
+// plane this reproduces the classic perspective grid; a pinned hill dents it.
+function carpetSvg() {
+  const W = cur.width, H = cur.height, G = 28;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'grid');
   svg.setAttribute('width', W); svg.setAttribute('height', H);
-  let lo = Infinity, hi = -Infinity;
-  for (let y = 0; y <= H; y += step) for (let x = 0; x <= W; x += step) {
-    const k = fieldAt(x, y);
-    if (k < lo) lo = k; if (k > hi) hi = k;
-  }
-  if (!(hi > lo + 1e-6)) return svg;
-  for (let i = 1; i <= 12; i++) {
-    const level = lo + (hi - lo) * i / 13;
+  const line = (pts, op) => {
     let d = '', pen = false;
-    for (let x = 0; x <= W; x += step) {
-      let prev = fieldAt(x, H), found = null;
-      for (let y = H - step; y >= -step; y -= step) {
-        const v = fieldAt(x, Math.max(0, y));
-        if ((prev - level) * (v - level) <= 0 && prev !== v) {
-          found = Math.max(0, y) + step * (level - v) / (prev - v);
-          break;
-        }
-        prev = v;
-      }
-      if (found === null) { pen = false; continue; }
-      d += (pen ? 'L' : 'M') + x + ' ' + found.toFixed(1);
+    for (const p of pts) {
+      // break the polyline where it leaves the frame -- TPS extrapolation far
+      // outside the pins can march rows wildly, and svg clipping alone still
+      // draws long clipped chords through the visible area
+      if (!p || !isFinite(p[1]) || p[1] < -G * 2 || p[1] > H + G * 2) { pen = false; continue; }
+      d += (pen ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
       pen = true;
     }
-    if (!d) continue;
+    if (!d) return;
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'rgba(159,208,138,.45)');
+    path.setAttribute('d', d); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', `rgba(106,169,255,${op})`);
     svg.appendChild(path);
+  };
+  const XS = []; for (let x = 0; x <= W; x += 16) XS.push(x);
+  // The carpet covers the measured ground, not the sky: extrapolating the
+  // spline much beyond the farthest pin painted a dense sheet over the top of
+  // the frame. Stop a step beyond the farthest judgement.
+  const topLimit = pins.length >= 3 ? Math.max(0, Math.min(...pins.map(pn => pn.y)) - 80) : 0;
+  const rows = [XS.map(() => H)];
+  while (rows.length < 70) {
+    const prev = rows[rows.length - 1];
+    const next = prev.map((y, i) => {
+      if (!isFinite(y)) return NaN;
+      const step = G * fieldAt(XS[i], clamp(y, 0, H));
+      // a step under 3px is ground at the horizon -- stop marching there
+      return step < 3 || y - step < topLimit ? NaN : y - step;
+    });
+    if (next.every(y => !isFinite(y))) break;
+    rows.push(next);
+  }
+  const yAt = (row, x) => {
+    const i = clamp(Math.floor(x / 16), 0, XS.length - 2), t = (x - XS[i]) / 16;
+    return row[i] * (1 - t) + row[i + 1] * t;
+  };
+  for (let n = 0; n < rows.length; n++)
+    line(XS.map((x, i) => [x, rows[n][i]]), n ? .3 : .5);
+  // columns: tick j of each row connected across rows, both sides of centre
+  for (const dir of [1, -1]) {
+    const ticks = rows.map(row => {
+      const r = [];
+      let x = W / 2;
+      for (let j = 0; j < 45 && x >= -G && x <= W + G; j++) {
+        r.push([x, yAt(row, clamp(x, 0, W))]);
+        x += dir * G * fieldAt(clamp(x, 0, W), clamp(yAt(row, clamp(x, 0, W)), 0, H));
+      }
+      return r;
+    });
+    const most = Math.max(...ticks.map(t => t.length));
+    for (let j = dir === 1 ? 0 : 1; j < most; j++)
+      line(ticks.map(t => t[j]), .3);
   }
   return svg;
 }
@@ -816,8 +885,8 @@ function setMode(m) {
   $('#mModern').classList.toggle('on', m === 'modern');
   if (him) him.k = null;
   $('#hint').textContent = m === 'modern'
-    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Scroll sets a PENDING size; double-click pins it into the terrain. The four numbers keep tracking the best linear fit for Classic.'
-    : 'Classic: the engine’s y-ramp. Scroll writes the four numbers directly; pins fit them.';
+    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Corner handles or scroll set a PENDING size; double-click pins it into the terrain. The four numbers keep tracking the best linear fit for Classic.'
+    : 'Classic: the engine’s y-ramp. Corner handles or scroll write the four numbers directly; pins fit them.';
   render();
 }
 $('#mClassic').onclick = () => setMode('classic');
@@ -831,7 +900,7 @@ $('#him').onclick = () => {
   him = him ? null : { x: (nearPt[0] + farPt[0]) / 2, y: (nearPt[1] + farPt[1]) / 2 };
   $('#him').textContent = him ? 'Hide him' : 'Show him';
   $('#hint').textContent = him
-    ? 'Drag him anywhere — next to any reference in the art, walkable or not. Scroll to resize, double-click to pin the judgement. Two pins make the plane; more make a fit, and expose the lateral tilt the engine cannot express. Click a pin to remove it.'
+    ? 'Drag him anywhere — next to any reference in the art, walkable or not. Resize with the corner handles (or scroll), double-click to pin the judgement. Two pins make the plane; more make a fit, and expose the lateral tilt the engine cannot express. Click a pin to remove it.'
     : '';
   render();
 };

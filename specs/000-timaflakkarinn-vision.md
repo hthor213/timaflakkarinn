@@ -454,6 +454,50 @@ ordering half — sorting layers, seeding from z + an AI depth pass — is not
 started**, and none of the ~60 calibrations have been authored yet: the tool
 exists, the hour of authoring has not happened.
 
+**REVISED 2026-08-14 — save and publish are part of the tool.** The proposal
+above says "no network, no service", and the built tool inherited that
+faithfully: Copy GML is its only output and the clipboard was the whole write
+path. That undersold what authoring is actually like. Calibrating a scene is
+judgement work spread across sittings — ten minutes today, ten tomorrow,
+together completing one scene — so the tool needs two buttons the proposal
+never asked for:
+
+- **Save** persists work-in-progress per terrain: the pins (the primary
+  artifact), the Classic/Modern choice, and any pending unpinned size, so
+  reloading `/calibrate` resumes exactly where the last sitting ended. WIP
+  lives in git-tracked sidecar files (e.g. `web_import/calib/<terrain>.json`),
+  never in the masters — a half-formed judgement must not churn shipped GML.
+- **Publish** writes the finished calibration into the `.gml` master — the
+  four numbers as attributes, the pins as the XML comment — and deploys it to
+  tt-dev. That is tt-dev's purpose: it is the dev server, and
+  author → publish → judge in-game is one loop. The in-place master writer
+  already exists as `tools/pipeline/calibration.py` (encoding-safe:
+  ISO-8859-1 + CRLF read and asserted), currently untracked and unwired.
+- Both need a write path from a served page back into the working repo: a
+  small dev-only service with auth behind Caddy. Its exact shape is decided
+  when built; what is decided now is that it exists, revising the "no
+  service" line above.
+
+**Open: how a publish permeates to prod (tt.spliffdonk.com).** Proposal,
+not yet confirmed by the owner: it doesn't, directly. Prod serves `main` and
+moves only by `deploy.sh --promote`, so a published calibration rides the
+ordinary dev→main promote like any other content change. Classic consumes
+the four linear numbers; the TPS pins ride as comments only the remaster
+engine will read. Publishing Modern work to dev therefore never changes prod
+until promoted — and even then Classic sees only the linear part.
+
+**Open: a fix authored in Modern that the original engine could express —
+what migrates, and how?** Proposed rule: nothing migrates by hand. The pins
+are the edition-neutral judgement; each edition consumes its own derivative —
+Classic the best linear fit (the tool already computes it live), Modern the
+thin-plate spline. Publish should therefore print the Classic residual
+("linear fit within 4% of your pins"), giving every scene an explicit
+verdict: either the fix lands in both editions for free, or the residual is
+the measured, recorded price Classic pays — lateral tilt and curvature are
+beyond `a*y + b` by construction (D8's own test). Authored once, derived per
+edition, translated never — so the editions cannot drift apart. This is the
+same shape as D8's one-tree-two-editions rule, applied to depth.
+
 ## Open
 
 - **Point-and-click under a cutting camera** (D5 × D3). Unsolved, and the

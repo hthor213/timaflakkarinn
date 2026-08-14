@@ -500,6 +500,19 @@ the four linear numbers; the TPS pins ride as comments only the remaster
 engine will read. Publishing Modern work to dev therefore never changes prod
 until promoted — and even then Classic sees only the linear part.
 
+**Open — and now ASKED (2026-08-14): where Classic's line is.** The
+question went to Gummi and Georg on Messenger, the two who can answer it,
+framed as: Classic = 1999 plus bug fixes and unfinished polish (stray green
+pixels; "Erna" input becoming case-insensitive and trailing-space-tolerant
+was the owner's added example) — intent decides; Modern = no restrictions
+except identical gameplay. The two questions as sent: (1) was y-only
+scaling a design call or the deadline — with one more month, would floors
+have gotten sideways tilt? (2) were the 47 rampless scenes deliberately
+flat or unfinished? Their answers draw the line; the rule below stands as
+the working proposal until they do. Note their answer to (2) also decides
+whether authoring numbers for a given flat scene is "finishing" or
+"changing" — small deliberately-flat rooms may exist.
+
 **Open: a fix authored in Modern that the original engine could express —
 what migrates, and how?** Proposed rule: nothing migrates by hand. The pins
 are the edition-neutral judgement; each edition consumes its own derivative —

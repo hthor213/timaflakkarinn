@@ -478,6 +478,20 @@ never asked for:
   when built; what is decided now is that it exists, revising the "no
   service" line above.
 
+**Status 2026-08-14: built and live.** `tools/calibrate_server.py` (stdlib,
+loopback, bearer token from `.calib.env`, no default) behind Caddy at
+`/calibrate/api/*` on the tt-dev block only, run by
+`timaflakkarinn-calib.service`. Save/resume verified on the live page by
+Playwright probe (`~/tools/browser/save_probe.mjs`): judgement → `Save •` →
+saved → cold reload → sitting restored. Publish verified end-to-end through
+the service (`5848cde`): master patched in place (a values-identical publish
+correctly writes nothing), sidecar committed, pushed to Forgejo, deploy.sh
+ran green and tt-dev's version.json confirmed the commit. The scene list
+marks saved-but-unpublished terrains ●; Reset deliberately does not resume
+the sidecar. Found on the way: `webapp/public/gml` is a symlink into
+`web_import/gml`, so the master is the only tracked copy and publish
+commits it alone. The Classic residual prints in the publish confirm.
+
 **Open: how a publish permeates to prod (tt.spliffdonk.com).** Proposal,
 not yet confirmed by the owner: it doesn't, directly. Prod serves `main` and
 moves only by `deploy.sh --promote`, so a published calibration rides the

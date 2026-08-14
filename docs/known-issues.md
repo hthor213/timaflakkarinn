@@ -1498,3 +1498,75 @@ Still true and separate: `a_Karli_acc` and `a_Halldora_acc` are chroma green and
 therefore deliberately invisible, so Karli's and Halldóra's lines remain
 unsubtitled by 1998's own choice. Whether to keep that is a `modern-only`
 question, not a defect.
+
+## 25 — `provenance` · A full original-team playthrough passes, and the Þjórsá "bug" never existed
+
+**Reported by:** Georg, 2026-08-13, on Messenger — played the game **start to
+finish on his iPhone in one evening**. Tagged `provenance` because both halves
+are evidence about the project rather than defects in the game: the strongest
+fidelity verification the port has had, from someone who helped make the
+original, and a phantom report closed by the only kind of authority that can
+close one.
+
+> "Ég gat spilað leikinn til enda á símanum mínum í gærkvöldi - þannig að allt
+> virkar frá upphafi til enda og fáir böggar eftir … þetta virkar allt bara 99%
+> nákvæmlega eins og þetta var"
+
+(*"I could play the game to the end on my phone last night — so everything
+works start to finish and few bugs remain … it all works 99% exactly as it
+was."*)
+
+**The Þjórsá crossing was never broken.** The long-suspected bug — that the
+axe-tied-to-rope throw across the river doesn't work — was Georg forgetting
+the puzzle's own prerequisite:
+
+> "maður þarf að höggva tréið manns megin við bakkann áður en maður reynir að
+> kasta öxi-bundinni-við-reipi yfir ána - það virkar ekki að kasta fyrr en
+> búið er að höggva tréið fyrst"
+
+(*chop the tree on your own side of the bank first; the throw refuses until
+the tree is down.*) That refusal is the 1999 design working as intended. No
+entry ever existed for this and none should be opened; this note exists so
+nobody chases the ghost.
+
+**Caveat on everything Georg saw:** prod (`tt.spliffdonk.com`) serves
+`ff1ebec` (2026-08-07) — a week behind dev, before the save menu (`8fc4479`)
+and the subtitle fixes (#24). Which URL he played is not known. If it was
+prod, parts of his list below are reports against already-fixed code. **Ask
+him which URL** before spending diagnosis time on #27.
+
+## 26 — `port-bug` · OPEN · Touch targets are finger-hostile on a phone
+
+**Reported by:** Georg, 2026-08-13, from the same playthrough:
+
+> "sumt [er] svo smátt á iphone að það er erfitt að sjá það eða taka það
+> (t.d. tappi í tunnu í Tyrkjaráni og Þórshamarshálsfesti í Kristnitöku) og ég
+> þurfti að reyna oft … velja nákvæmlega réttan punkt til að taka virkaði"
+
+(*Some things are so small on iPhone they are hard to see or take — the tap
+in the barrel in Tyrkjarán, the Thor's-hammer necklace in Kristnitaka — many
+tries, and only the exactly right pixel works.*)
+
+`port-bug` by the same reasoning as #6 and #9: the 1999 hotspots were sized
+for a mouse cursor on a desktop CRT and are right for that world; the port
+brought them to a platform where the pointer is a fingertip. Wants a
+finger-sized pick tolerance on touch input (a radius around the tap, nearest
+eligible hotspot wins), not enlarged hotspots — the authored geometry stays
+1999's. His two examples are the test cases.
+
+## 27 — `port-bug`? · UNVERIFIED · Dialogue text sometimes unreadable, and old text lingers
+
+**Reported by:** Georg, 2026-08-13, from the same playthrough:
+
+> "Svo eru e-r glitch í að textinn sjáist þegar verið er að tala - og stundum
+> lúrir gamall texti á skjánum"
+
+(*Some glitches in the text showing while someone is talking — and sometimes
+old text lurks on the screen.*)
+
+UNVERIFIED because of the #25 caveat: the subtitle pipeline was rebuilt in
+#24 *after* the commit prod serves, and "text not showing during speech" is
+exactly what #24 fixed. The lingering-text half may be the pre-fix sentence
+clock running ahead of the audio (also #24), or may be a real, still-live
+staleness bug in the accumulator teardown. Reproduce on current dev first;
+if it survives there, this becomes a real entry with its own diagnosis.

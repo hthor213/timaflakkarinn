@@ -49,8 +49,11 @@ BRANCH = os.environ.get('CALIB_BRANCH', 'dev')
 
 # The paths a publish is allowed to commit. Anything else dirty in the tree
 # is someone's work-in-progress, and shipping it as a side effect of a
-# calibration would be the worst kind of surprise.
-OURS = ('web_import/calib/', 'web_import/gml/', 'webapp/public/gml/')
+# calibration would be the worst kind of surprise. webapp/public/gml is NOT
+# here although the site serves from it: it is a symlink into web_import/gml
+# (git add refuses pathspecs through it), so patching the master already
+# updates what both paths see.
+OURS = ('web_import/calib/', 'web_import/gml/')
 
 NAME_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 MAX_BODY = 256 * 1024

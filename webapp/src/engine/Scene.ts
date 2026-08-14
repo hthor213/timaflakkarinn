@@ -184,20 +184,65 @@ export class Scene {
     ctx.restore();
   }
 
-  /** Get topmost actor face at screen coordinates */
-  getActorFaceAt(x: number, y: number): ActorFace | null {
+  /**
+   * Get topmost actor face at screen coordinates.
+   *
+   * `slop` is a finger allowance in logical pixels — 0 (the default, and what
+   * a mouse gets) is the exact 1999 hit test. Known-issues #26: the original
+   * hotspots were sized for a mouse cursor on a desktop screen, and on a
+   * phone some of them are smaller than the fingertip aiming at them — the
+   * barrel tap in Tyrkjarán took Georg "exactly the right point" to take.
+   * The authored geometry is untouched; this is pick tolerance, not resizing.
+   *
+   * The rules, chosen so tolerance cannot rewrite gameplay:
+   *  - an exact hit on a SMALL face wins outright — a precise tap stays
+   *    precise, and nothing can steal it;
+   *  - otherwise the nearest small face within `slop` wins. Small means at
+   *    most 2*slop per side: a target a fingertip can genuinely miss. Large
+   *    faces never attract — they need no help, and letting a character or
+   *    the backdrop pull taps would change what a tap means;
+   *  - a candidate below the exact hit in z is never chosen: whatever a
+   *    covering face hides stays hidden from fingers too.
+   */
+  getActorFaceAt(x: number, y: number, slop = 0): ActorFace | null {
     // Walk backwards (topmost = rendered last = highest z-order)
     // Original Java walks forward keeping last match — same result
+    let exact: ActorFace | null = null;
     for (let i = this.faces.length - 1; i >= 0; i--) {
       const face = this.faces[i];
       // Skip faces with zero-size bounds (not yet loaded)
       if (face.bounds.width === 0 || face.bounds.height === 0) continue;
       // All faces are hittable — including transparent/invisible hotspots
       if (face.contains(x, y)) {
-        return face;
+        exact = face;
+        break;
       }
     }
-    return null;
+    if (slop <= 0) return exact;
+
+    const small = (f: ActorFace) =>
+      f.bounds.width <= 2 * slop && f.bounds.height <= 2 * slop;
+    if (exact && small(exact)) return exact;
+
+    const zFloor = exact ? exact.getZOrder() : -Infinity;
+    let best: ActorFace | null = null;
+    let bestDist = Infinity;
+    for (const face of this.faces) {
+      if (face === exact) continue;
+      const b = face.bounds;
+      if (b.width === 0 || b.height === 0) continue;
+      if (!small(face) || face.getZOrder() < zFloor) continue;
+      const dx = Math.max(b.x - x, 0, x - (b.x + b.width));
+      const dy = Math.max(b.y - y, 0, y - (b.y + b.height));
+      const dist = Math.hypot(dx, dy);
+      if (dist > slop) continue;
+      if (dist < bestDist ||
+          (dist === bestDist && best !== null && face.getZOrder() > best.getZOrder())) {
+        best = face;
+        bestDist = dist;
+      }
+    }
+    return best ?? exact;
   }
 
   /** Get all faces (for rebuilding) */

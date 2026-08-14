@@ -66,8 +66,13 @@
   (b), 49 are (c). Only (c) needs real depth in the remaster; (b) can be baked
   onto the plate.
 
-  Dev tool. Served by `npm run dev` and deliberately NOT in the deploy
-  allowlist -- it is not part of the game.
+  Dev tool. Deployed to tt-dev only (Caddy rewrites /calibrate there); it is
+  not part of the game. SAVE and PUBLISH go through /calibrate/api/*, which
+  Caddy proxies to tools/calibrate_server.py on the box — save writes a
+  git-tracked sidecar (web_import/calib/<terrain>.json) so a calibration can
+  be authored across sittings; publish writes the .gml master, commits,
+  pushes and redeploys tt-dev. Under `npm run dev` there is no such proxy, so
+  the two buttons only work on tt-dev.
 -->
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,6 +85,7 @@
   aside button.on { background: #c8a040; color: #14100c; }
   aside .dot { float: right; font-size: 11px; }
   aside .no { color: #d08a5a; }
+  aside .wip { color: #c8a040; }
   main { flex: 1 1 auto; display: flex; flex-direction: row; min-width: 0; }
   #center { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
   /* Controls live in a right-hand panel beside the stage -- a laptop screen
@@ -150,6 +156,8 @@
     <label>scanline2 <input type="number" id="b" step="1"></label>
     <label>zoom <input type="number" id="z" step="0.05" min="0.2" max="3" value="1"></label>
     <h3>actions</h3>
+    <button id="save">Save</button>
+    <button id="publish">Publish → tt-dev</button>
     <button id="copy">Copy GML</button>
     <button class="ghost" id="fit">Fit to window</button>
     <button class="ghost" id="reset">Reset</button>
@@ -173,6 +181,8 @@ let draftYh = null;  // horizon guess while the terrain is still flat (d === s)
 let pins = [];       // {x, y, k} size judgements, pinned by double-clicking him
 let mode = 'classic'; // classic: y-ramp, the engine's plane · modern: TPS terrain through the pins
 let tpsCache = null;  // solved spline, invalidated when the pins change
+let dirty = false;    // judgements newer than the last save -- the Save button wears a dot
+let wip = {};         // terrain -> sidecar summary, from GET /calib; drives the ● in the list
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -181,6 +191,147 @@ fetch('/scene-index.json').then(r => r.json()).then(d => {
   buildList();
   const first = Object.values(scenes).find(s => s.terrains.some(t => t.polygon.length));
   select(first ? first.name : Object.keys(scenes)[0]);
+});
+
+/* ---- save / publish -------------------------------------------------------
+   The write path. Save puts the whole judgement state (pins, mode, the four
+   numbers, him, the VP) in a git-tracked sidecar on the box, so a scene can
+   be calibrated across sittings; Publish writes the .gml master, commits,
+   pushes, and redeploys tt-dev. Both need the token from .calib.env on
+   homeserver — asked for once, kept in localStorage. Background loads never
+   prompt: browsing scenes must not nag for a token. */
+const API = '/calibrate/api';
+
+function calibToken(force) {
+  let t = localStorage.getItem('calib-token') || '';
+  if (force || !t) {
+    t = (prompt('Calibration token (in ~/work/timaflakkarinn/.calib.env on homeserver):') || '').trim();
+    if (t) localStorage.setItem('calib-token', t);
+  }
+  return t;
+}
+
+async function apiCall(method, path, body, interactive) {
+  let tok = localStorage.getItem('calib-token') || '';
+  if (!tok && !interactive) return null;
+  if (!tok) tok = calibToken(true);
+  const go = t => fetch(API + path, {
+    method, headers: { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined });
+  let r = await go(tok);
+  if (r.status === 401 && interactive) r = await go(calibToken(true));
+  return r;
+}
+
+async function apiGet(path) {
+  try {
+    const r = await apiCall('GET', path, null, false);
+    return r && r.ok ? await r.json() : null;
+  } catch (e) { return null; }
+}
+
+function markActive() {
+  document.querySelectorAll('#list button').forEach(b =>
+    b.classList.toggle('on', !!cur && b.dataset.scene === cur.name));
+}
+
+function refreshSave() { $('#save').textContent = dirty ? 'Save •' : 'Save'; }
+function markDirty() { if (!dirty) { dirty = true; refreshSave(); } }
+
+function sidecarBody() {
+  return { version: 1, scene: cur.name, terrain: curT.name, mode,
+           values: vals(), pins, him, vpx,
+           savedAt: new Date().toISOString() };
+}
+
+// Restore a saved sitting. Everything select() initialises from the GML is
+// overwritten by the judgement state, which is newer by definition.
+function applySidecar(s) {
+  pins = (s.pins || []).map(p => ({ x: p.x, y: p.y, k: p.k }));
+  tpsCache = null;
+  mode = s.mode === 'modern' ? 'modern' : 'classic';
+  $('#mClassic').classList.toggle('on', mode === 'classic');
+  $('#mModern').classList.toggle('on', mode === 'modern');
+  if (s.values) {
+    $('#d').value = s.values.d; $('#a').value = s.values.a;
+    $('#b').value = s.values.b; $('#s').value = s.values.s;
+  }
+  him = s.him || null;
+  $('#him').textContent = him ? 'Hide him' : 'Show him';
+  if (s.vpx != null) vpx = s.vpx;
+  dirty = false; refreshSave();
+  $('#hint').textContent = `Resumed ${curT.name} from ${s.savedAt || 'a saved sitting'}` +
+    (s.publishedAt ? ` (last published ${s.publishedAt})` : '') + '.';
+  render();
+}
+
+async function saveWip() {
+  if (!curT) return;
+  const r = await apiCall('PUT', '/calib/' + curT.name, sidecarBody(), true);
+  if (r && r.ok) {
+    wip[curT.name] = Object.assign({}, wip[curT.name],
+                                   { scene: cur.name, pins: pins.length });
+    dirty = false; refreshSave(); buildList(); markActive();
+    $('#hint').textContent = `Saved ${curT.name} — resume any time. Publish ships it to tt-dev.`;
+  } else {
+    $('#hint').textContent = 'Save failed: ' +
+      (r ? ((await r.json().catch(() => ({}))).error || r.status) : 'no token given');
+  }
+}
+
+async function publishCalib() {
+  if (!curT) return;
+  const v = vals();
+  let resLine = '';
+  if (pins.length >= 2) {
+    // The Classic residual, per specs/000: what the linear ramp loses
+    // against the pins. Near zero -> the fix lands in both editions; large
+    // -> the pins want ground the 1999 engine cannot express, and this
+    // number is the measured price Classic pays.
+    const rms = Math.sqrt(pins.reduce((a, p) => a + (scalingAt(p.y) - p.k) ** 2, 0) / pins.length);
+    const mean = pins.reduce((a, p) => a + p.k, 0) / pins.length;
+    resLine = `\nClassic linear fit: ±${rms.toFixed(3)} (${(100 * rms / mean).toFixed(1)}% of mean pin size)`;
+  }
+  if (!confirm(`Publish ${curT.name} to tt-dev?\n\n` +
+      `defaultscaling ${v.d} · scanline1 ${v.a} · scanline2 ${v.b} · scaling2 ${v.s}\n` +
+      `${pins.length} pin(s) ride along as the XML comment${resLine}\n\n` +
+      `Writes the .gml master, commits, pushes, redeploys tt-dev (~1–2 min).`)) return;
+  const btn = $('#publish');
+  btn.disabled = true; btn.textContent = 'Publishing…';
+  $('#hint').textContent = 'Publishing — patch, commit, push, build, verify…';
+  try {
+    const r = await apiCall('POST', '/publish', sidecarBody(), true);
+    const res = r ? await r.json().catch(() => ({})) : { error: 'no token given' };
+    if (r && r.ok) {
+      curT.defaultscaling = v.d; curT.scanline1 = v.a;
+      curT.scanline2 = v.b; curT.scaling2 = v.s;
+      wip[curT.name] = Object.assign({}, wip[curT.name], { publishedAt: 'now' });
+      dirty = false; refreshSave(); buildList(); markActive();
+      $('#hint').textContent = res.deploy_ok
+        ? `Published ${curT.name}${res.commit ? ' (' + res.commit + ')' : ' (no change)'} — tt-dev is serving it. Open the scene in the game to judge it.`
+        : `Master committed${res.commit ? ' (' + res.commit + ')' : ''} but the DEPLOY FAILED — tail in the readout below.`;
+      $('#out').textContent = (res.element_after || '; master unchanged (values already there)') +
+        '\n\n; deploy ' + (res.deploy_ok ? 'ok' : 'FAILED') + '\n' + (res.deploy_tail || '');
+    } else {
+      $('#hint').textContent = 'Publish refused: ' + (res.error || (r && r.status));
+    }
+  } catch (e) {
+    $('#hint').textContent = 'Publish failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Publish → tt-dev';
+  }
+}
+
+$('#save').onclick = saveWip;
+$('#publish').onclick = publishCalib;
+addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+// WIP dots for the scene list. No token stored -> stays empty, silently.
+apiGet('/calib').then(d => {
+  if (d && d.terrains) {
+    wip = d.terrains;
+    if (Object.keys(scenes).length) { buildList(); markActive(); }
+  }
 });
 
 function buildList() {
@@ -192,17 +343,26 @@ function buildList() {
     const h = document.createElement('h2'); h.textContent = ch; el.appendChild(h);
     for (const s of byChapter[ch].sort((x, y) => x.name.localeCompare(y.name))) {
       const done = s.terrains.some(t => t.scanline1);
+      // ● = a saved sitting not yet published: work exists that the GML does
+      // not have. It outranks ✓ -- resumable judgement beats shipped state.
+      const w = s.terrains.some(t => wip[t.name] && !wip[t.name].publishedAt);
       const btn = document.createElement('button');
       btn.dataset.scene = s.name;
       btn.innerHTML = s.name.replace(/^s_/, '') +
-        `<span class="dot ${done ? '' : 'no'}">${done ? '✓' : '—'}</span>`;
+        `<span class="dot ${w ? 'wip' : done ? '' : 'no'}">${w ? '●' : done ? '✓' : '—'}</span>`;
       btn.onclick = () => select(s.name);
       el.appendChild(btn);
     }
   }
 }
 
-function select(name) {
+function select(name, noResume) {
+  // Leaving unsaved judgements is a decision, not an accident. Reset lands
+  // here too, so a dirty reset asks the same question -- correctly: it also
+  // discards.
+  if (dirty && curT &&
+      !confirm(`Unsaved judgements on ${curT.name} — discard them?`)) return;
+  dirty = false;
   cur = scenes[name];
   // Pick the FLOOR, not the backdrop's full-screen terrain. In order of how
   // much the content actually tells us: terrains that host MovingActors are
@@ -224,8 +384,21 @@ function select(name) {
   $('#a').value = curT.scanline1 ?? Math.round(cur.height * 0.95);
   $('#b').value = curT.scanline2 ?? Math.round(cur.height * 0.60);
   $('#s').value = curT.scaling2 ?? (curT.defaultscaling ?? 1) * 0.7;
+  refreshSave();
   fitZoom();
   render();
+  // Resume a saved sitting, if one exists. Async with a race guard: by the
+  // time the sidecar arrives another scene may be on stage. Reset passes
+  // noResume -- its meaning is "back to the authored GML", and silently
+  // re-applying the sidecar would make Reset a no-op whenever a save exists.
+  if (noResume) {
+    $('#hint').textContent = 'Reset to the authored GML. Save overwrites the saved sitting; reload resumes it.';
+    return;
+  }
+  const terrain = curT.name;
+  apiGet('/calib/' + terrain).then(s => {
+    if (s && curT && curT.name === terrain) applySidecar(s);
+  });
 }
 
 function vals() {
@@ -440,6 +613,7 @@ function impliedHorizon() {
 // Drag the horizon: the front anchor (scanline1, defaultscaling) holds, and
 // scaling2 is derived instead of guessed. scale(y) ∝ (y - yh).
 function setHorizon(yh) {
+  markDirty();
   const v = vals();
   yh = Math.min(yh, Math.min(v.a, v.b) - 10);
   $('#s').value = Math.max(0.02, v.d * (v.b - yh) / (v.a - yh)).toFixed(3);
@@ -619,6 +793,7 @@ function dragVP(e) {
 // size is a pending judgement; only pinning writes. Classic: written on the
 // spot -- on scanline1 into defaultscaling, elsewhere solved into scaling2.
 function applySize(k) {
+  markDirty();
   k = Math.max(0.02, k);
   if (mode === 'modern') {
     him.k = k;
@@ -652,6 +827,7 @@ function dragScale(e, k0) {
 // engine's anchor lines stay put -- the fitted line is written as new values
 // AT scanline1 and scanline2, which is the same line in the engine's terms.
 function fitPins() {
+  markDirty();
   if (pins.length >= 2) {
     const n = pins.length;
     let sy = 0, sk = 0, syy = 0, syk = 0;
@@ -829,6 +1005,7 @@ function dragHim(e) {
   e.preventDefault();
   const st = $('#stage').getBoundingClientRect();
   const move = ev => {
+    markDirty();          // his spot is saved state: parked beside a reference
     him.x = clamp((ev.clientX - st.left) / zoom, 0, cur.width);
     him.y = clamp((ev.clientY - st.top) / zoom, 1, cur.height);
     // Shift-drag keeps a pending size (resize, then place, then pin); a plain
@@ -920,6 +1097,7 @@ $('#fit').onclick = () => { fitZoom(); render(); };
 // to the authored GML. For starting a fresh set of judgements over a fit you
 // want to keep testing.
 $('#clearPins').onclick = () => {
+  markDirty();
   pins = []; tpsCache = null;
   $('#hint').textContent = 'Pins cleared — the four numbers keep the last fit. Reset returns to the authored GML.';
   render();
@@ -943,9 +1121,10 @@ $('#him').onclick = () => {
   render();
 };
 
-for (const id of ['#d', '#a', '#b', '#s', '#z']) $(id).oninput = render;
+for (const id of ['#d', '#a', '#b', '#s']) $(id).oninput = () => { markDirty(); render(); };
+$('#z').oninput = render;   // zoom is a view choice, not a judgement
 for (const id of ['#showRef', '#showPins', '#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
-$('#reset').onclick = () => select(cur.name);
+$('#reset').onclick = () => select(cur.name, true);
 $('#copy').onclick = () => navigator.clipboard.writeText(
   $('#out').textContent.split('\n\n')[0] +
   // The samples travel with the element, as legal XML: they are the

@@ -23,3 +23,5 @@ webapp/public/GAME/
 # Derived from the GML masters by tools/pipeline/scene-index.py; regenerated
 # by the npm prebuild hook. Build output, so not committed.
 webapp/public/scene-index.json
+__pycache__/
+.calib.env

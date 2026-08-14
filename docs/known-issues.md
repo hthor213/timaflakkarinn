@@ -1535,7 +1535,7 @@ and the subtitle fixes (#24). Which URL he played is not known. If it was
 prod, parts of his list below are reports against already-fixed code. **Ask
 him which URL** before spending diagnosis time on #27.
 
-## 26 — `port-bug` · OPEN · Touch targets are finger-hostile on a phone
+## 26 — `port-bug` · FIXED · Touch targets are finger-hostile on a phone
 
 **Reported by:** Georg, 2026-08-13, from the same playthrough:
 
@@ -1553,6 +1553,19 @@ brought them to a platform where the pointer is a fingertip. Wants a
 finger-sized pick tolerance on touch input (a radius around the tap, nearest
 eligible hotspot wins), not enlarged hotspots — the authored geometry stays
 1999's. His two examples are the test cases.
+
+**Fixed 2026-08-14** (`21c5eba`), exactly as proposed. Touch taps carry a
+22-CSS-px slop (half of Apple's 44pt minimum target), scaled through the
+canvas fit into logical space; mouse and pen stay exact, so slop 0 remains
+the byte-for-byte 1999 hit test. Only faces small enough for a fingertip to
+miss (twice the slop per side) attract; an exact hit always wins; nearest
+wins among candidates; nothing below the exact hit in z can be picked, so a
+covering face keeps covering. Measured against his examples: the barrel tap
+is a 16x19 sprite and the Thor's hammer 23x20 — both about ten CSS pixels on
+an iPhone, both now magnetic within a fingertip. 8 tests in
+`webapp/test/touchslop.test.mjs`; logic verified there and against the real
+sprite dimensions. On-device confirmation still owed — ideally by the
+reporter.
 
 ## 27 — `port-bug`? · UNVERIFIED · Dialogue text sometimes unreadable, and old text lingers
 

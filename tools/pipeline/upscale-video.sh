@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# WORKSTATION-ONLY render tool (needs Upscayl + ffmpeg on a desktop) — not part
+# of deployment; tools/deploy.sh never calls this. Paths below are env-overridable.
+#
 # Upscale + frame-interpolate the 1998 backstory film.
 #
 #   320x240 Cinepak @ 7fps  ->  1280x960 H.264 @ 30fps
@@ -18,17 +21,17 @@ WORK="${TMPDIR:-/tmp}/tt-upscale-$MODEL"
 # Experiments land OUTSIDE the repo. webapp/public/video/ is served and
 # LFS-tracked, so a candidate cut left there gets shipped and committed by
 # accident. Only the chosen cut is promoted, deliberately, by hand.
-EXP="${EXPERIMENTS_DIR:-$HOME/Documents/GitHub/timaflakkarinn-disc/work/video-experiments}"
+EXP="${EXPERIMENTS_DIR:-$HOME/timaflakkarinn-disc/work/video-experiments}"
 mkdir -p "$EXP"
 OUT7="$EXP/INTRO_${MODEL}_7fps.mp4"
 OUT30="$EXP/INTRO_${MODEL}_30fps.mp4"
 KEEP="${KEEP_FRAMES:-0}"
-BIN=/Applications/Upscayl.app/Contents/Resources/bin/upscayl-bin
-MODELS=/Applications/Upscayl.app/Contents/Resources/models
+BIN="${UPSCAYL_BIN:-/Applications/Upscayl.app/Contents/Resources/bin/upscayl-bin}"
+MODELS="${UPSCAYL_MODELS:-/Applications/Upscayl.app/Contents/Resources/models}"
 FPS=7.0000049   # r_frame_rate 1000000/142857, not exactly 7
 
 [ -f "$SRC" ] || { echo "missing master: $SRC" >&2; exit 1; }
-[ -x "$BIN" ] || { echo "Upscayl not installed (brew install --cask upscayl)" >&2; exit 1; }
+[ -x "$BIN" ] || { echo "Upscayl binary not found at $BIN (install Upscayl, or set UPSCAYL_BIN / UPSCAYL_MODELS)" >&2; exit 1; }
 
 rm -rf "$WORK"; mkdir -p "$WORK/src" "$WORK/up"
 

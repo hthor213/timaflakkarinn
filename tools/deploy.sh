@@ -123,9 +123,20 @@ case "$ENV" in
 esac
 
 # --- are we the deploy host? -----------------------------------------------
+# Three signals, any one suffices (mirrors ~/.claude/skills/homeserver/connect.sh):
+# short hostname matches, this box owns the server's LAN IP, or the machine
+# sentinel ~/.claude/.aidev-mode says so. --host always wins: an explicit host
+# means "go remote" even when we are standing on the server.
+DEPLOY_IP="${DEPLOY_IP:-192.168.1.100}"
 LOCAL_MODE=0
-if [ "$HOST_OVERRIDDEN" = 0 ] && [ "$(hostname -s)" = "$DEPLOY_HOST" ]; then
-  LOCAL_MODE=1
+if [ "$HOST_OVERRIDDEN" = 0 ]; then
+  if [ "$(hostname -s 2>/dev/null)" = "$DEPLOY_HOST" ]; then
+    LOCAL_MODE=1
+  elif hostname -I 2>/dev/null | tr ' ' '\n' | grep -qx "$DEPLOY_IP"; then
+    LOCAL_MODE=1
+  elif [ "$(cat "$HOME/.claude/.aidev-mode" 2>/dev/null | tr -d '[:space:]')" = "$DEPLOY_HOST" ]; then
+    LOCAL_MODE=1
+  fi
 fi
 
 # ---------------------------------------------------------------------------

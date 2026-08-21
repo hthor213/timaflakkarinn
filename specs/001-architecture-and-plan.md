@@ -208,9 +208,11 @@ deploy; it is no longer the normal case.
 and `REMOTE_REPO=/home/hjalti/work/timaflakkarinn` — the very working copy it ran
 from. Every `remote()` was a loopback ssh that died on host key verification, and
 the "server has commits the laptop does not" guard compared a directory to
-itself. The script now asks whether it *is* the deploy host and runs the same
-snippets in a subshell when it is. The ssh path is unchanged for a real
-laptop-to-server run.
+itself. The script now asks whether it *is* the deploy host — short hostname
+`homeserver`, or `hostname -I` owning `192.168.1.100`, or `~/.claude/.aidev-mode`
+reading `homeserver`, the same three signals as `connect.sh`; `--host` overrides
+all three — and runs the same snippets in a subshell when it is. The ssh path is
+unchanged for a real laptop-to-server run.
 
 **Cache headers must match how a file is named.** `/assets/*` is content-hashed,
 so `immutable` is correct. `/gml/*` is **not** hashed, so it revalidates

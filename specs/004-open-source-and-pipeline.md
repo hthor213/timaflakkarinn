@@ -58,14 +58,30 @@ topology with A's operational cost.
 
 ## Done When
 
-- [ ] `git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | grep -q .` — the repo is public: anonymous ls-remote succeeds
-- [ ] `curl -sf -o /dev/null https://git.spliffdonk.com/hjalti/timaflakkarinn` — Forgejo repo is public-read for anonymous LFS
-- [ ] `git config --get lfs.url | grep -q git.spliffdonk.com && grep -q git.spliffdonk.com .lfsconfig` — LFS decoupled from origin, for this clone and every fresh one
-- [ ] `gh run list --workflow check.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx success` — CI green on the integration branch
-- [ ] `gh api repos/hthor213/timaflakkarinn/actions/runners --jq '.runners[] | select(.name=="homeserver") | .status' | grep -qx online` — the deploy runner is listening
-- [ ] Judgment: a PR merged into `dev` appears on tt-dev.spliffdonk.com with no
+- [x] `git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | grep -q .` — the repo is public: anonymous ls-remote succeeds
+- [x] `curl -sf -o /dev/null https://git.spliffdonk.com/hjalti/timaflakkarinn` — Forgejo repo is public-read for anonymous LFS
+- [x] `git config --get lfs.url | grep -q git.spliffdonk.com && grep -q git.spliffdonk.com .lfsconfig` — LFS decoupled from origin, for this clone and every fresh one
+- [x] `gh run list --workflow check.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx success` — CI green on the integration branch
+- [x] `gh api repos/hthor213/timaflakkarinn/actions/runners --jq '.runners[] | select(.name=="homeserver") | .status' | grep -qx online` — the deploy runner is listening
+- [x] Judgment: a PR merged into `dev` appears on tt-dev.spliffdonk.com with no
       manual deploy step; a merged promotion PR appears on tt.spliffdonk.com.
       Verified by watching the Actions run end in `deploy.sh`'s own 16-check
       verification pass.
-- [ ] Judgment: a fresh anonymous clone from GitHub + `git lfs pull` +
+- [x] Judgment: a fresh anonymous clone from GitHub + `git lfs pull` +
       `npm run check` is green on a machine with no credentials.
+
+All boxes verified 2026-09-01, the day the repo went public: PR #2 → tt-dev
+and promotion PR #3 → tt both deployed by their Actions runs; the anonymous
+clone was tested with global/system git config nulled and prompts disabled,
+and the pulled `BENDILL1.PNG` hashed identical to the local master.
+
+## Operational notes
+
+- **Promotion merges need admin.** GitHub blocks the `dev` → `main` merge with
+  "base branch policy prohibits the merge" even when the required `check` is
+  green on the head SHA — merge with the UI's admin bypass or
+  `gh pr merge --admin`. Owner-only friction; contributors never promote.
+- The pre-2026-09 Forgejo→GitHub push-mirror (created 2026-08-12, the origin of
+  the private GitHub copy) was **deleted** — it would have force-pushed stale
+  refs over canonical GitHub. Mirroring now flows the other way, from the
+  deploy workflows.

@@ -1,0 +1,24 @@
+# Save/Publish backend for tt-dev.spliffdonk.com/calibrate.
+# Install:
+#   sudo cp tools/timaflakkarinn-calib.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now timaflakkarinn-calib
+# Token: .calib.env in the repo root (gitignored, chmod 600):
+#   CALIB_TOKEN=<random>
+# Caddy proxies /calibrate/api/* on tt-dev to 127.0.0.1:8031 (dev block only).
+
+[Unit]
+Description=Timaflakkarinn calibration save/publish backend
+After=network.target
+
+[Service]
+User=hjalti
+WorkingDirectory=/home/hjalti/work/timaflakkarinn
+EnvironmentFile=/home/hjalti/work/timaflakkarinn/.calib.env
+# deploy.sh needs git, node/npm, rsync and curl on PATH.
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 tools/calibrate_server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

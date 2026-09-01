@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# WORKSTATION-ONLY render tool (needs Upscayl + ffmpeg on a desktop) — not part
+# of deployment; tools/deploy.sh never calls this. Paths below are env-overridable.
+#
 # Hybrid render of the 1998 backstory film — the DELIVERABLE cut.
 #
 #   320x240 Cinepak @ 7fps  ->  1280x960 H.264 @ 7fps (native cadence)
@@ -55,12 +58,12 @@ LEADIN="${LEADIN:-13}"
 # Experiments land OUTSIDE the repo. webapp/public/video/ is served and
 # LFS-tracked, so a candidate cut left there gets shipped and committed by
 # accident. Only the chosen cut is promoted, deliberately, by hand.
-EXP="${EXPERIMENTS_DIR:-$HOME/Documents/GitHub/timaflakkarinn-disc/work/video-experiments}"
-WORK="${WORK_DIR:-$HOME/Documents/GitHub/timaflakkarinn-disc/work/hybrid}"
+EXP="${EXPERIMENTS_DIR:-$HOME/timaflakkarinn-disc/work/video-experiments}"
+WORK="${WORK_DIR:-$HOME/timaflakkarinn-disc/work/hybrid}"
 OUT="$EXP/INTRO_hybrid_${MODEL}_7fps.mp4"
 KEEP="${KEEP_FRAMES:-0}"
-BIN=/Applications/Upscayl.app/Contents/Resources/bin/upscayl-bin
-MODELS=/Applications/Upscayl.app/Contents/Resources/models
+BIN="${UPSCAYL_BIN:-/Applications/Upscayl.app/Contents/Resources/bin/upscayl-bin}"
+MODELS="${UPSCAYL_MODELS:-/Applications/Upscayl.app/Contents/Resources/models}"
 FPS=7.0000049   # r_frame_rate 1000000/142857, not exactly 7
 
 # Tone match at the seam. MEASURED, and the answer is: none needed.
@@ -97,7 +100,7 @@ NATIVE_VF="deblock=filter=weak:block=4,hqdn3d=2:1:2:3"
 ATA_VF="format=yuv444p,atadenoise=0a=0.12:0b=0.30:1a=0.12:1b=0.30:2a=0.12:2b=0.30:s=15"
 
 [ -f "$SRC" ] || { echo "missing master: $SRC" >&2; exit 1; }
-[ -x "$BIN" ] || { echo "Upscayl not installed (brew install --cask upscayl)" >&2; exit 1; }
+[ -x "$BIN" ] || { echo "Upscayl binary not found at $BIN (install Upscayl, or set UPSCAYL_BIN / UPSCAYL_MODELS)" >&2; exit 1; }
 [ -f "$MODELS/$MODEL.param" ] || {
   echo "unknown model: $MODEL (have: $(ls "$MODELS" | sed 's/\..*//' | sort -u | tr '\n' ' '))" >&2; exit 1; }
 

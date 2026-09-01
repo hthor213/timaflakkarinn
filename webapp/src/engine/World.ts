@@ -138,12 +138,29 @@ export class World {
     this.lastFaceUnderMouse = face;
   }
 
+  /**
+   * Finger allowance for a touch pointer, in logical pixels. 22 CSS px is
+   * half of Apple's 44pt minimum touch target; scaling it by the canvas fit
+   * makes it the same PHYSICAL size on every screen — a fixed logical radius
+   * would be generous on a desktop touchscreen and useless on a phone, where
+   * one logical pixel renders well under a CSS pixel. Mouse and pen are
+   * exact: precision is what they are for. Known-issues #26.
+   */
+  private static readonly TOUCH_SLOP_CSS_PX = 22;
+
+  private touchSlop(e: PointerEvent): number {
+    if (e.pointerType !== 'touch') return 0;
+    const rect = this.canvas.getBoundingClientRect();
+    return rect.width > 0 ? World.TOUCH_SLOP_CSS_PX * (800 / rect.width) : 0;
+  }
+
   private handlePointerMove(e: PointerEvent): void {
     this.updatePointerLocation(e);
 
     // Hit test for enter/exit events
     if (this.currentScene) {
-      this.setFaceUnderPointer(this.currentScene.getActorFaceAt(this.mouseX, this.mouseY));
+      this.setFaceUnderPointer(
+        this.currentScene.getActorFaceAt(this.mouseX, this.mouseY, this.touchSlop(e)));
     }
   }
 
@@ -154,19 +171,24 @@ export class World {
     // later one wherever the previous tap happened to land.
     this.updatePointerLocation(e);
 
+    const slop = this.touchSlop(e);
+
     // Pair the enter with the tap. A mouse would have moved here first, a
     // finger did not — without this a tapped actor never gets its onEntered,
     // and the next pointer event reports an exit from something never entered.
     if (this.currentScene) {
-      this.setFaceUnderPointer(this.currentScene.getActorFaceAt(this.mouseX, this.mouseY));
+      this.setFaceUnderPointer(
+        this.currentScene.getActorFaceAt(this.mouseX, this.mouseY, slop));
     }
 
     this.onMouseClicked?.(this.mouseX, this.mouseY, e.button);
 
     // Re-read the scene: onMouseClicked can switch it, and the click below has
     // always been dispatched against whatever scene is current afterwards.
+    // Same slop as the enter above: the actor a finger entered is the actor
+    // its tap must click.
     if (this.currentScene) {
-      const face = this.currentScene.getActorFaceAt(this.mouseX, this.mouseY);
+      const face = this.currentScene.getActorFaceAt(this.mouseX, this.mouseY, slop);
       if (face?.owner) {
         face.owner.onClicked?.(face.owner);
         this.onActorClicked?.(face.owner, e.button);

@@ -1,0 +1,16 @@
+{
+  "him": null,
+  "mode": "classic",
+  "pins": [],
+  "publishedAt": "2026-08-14T07:29:29+00:00",
+  "savedAt": "2026-08-14T07:45:00Z",
+  "scene": "s_HjaBryta",
+  "terrain": "t_HjaBrytal",
+  "values": {
+    "a": 425.0,
+    "b": 570.0,
+    "d": 0.85,
+    "s": 1.0
+  },
+  "version": 1
+}

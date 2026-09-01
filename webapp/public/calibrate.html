@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8">
+<title>Tímaflakkarinn — perspective calibration</title>
+<!--
+  Per-background perspective calibration, and a look at the four layers.
+
+  WHAT IT PRODUCES. The engine's entire notion of depth on a terrain is four
+  numbers:
+
+      <SimplePseudo3DTerrain defaultscaling="D" scanline1="A"
+                             scanline2="B" scaling2="S"/>
+
+  The character is D times size at screen line A and S times at line B, linear
+  in between and beyond (Terrain.setScalingParameters / getScaling). Nothing
+  else is consumed. So calibrating a background means: put him on two lines,
+  size him until each looks right, copy the four numbers into the GML.
+
+  47 of the 70 scene terrains have no ramp at all and scale by a constant, which
+  is why characters do not shrink with depth. Two of the calibrated ones are
+  suspect -- t_HjaVolvul ramps 1.031x where perspective wants about 1.63x.
+
+  THE VANISHING POINT. The engine's scale is linear in y -- and so is a pinhole
+  camera over a flat floor, with scale hitting zero exactly at the horizon. The
+  lerp's zero IS the vanishing line: the four numbers have always encoded a
+  perspective camera, whether 1998 knew it or not. So the horizon is drawn as a
+  derived, draggable line; dragging it keeps the front anchor (scanline1,
+  defaultscaling) and rewrites scaling2 = d*(b-yh)/(a-yh). One size judgement at
+  the front plus one horizon replaces guessing both scalings. The grid rails
+  converge on the VP, and the depth lines sit at equal ground steps -- for a
+  flat floor 1/(y-yh) advances by a constant per step, no focal length needed.
+  "Show him" drops the real player sprite on the plane, draggable, scaling
+  continuously by getScaling's own formula: the does-that-look-right check.
+
+  THE PINS. The resize is the interaction, the plane is the output. Park him
+  beside any reference the art offers, scroll him to the right size, and
+  double-click to pin that judgement -- a size for a position. Two pins ARE
+  the engine's plane and are written into the four numbers exactly. Three or
+  more are least-squared, and additionally fit the full plane k = px + qy + r,
+  whose zero line is a vanishing line that may tilt: lateral perspective the
+  engine cannot express. That tilt and the fit residual are recorded for the
+  remaster, and tell you whether the painted floor is a plane at all.
+
+  CLASSIC / MODERN. One interface, two models, the same pins -- the owner's
+  "we do it all at once". Classic previews what the 1999 engine can express:
+  getScaling is a*y + b (verified in Terrain.ts:50 and the decompiled Java),
+  front-to-back only, no lateral term. Modern previews the terrain the pins
+  define: a thin-plate spline -- three pins are exactly the (possibly tilted)
+  plane, every further pin bends the ground locally through its judgement.
+  The plane grid gives way to iso-scale contours, straight where the ground is
+  planar and bending where it is not. In Modern the wheel sets a PENDING size
+  and only double-click writes -- the pins ARE the modern format; the four
+  numbers keep tracking the best linear fit, so one session yields both.
+
+  THE METRE TOOL is not consumed by the engine and is not needed to fix the
+  classic game. It is for the remaster: click two points on the ground, say how
+  far apart they are, and the page can show the character standing N metres
+  back. That is the "does that look right?" check, and it is the beginning of a
+  metric ground plane for 2.8D.
+
+  LAYERS, per the owner's model: (a) the plate, (b) objects the character can
+  never get behind, (c) objects he can walk behind, (d) characters. (b) and (c)
+  are decided in tools/pipeline/scene-index.py by asking whether the walkable
+  polygon reaches further back than the object AT THE OBJECT'S OWN X -- 68 are
+  (b), 49 are (c). Only (c) needs real depth in the remaster; (b) can be baked
+  onto the plate.
+
+  Dev tool. Deployed to tt-dev only (Caddy rewrites /calibrate there); it is
+  not part of the game. SAVE and PUBLISH go through /calibrate/api/*, which
+  Caddy proxies to tools/calibrate_server.py on the box — save writes a
+  git-tracked sidecar (web_import/calib/<terrain>.json) so a calibration can
+  be authored across sittings; publish writes the .gml master, commits,
+  pushes and redeploys tt-dev. Under `npm run dev` there is no such proxy, so
+  the two buttons only work on tt-dev.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #14100c; color: #e8dcc0; font: 13px/1.45 system-ui, sans-serif; display: flex; height: 100vh; }
+  aside { width: 240px; flex: 0 0 auto; overflow-y: auto; border-right: 1px solid #3a3025; padding: 10px; }
+  aside h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8d7a55; margin: 12px 0 4px; }
+  aside button { display: block; width: 100%; text-align: left; padding: 5px 7px; border: 0; border-radius: 3px;
+                 background: transparent; color: #e8dcc0; font: inherit; cursor: pointer; }
+  aside button:hover { background: #241c12; }
+  aside button.on { background: #c8a040; color: #14100c; }
+  aside .dot { float: right; font-size: 11px; }
+  aside .no { color: #d08a5a; }
+  aside .wip { color: #c8a040; }
+  main { flex: 1 1 auto; display: flex; flex-direction: row; min-width: 0; }
+  #center { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+  /* Controls live in a right-hand panel beside the stage -- a laptop screen
+     cut a single top row off after Reset; the space to the right of the game
+     was free the whole time. */
+  #ctrl { width: 200px; flex: 0 0 auto; border-left: 1px solid #3a3025; padding: 10px;
+          overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+  #ctrl h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8d7a55; margin: 8px 0 0; }
+  #ctrl label { color: #8d7a55; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  #ctrl input[type=number] { width: 72px; background: #241c12; color: #e8dcc0; border: 1px solid #5a4526;
+                             border-radius: 3px; padding: 3px 5px; font: inherit; }
+  #ctrl label.chk { justify-content: flex-start; color: #e8dcc0; }
+  #ctrl button { background: #c8a040; color: #14100c; border: 0; border-radius: 3px; padding: 6px 10px;
+                 font: inherit; font-weight: 600; cursor: pointer; width: 100%; text-align: center; }
+  #ctrl button.ghost { background: transparent; color: #c8a040; border: 1px solid #5a4526; font-weight: 400; }
+  #ctrl button.ghost.on { background: #c8a040; color: #14100c; font-weight: 600; }
+  #ctrl .duo { display: flex; gap: 6px; }
+  #title { font-weight: 600; }
+  #wrap { flex: 1 1 auto; overflow: auto; padding: 14px; }
+  #stage { position: relative; transform-origin: top left; }
+  #stage img.bg { display: block; image-rendering: pixelated; }
+  .obj { position: absolute; border: 1px solid; font-size: 10px; color: #fff; pointer-events: none;
+         text-shadow: 0 0 3px #000; }
+  .obj.b { border-color: #6aa9ff; background: rgba(106,169,255,.10); }
+  .obj.c { border-color: #ffa04a; background: rgba(255,160,74,.10); }
+  .obj span { position: absolute; top: -1px; left: 1px; }
+  .scan { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #c8a040; cursor: ns-resize; }
+  .scan b { position: absolute; left: 4px; top: -16px; font-size: 11px; color: #c8a040; background: #14100c; padding: 0 4px; }
+  .scan.hz { border-top: 1px solid #6aa9ff; }
+  .scan.hz b { color: #6aa9ff; left: auto; right: 4px; }
+  .vp { position: absolute; width: 11px; height: 11px; margin: -6px 0 0 -6px; border: 1px solid #6aa9ff;
+        background: rgba(106,169,255,.35); cursor: move; }
+  .char { position: absolute; image-rendering: pixelated; transform-origin: bottom left; pointer-events: none; }
+  .char.ghost { opacity: .5; filter: hue-rotate(150deg); }
+  .char.free { pointer-events: auto; cursor: grab; transform-origin: 50% 100%; }
+  .char.pin { pointer-events: auto; cursor: pointer; transform-origin: 50% 100%;
+              opacity: .45; filter: sepia(1) saturate(2.5) hue-rotate(-25deg); }
+  .tag.warm { color: #d08a5a; }
+  .box { position: absolute; border: 1px dashed rgba(232,220,192,.8); pointer-events: none; }
+  .hnd { position: absolute; width: 9px; height: 9px; margin: -5px 0 0 -5px;
+         background: #e8dcc0; border: 1px solid #14100c; }
+  .tag { position: absolute; font-size: 11px; color: #6aa9ff; background: #14100c; padding: 0 4px; pointer-events: none; }
+  svg.grid { position: absolute; inset: 0; pointer-events: none; }
+  svg.poly { position: absolute; inset: 0; pointer-events: none; }
+  /* Fixed height, its own scrollbar: the readout must not eat the stage's
+     room, and fitZoom needs the wrap's size to be stable before render. */
+  #out { border-top: 1px solid #3a3025; padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 12px;
+         color: #9fd08a; white-space: pre-wrap; word-break: break-all;
+         height: 150px; flex: 0 0 auto; overflow-y: auto; }
+  #hint { color: #8d7a55; padding: 0 12px 8px; font-size: 12px; }
+</style>
+</head>
+<body>
+<aside id="list"></aside>
+<main>
+  <div id="center">
+    <div id="wrap"><div id="stage"></div></div>
+    <div id="hint"></div>
+    <pre id="out"></pre>
+  </div>
+  <div id="ctrl">
+    <span id="title"></span>
+    <div class="duo"><button class="ghost on" id="mClassic">Classic</button><button class="ghost" id="mModern">Modern</button></div>
+    <h3>terrain</h3>
+    <label>defaultscaling <input type="number" id="d" step="0.01" min="0.05" max="4"></label>
+    <label>scanline1 <input type="number" id="a" step="1"></label>
+    <label>scaling2 <input type="number" id="s" step="0.01" min="0.05" max="4"></label>
+    <label>scanline2 <input type="number" id="b" step="1"></label>
+    <label>zoom <input type="number" id="z" step="0.05" min="0.2" max="3" value="1"></label>
+    <h3>actions</h3>
+    <button id="save">Save</button>
+    <button id="publish">Publish → tt-dev</button>
+    <button id="copy">Copy GML</button>
+    <button class="ghost" id="fit">Fit to window</button>
+    <button class="ghost" id="reset">Reset</button>
+    <button class="ghost" id="clearPins">Clear pins</button>
+    <button class="ghost" id="metre">Set scale (2 clicks)</button>
+    <button class="ghost" id="him">Show him</button>
+    <h3>show</h3>
+    <label class="chk"><input type="checkbox" id="showRef" checked> him in game</label>
+    <label class="chk"><input type="checkbox" id="showPins" checked> pins</label>
+    <label class="chk"><input type="checkbox" id="showGrid" checked> grid</label>
+    <label class="chk"><input type="checkbox" id="showObjs" checked> objects</label>
+    <label class="chk"><input type="checkbox" id="showPoly" checked> walkable</label>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+let scenes = {}, cur = null, curT = null, metrePts = [], metres = null, zoom = 1;
+let him = null;      // {x, y}: feet of the draggable check figure, world px
+let vpx = null;      // vanishing point x -- visual only, the engine has no lateral term
+let draftYh = null;  // horizon guess while the terrain is still flat (d === s)
+let pins = [];       // {x, y, k} size judgements, pinned by double-clicking him
+let mode = 'classic'; // classic: y-ramp, the engine's plane · modern: TPS terrain through the pins
+let tpsCache = null;  // solved spline, invalidated when the pins change
+let dirty = false;    // judgements newer than the last save -- the Save button wears a dot
+let wip = {};         // terrain -> sidecar summary, from GET /calib; drives the ● in the list
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+fetch('/scene-index.json').then(r => r.json()).then(d => {
+  scenes = d;
+  buildList();
+  const first = Object.values(scenes).find(s => s.terrains.some(t => t.polygon.length));
+  select(first ? first.name : Object.keys(scenes)[0]);
+});
+
+/* ---- save / publish -------------------------------------------------------
+   The write path. Save puts the whole judgement state (pins, mode, the four
+   numbers, him, the VP) in a git-tracked sidecar on the box, so a scene can
+   be calibrated across sittings; Publish writes the .gml master, commits,
+   pushes, and redeploys tt-dev. Both need the token from .calib.env on
+   homeserver — asked for once, kept in localStorage. Background loads never
+   prompt: browsing scenes must not nag for a token. */
+const API = '/calibrate/api';
+
+function calibToken(force) {
+  let t = localStorage.getItem('calib-token') || '';
+  if (force || !t) {
+    t = (prompt('Calibration token (in ~/work/timaflakkarinn/.calib.env on homeserver):') || '').trim();
+    if (t) localStorage.setItem('calib-token', t);
+  }
+  return t;
+}
+
+async function apiCall(method, path, body, interactive) {
+  let tok = localStorage.getItem('calib-token') || '';
+  if (!tok && !interactive) return null;
+  if (!tok) tok = calibToken(true);
+  const go = t => fetch(API + path, {
+    method, headers: { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined });
+  let r = await go(tok);
+  if (r.status === 401 && interactive) r = await go(calibToken(true));
+  return r;
+}
+
+async function apiGet(path) {
+  try {
+    const r = await apiCall('GET', path, null, false);
+    return r && r.ok ? await r.json() : null;
+  } catch (e) { return null; }
+}
+
+function markActive() {
+  document.querySelectorAll('#list button').forEach(b =>
+    b.classList.toggle('on', !!cur && b.dataset.scene === cur.name));
+}
+
+function refreshSave() { $('#save').textContent = dirty ? 'Save •' : 'Save'; }
+function markDirty() { if (!dirty) { dirty = true; refreshSave(); } }
+
+function sidecarBody() {
+  return { version: 1, scene: cur.name, terrain: curT.name, mode,
+           values: vals(), pins, him, vpx,
+           savedAt: new Date().toISOString() };
+}
+
+// Restore a saved sitting. Everything select() initialises from the GML is
+// overwritten by the judgement state, which is newer by definition.
+function applySidecar(s) {
+  pins = (s.pins || []).map(p => ({ x: p.x, y: p.y, k: p.k }));
+  tpsCache = null;
+  mode = s.mode === 'modern' ? 'modern' : 'classic';
+  $('#mClassic').classList.toggle('on', mode === 'classic');
+  $('#mModern').classList.toggle('on', mode === 'modern');
+  if (s.values) {
+    $('#d').value = s.values.d; $('#a').value = s.values.a;
+    $('#b').value = s.values.b; $('#s').value = s.values.s;
+  }
+  him = s.him || null;
+  $('#him').textContent = him ? 'Hide him' : 'Show him';
+  if (s.vpx != null) vpx = s.vpx;
+  dirty = false; refreshSave();
+  $('#hint').textContent = `Resumed ${curT.name} from ${s.savedAt || 'a saved sitting'}` +
+    (s.publishedAt ? ` (last published ${s.publishedAt})` : '') + '.';
+  render();
+}
+
+async function saveWip() {
+  if (!curT) return;
+  const r = await apiCall('PUT', '/calib/' + curT.name, sidecarBody(), true);
+  if (r && r.ok) {
+    wip[curT.name] = Object.assign({}, wip[curT.name],
+                                   { scene: cur.name, pins: pins.length });
+    dirty = false; refreshSave(); buildList(); markActive();
+    $('#hint').textContent = `Saved ${curT.name} — resume any time. Publish ships it to tt-dev.`;
+  } else {
+    $('#hint').textContent = 'Save failed: ' +
+      (r ? ((await r.json().catch(() => ({}))).error || r.status) : 'no token given');
+  }
+}
+
+async function publishCalib() {
+  if (!curT) return;
+  const v = vals();
+  let resLine = '';
+  if (pins.length >= 2) {
+    // The Classic residual, per specs/000: what the linear ramp loses
+    // against the pins. Near zero -> the fix lands in both editions; large
+    // -> the pins want ground the 1999 engine cannot express, and this
+    // number is the measured price Classic pays.
+    const rms = Math.sqrt(pins.reduce((a, p) => a + (scalingAt(p.y) - p.k) ** 2, 0) / pins.length);
+    const mean = pins.reduce((a, p) => a + p.k, 0) / pins.length;
+    resLine = `\nClassic linear fit: ±${rms.toFixed(3)} (${(100 * rms / mean).toFixed(1)}% of mean pin size)`;
+  }
+  if (!confirm(`Publish ${curT.name} to tt-dev?\n\n` +
+      `defaultscaling ${v.d} · scanline1 ${v.a} · scanline2 ${v.b} · scaling2 ${v.s}\n` +
+      `${pins.length} pin(s) ride along as the XML comment${resLine}\n\n` +
+      `Writes the .gml master, commits, pushes, redeploys tt-dev (~1–2 min).`)) return;
+  const btn = $('#publish');
+  btn.disabled = true; btn.textContent = 'Publishing…';
+  $('#hint').textContent = 'Publishing — patch, commit, push, build, verify…';
+  try {
+    const r = await apiCall('POST', '/publish', sidecarBody(), true);
+    const res = r ? await r.json().catch(() => ({})) : { error: 'no token given' };
+    if (r && r.ok) {
+      curT.defaultscaling = v.d; curT.scanline1 = v.a;
+      curT.scanline2 = v.b; curT.scaling2 = v.s;
+      wip[curT.name] = Object.assign({}, wip[curT.name], { publishedAt: 'now' });
+      dirty = false; refreshSave(); buildList(); markActive();
+      $('#hint').textContent = res.deploy_ok
+        ? `Published ${curT.name}${res.commit ? ' (' + res.commit + ')' : ' (no change)'} — tt-dev is serving it. Open the scene in the game to judge it.`
+        : `Master committed${res.commit ? ' (' + res.commit + ')' : ''} but the DEPLOY FAILED — tail in the readout below.`;
+      $('#out').textContent = (res.element_after || '; master unchanged (values already there)') +
+        '\n\n; deploy ' + (res.deploy_ok ? 'ok' : 'FAILED') + '\n' + (res.deploy_tail || '');
+    } else {
+      $('#hint').textContent = 'Publish refused: ' + (res.error || (r && r.status));
+    }
+  } catch (e) {
+    $('#hint').textContent = 'Publish failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Publish → tt-dev';
+  }
+}
+
+$('#save').onclick = saveWip;
+$('#publish').onclick = publishCalib;
+addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+// WIP dots for the scene list. No token stored -> stays empty, silently.
+apiGet('/calib').then(d => {
+  if (d && d.terrains) {
+    wip = d.terrains;
+    if (Object.keys(scenes).length) { buildList(); markActive(); }
+  }
+});
+
+function buildList() {
+  const byChapter = {};
+  for (const s of Object.values(scenes)) (byChapter[s.chapter] ||= []).push(s);
+  const el = $('#list');
+  el.innerHTML = '';
+  for (const ch of Object.keys(byChapter).sort()) {
+    const h = document.createElement('h2'); h.textContent = ch; el.appendChild(h);
+    for (const s of byChapter[ch].sort((x, y) => x.name.localeCompare(y.name))) {
+      const done = s.terrains.some(t => t.scanline1);
+      // ● = a saved sitting not yet published: work exists that the GML does
+      // not have. It outranks ✓ -- resumable judgement beats shipped state.
+      const w = s.terrains.some(t => wip[t.name] && !wip[t.name].publishedAt);
+      const btn = document.createElement('button');
+      btn.dataset.scene = s.name;
+      btn.innerHTML = s.name.replace(/^s_/, '') +
+        `<span class="dot ${w ? 'wip' : done ? '' : 'no'}">${w ? '●' : done ? '✓' : '—'}</span>`;
+      btn.onclick = () => select(s.name);
+      el.appendChild(btn);
+    }
+  }
+}
+
+function select(name, noResume) {
+  // Leaving unsaved judgements is a decision, not an accident. Reset lands
+  // here too, so a dirty reset asks the same question -- correctly: it also
+  // discards.
+  if (dirty && curT &&
+      !confirm(`Unsaved judgements on ${curT.name} — discard them?`)) return;
+  dirty = false;
+  cur = scenes[name];
+  // Pick the FLOOR, not the backdrop's full-screen terrain. In order of how
+  // much the content actually tells us: terrains that host MovingActors are
+  // where characters stand (authoritative, but only 10 scenes declare any);
+  // then anything already calibrated; then the "t_Xl" naming the content uses
+  // for a floor layer; then any polygon that is not the whole screen.
+  curT = cur.terrains.find(t => t.walkable)
+      || cur.terrains.find(t => t.scanline1)
+      || cur.terrains.find(t => /l$/.test(t.name) && t.polygon.length)
+      || cur.terrains.find(t => t.polygon.length && t.polygonName !== 'p_All')
+      || cur.terrains.find(t => t.polygon.length)
+      || cur.terrains[0];
+  metrePts = []; metres = null;
+  him = null; vpx = null; draftYh = null; pins = [];
+  $('#him').textContent = 'Show him';
+  document.querySelectorAll('#list button').forEach(b => b.classList.toggle('on', b.dataset.scene === name));
+  $('#title').textContent = name + '  ·  ' + curT.name;
+  $('#d').value = curT.defaultscaling ?? 1;
+  $('#a').value = curT.scanline1 ?? Math.round(cur.height * 0.95);
+  $('#b').value = curT.scanline2 ?? Math.round(cur.height * 0.60);
+  $('#s').value = curT.scaling2 ?? (curT.defaultscaling ?? 1) * 0.7;
+  refreshSave();
+  fitZoom();
+  render();
+  // Resume a saved sitting, if one exists. Async with a race guard: by the
+  // time the sidecar arrives another scene may be on stage. Reset passes
+  // noResume -- its meaning is "back to the authored GML", and silently
+  // re-applying the sidecar would make Reset a no-op whenever a save exists.
+  if (noResume) {
+    $('#hint').textContent = 'Reset to the authored GML. Save overwrites the saved sitting; reload resumes it.';
+    return;
+  }
+  const terrain = curT.name;
+  apiGet('/calib/' + terrain).then(s => {
+    if (s && curT && curT.name === terrain) applySidecar(s);
+  });
+}
+
+function vals() {
+  return { d: +$('#d').value, a: +$('#a').value, b: +$('#b').value, s: +$('#s').value };
+}
+
+function render() {
+  if (!cur) return;
+  const v = vals();
+  zoom = +$('#z').value || 1;
+  const st = $('#stage');
+  st.style.transform = `scale(${zoom})`;
+  st.style.width = cur.width + 'px';
+  st.style.height = cur.height + 'px';
+  st.innerHTML = '';
+
+  const bg = document.createElement('img');
+  bg.className = 'bg'; bg.src = cur.background; bg.width = cur.width; bg.height = cur.height;
+  st.appendChild(bg);
+
+  if ($('#showPoly').checked && curT.polygon.length) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'poly');
+    svg.setAttribute('width', cur.width); svg.setAttribute('height', cur.height);
+    const pg = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    pg.setAttribute('points', curT.polygon.map(p => p.join(',')).join(' '));
+    pg.setAttribute('fill', 'rgba(120,190,30,.12)');
+    pg.setAttribute('stroke', '#78be1e');
+    svg.appendChild(pg); st.appendChild(svg);
+  }
+
+  if ($('#showObjs').checked) for (const o of (cur.objects || [])) {
+    const d = document.createElement('div');
+    d.className = 'obj ' + o.layer;
+    // Actors are top-left anchored at (x, y - z), the same rule the backdrop
+    // follows: it sits at (0,-1,-1) and lands at (0,0).
+    d.style.left = o.x + 'px';
+    d.style.top = (o.y - o.z) + 'px';
+    d.style.width = (o.w || 20) + 'px';
+    d.style.height = (o.h || 20) + 'px';
+    d.innerHTML = `<span>${o.layer}·${o.name.replace(/^a_/, '')}</span>`;
+    st.appendChild(d);
+  }
+
+  // The vanishing line and its grid. Drawn before the scanlines so their
+  // handles stay on top. In Modern the plane grid gives way to the terrain's
+  // own contours, and the horizon handle with it -- the field is set by pins.
+  const yh = impliedHorizon() ?? (draftYh ??= Math.round(cur.height * 0.4));
+  if (vpx === null) vpx = Math.round(cur.width / 2);
+  if ($('#showGrid').checked && mode === 'modern') st.appendChild(carpetSvg());
+  if ($('#showGrid').checked && mode === 'classic' && yh < cur.height - 20) {
+    st.appendChild(grid(yh));
+    // A weak ramp puts the implied horizon far above the frame (Extro:
+    // y=-530). The grid uses the true value; the handle is clamped into the
+    // frame so it can still be grabbed and dragged where it belongs.
+    const yhDisp = clamp(yh, 8, cur.height - 24);
+    const hz = document.createElement('div');
+    hz.className = 'scan hz'; hz.style.top = yhDisp + 'px';
+    hz.innerHTML = `<b>horizon ${Math.round(yh)} · 0×` +
+      (impliedHorizon() === null ? ' · drag to set the ramp' : yhDisp !== yh ? ' · off-frame, drag down' : '') + '</b>';
+    hz.onpointerdown = dragHorizon;
+    st.appendChild(hz);
+    const vp = document.createElement('div');
+    vp.className = 'vp'; vp.style.left = vpx + 'px'; vp.style.top = yhDisp + 'px';
+    vp.onpointerdown = dragVP;
+    st.appendChild(vp);
+  }
+
+  for (const [line, scale, label] of [[v.a, v.d, 'scanline1'], [v.b, v.s, 'scanline2']]) {
+    const ln = document.createElement('div');
+    ln.className = 'scan'; ln.style.top = line + 'px';
+    ln.innerHTML = `<b>${label} ${Math.round(line)} · ${scale.toFixed(3)}×</b>`;
+    ln.onpointerdown = e => drag(e, label === 'scanline1' ? '#a' : '#b');
+    st.appendChild(ln);
+  }
+
+  // The in-game reference pair, blue: how getScaling sizes him at the nearest
+  // and farthest WALKABLE spots. It used to stand on the raw scanlines, but
+  // 1998 authored some of those beyond the room (t_HjaVolvul: scanline2=800 in
+  // a 600-high room), and a reference below the frame is no reference.
+  if ($('#showRef').checked) for (const [pt, label] of refPoints()) {
+    const k = fieldAt(pt[0], pt[1]);
+    const g = character(pt[1], k, true);
+    g.style.left = pt[0] + 'px';
+    st.appendChild(g);
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.style.left = (pt[0] + 8) + 'px'; tag.style.top = (pt[1] + 4) + 'px';
+    tag.textContent = `in game, ${label} · ${k.toFixed(3)}×`;
+    st.appendChild(tag);
+  }
+
+  // The pinned judgements, sepia. Each keeps the size it was given -- pins are
+  // samples, the fit moves the numbers, never the evidence. Hideable: a scene
+  // full of figures makes the terrain unreadable, and hiding the evidence
+  // does not remove it.
+  if ($('#showPins').checked) for (let i = 0; i < pins.length; i++) {
+    const pn = pins[i];
+    const img = document.createElement('img');
+    img.className = 'char pin';
+    const sprite = playerSprite();
+    img.src = sprite ? chromaKey(sprite).url : '';
+    img.style.left = pn.x + 'px'; img.style.top = pn.y + 'px';
+    img.style.transform = `translate(-50%,-100%) scale(${pn.k})`;
+    img.title = 'click to remove';
+    img.onpointerdown = e => { e.stopPropagation(); pins.splice(i, 1); fitPins(); };
+    st.appendChild(img);
+    const tag = document.createElement('div');
+    tag.className = 'tag warm';
+    tag.style.left = (pn.x + 8) + 'px'; tag.style.top = (pn.y + 4) + 'px';
+    tag.textContent = `pin ${pn.k.toFixed(3)}×`;
+    st.appendChild(tag);
+  }
+
+  if (him) {
+    // In Modern a wheel-resize is a PENDING judgement (him.k) until pinned --
+    // the pins are the modern format, nothing else is written. Classic writes
+    // the four numbers on the spot, so there him.k stays null.
+    const k = Math.max(0.02, him.k ?? fieldAt(him.x, him.y));
+    const img = document.createElement('img');
+    img.className = 'char free';
+    const sprite = playerSprite();
+    img.src = sprite ? chromaKey(sprite).url : '';
+    img.style.left = him.x + 'px';
+    img.style.top = him.y + 'px';
+    img.style.transform = `translate(-50%,-100%) scale(${k})`;
+    img.onpointerdown = dragHim;
+    img.onwheel = wheelHim;
+    img.ondblclick = () => {
+      const near = pins.find(pn => Math.hypot(pn.x - him.x, pn.y - him.y) < 8);
+      if (near) near.k = k; else pins.push({ x: him.x, y: him.y, k });
+      him.k = null;
+      fitPins();
+    };
+    st.appendChild(img);
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.style.left = (him.x + 8) + 'px'; tag.style.top = (him.y + 4) + 'px';
+    tag.textContent = `y ${Math.round(him.y)} · ${k.toFixed(3)}×` +
+      (him.k != null && mode === 'modern' ? ' · PENDING — dblclick to pin · shift-drag keeps it' : ' · drag a corner to size · dblclick to pin');
+    st.appendChild(tag);
+
+    // Photoshop-style bounding box: corner handles resize him, proportions
+    // locked by construction (one scale factor). For the Magic Mouse, whose
+    // scroll is too twitchy to size with -- the wheel still works too.
+    const dims = sprite ? chromaKey(sprite) : null;
+    if (dims && dims.w) {
+      const bw = dims.w * k, bh = dims.h * k;
+      const box = document.createElement('div');
+      box.className = 'box';
+      box.style.left = (him.x - bw / 2) + 'px';
+      box.style.top = (him.y - bh) + 'px';
+      box.style.width = bw + 'px'; box.style.height = bh + 'px';
+      st.appendChild(box);
+      for (const [hx, hy, cursor] of [[0, 0, 'nwse'], [1, 0, 'nesw'], [0, 1, 'nesw'], [1, 1, 'nwse']]) {
+        const hd = document.createElement('div');
+        hd.className = 'hnd';
+        hd.style.left = (him.x - bw / 2 + hx * bw) + 'px';
+        hd.style.top = (him.y - bh + hy * bh) + 'px';
+        hd.style.cursor = cursor + '-resize';
+        hd.onpointerdown = e => dragScale(e, k);
+        st.appendChild(hd);
+      }
+    }
+  }
+
+  // With three or more pins the art gets a say the engine cannot express: the
+  // full plane k = px + qy + r, whose zero is a vanishing LINE that may tilt.
+  const pf = planeFit();
+  if (pf && $('#showGrid').checked && Math.abs(pf.q) > 1e-9) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'grid');
+    svg.setAttribute('width', cur.width); svg.setAttribute('height', cur.height);
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', 0); l.setAttribute('y1', -pf.r / pf.q);
+    l.setAttribute('x2', cur.width); l.setAttribute('y2', -(pf.p * cur.width + pf.r) / pf.q);
+    l.setAttribute('stroke', '#d08a5a'); l.setAttribute('stroke-dasharray', '6 4');
+    svg.appendChild(l); st.appendChild(svg);
+  }
+
+  // "N metres back" ghost, once a scale is known. Perspective-correct when a
+  // horizon exists: equal ground steps are equal steps in 1/(y-yh), the same
+  // rule the grid uses. Linear fallback when the terrain is flat.
+  if (metres && metres.pxPerM) {
+    const ih = impliedHorizon();
+    let backY;
+    if (ih !== null && v.a - metres.pxPerM > ih) {
+      const u = y => 1 / (y - ih);
+      backY = ih + 1 / (u(v.a) + 5 * (u(v.a - metres.pxPerM) - u(v.a)));
+    } else {
+      backY = v.a - 5 * metres.pxPerM;
+    }
+    if (backY > 0) {
+      const g = character(backY, scalingAt(backY), true);
+      st.appendChild(g);
+    }
+  }
+
+  out();
+}
+
+// The engine's scale is linear in y; a pinhole camera over a flat floor is
+// linear in y too, reaching zero AT the horizon. The lerp's zero is therefore
+// the vanishing line: yh = (s*a - d*b)/(s - d). Null when flat (no ramp).
+function impliedHorizon() {
+  const v = vals();
+  if (v.d === v.s || v.a === v.b) return null;
+  const yh = (v.s * v.a - v.d * v.b) / (v.s - v.d);
+  return yh < Math.min(v.a, v.b) ? yh : null;   // a "horizon" below the floor is an inverted ramp, not a camera
+}
+
+// Drag the horizon: the front anchor (scanline1, defaultscaling) holds, and
+// scaling2 is derived instead of guessed. scale(y) ∝ (y - yh).
+function setHorizon(yh) {
+  markDirty();
+  const v = vals();
+  yh = Math.min(yh, Math.min(v.a, v.b) - 10);
+  $('#s').value = Math.max(0.02, v.d * (v.b - yh) / (v.a - yh)).toFixed(3);
+  draftYh = null;
+  render();
+}
+
+function grid(yh) {
+  const W = cur.width, H = cur.height;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'grid');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const add = (x1, y1, x2, y2, op) => {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', `rgba(106,169,255,${op})`);
+    svg.appendChild(l);
+  };
+  // Cell size at the bottom edge: 1 metre when the metre tool has run.
+  const S = Math.min(metres?.pxPerM || Math.round(W / 10), (H - yh) / 2);
+  for (let i = -Math.ceil(W / S); i <= Math.ceil(W / S); i++)
+    add(vpx + i * S, H, vpx, yh, .4);                     // rails, converging on the VP
+  const u0 = 1 / (H - yh), du = 1 / (H - S - yh) - u0;    // equal ground steps: 1/(y-yh) is arithmetic
+  for (let n = 0, y = H; n < 80 && y > yh + 3; n++) {
+    y = yh + 1 / (u0 + n * du);
+    add(0, y, W, y, n ? .3 : .5);
+  }
+  return svg;
+}
+
+// Where the reference pair stands: the walkable polygon's nearest and farthest
+// vertices, clamped into frame. Falls back to the scanlines (clamped) when the
+// terrain has no polygon.
+function refPoints() {
+  const cl = p => [clamp(p[0], 50, cur.width - 50), clamp(p[1], 20, cur.height)];
+  if (curT.polygon.length >= 3) {
+    // Stand INSIDE the polygon -- he cannot leave it in the game, so a
+    // reference outside it lies. Centroid x was not enough: at the extreme y
+    // the centroid's column can be outside entirely (s_Extro's bottom corner,
+    // s_Logberg's far ghost on the hillside). Intersect a horizontal line just
+    // inside the extreme y with the polygon and stand mid-span, which is
+    // inside by construction.
+    const ys = curT.polygon.map(p => p[1]);
+    // Walk inward from the extreme until the line cuts a real span. The +0.5
+    // dodges vertices sitting exactly on the sample line, whose crossing
+    // parity otherwise double-counts (t_HjaVolvul put the near figure outside).
+    // Clip each span to the visible frame BEFORE the midpoint: p_HjaVolvu runs
+    // to x=1201 in an 800-wide room, so the polygon's own middle can be
+    // off-canvas, and clamping after the fact pushed him back outside it.
+    const pick = (from, dir) => {
+      for (let off = 6; off <= 60; off += 4) {
+        const y0 = from + dir * off + 0.5;
+        const span = widestSpanAt(y0);
+        if (!span) continue;
+        const lo = Math.max(span[0], 50), hi = Math.min(span[1], cur.width - 50);
+        if (hi - lo > 24) return [(lo + hi) / 2, y0];
+      }
+      return null;
+    };
+    const near = pick(Math.max(...ys), -1), far = pick(Math.min(...ys), +1);
+    if (near && far) return [[cl(near), 'near'], [cl(far), 'far']];
+  }
+  const v = vals();
+  return [[cl([cur.width * 0.35, v.a]), 'near'], [cl([cur.width * 0.65, v.b]), 'far']];
+}
+
+// The widest interior interval of the walkable polygon on the horizontal line
+// y = y0, by edge crossing parity. Null when the line misses the polygon.
+function widestSpanAt(y0) {
+  const P = curT.polygon, xs = [];
+  for (let i = 0; i < P.length; i++) {
+    const [x1, y1] = P[i], [x2, y2] = P[(i + 1) % P.length];
+    if ((y1 <= y0) !== (y2 <= y0)) xs.push(x1 + (y0 - y1) * (x2 - x1) / (y2 - y1));
+  }
+  xs.sort((a, b) => a - b);
+  let best = null;
+  for (let i = 0; i + 1 < xs.length; i += 2)
+    if (!best || xs[i + 1] - xs[i] > best[1] - best[0]) best = [xs[i], xs[i + 1]];
+  return best;
+}
+
+// The player sprite is the same figure in every chapter; a scene that never
+// shows him (s_Extro, s_Intro) has none in the index, so borrow one -- the
+// button must not silently do nothing.
+function playerSprite() {
+  if (cur.player) return cur.player;
+  for (const s of Object.values(scenes)) if (s.player) return s.player;
+  return null;
+}
+
+function scalingAt(y) {
+  const v = vals();
+  if (v.a === v.b) return v.d;
+  const aCoef = (v.d - v.s) / (v.a - v.b);
+  const bCoef = v.s - aCoef * v.b;
+  return aCoef * y + bCoef;
+}
+
+// The sprites are chroma-keyed green plates; the game keys them at load. Do the
+// same here or the character shows as a green slab and you cannot judge his size
+// against the art at all.
+const keyed = new Map();
+function chromaKey(src) {
+  if (keyed.has(src)) return keyed.get(src);
+  const out = { url: src, w: 0, h: 0 };
+  keyed.set(src, out);
+  const im = new Image();
+  im.onload = () => {
+    out.w = im.naturalWidth; out.h = im.naturalHeight;
+    const c = document.createElement('canvas');
+    c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const g = c.getContext('2d');
+    g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height);
+    const px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      // Generous on purpose: this is a preview, and the 1998 plates carry
+      // palette drift around the key (known-issues #4).
+      if (px[i + 1] > 150 && px[i] < 130 && px[i + 2] < 130) px[i + 3] = 0;
+    }
+    g.putImageData(d, 0, 0);
+    out.url = c.toDataURL();
+    render();
+  };
+  im.src = src;
+  return out;
+}
+
+function character(y, scale, ghost) {
+  const img = document.createElement('img');
+  img.className = 'char' + (ghost ? ' ghost' : '');
+  const sprite = playerSprite();
+  img.src = sprite ? chromaKey(sprite).url : '';
+  img.style.left = (cur.width * 0.5) + 'px';
+  img.style.top = y + 'px';
+  img.style.transform = `translateY(-100%) scale(${scale})`;
+  return img;
+}
+
+function drag(e, sel) {
+  e.preventDefault();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => {
+    $(sel).value = Math.round(clamp((ev.clientY - st.top) / zoom, 0, cur.height));
+    render();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+function dragHorizon(e) {
+  e.preventDefault();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => setHorizon((ev.clientY - st.top) / zoom);
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+function dragVP(e) {
+  e.preventDefault(); e.stopPropagation();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => {
+    vpx = Math.round(clamp((ev.clientX - st.left) / zoom, -cur.width, cur.width * 2));
+    setHorizon((ev.clientY - st.top) / zoom);
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+// Resize him in place: the judgement "he is THIS big HERE" -- made against
+// whatever reference the art offers, walkable or not -- is written back into
+// the ramp. On scanline1 it sets defaultscaling itself; anywhere else the
+// line through the front anchor and this (y, scale) point is evaluated at
+// scanline2. The in-game reference pair re-renders as the consequence.
+// One write path for every sizing gesture (wheel, corner drag). Modern: the
+// size is a pending judgement; only pinning writes. Classic: written on the
+// spot -- on scanline1 into defaultscaling, elsewhere solved into scaling2.
+function applySize(k) {
+  markDirty();
+  k = Math.max(0.02, k);
+  if (mode === 'modern') {
+    him.k = k;
+  } else {
+    const v = vals();
+    if (Math.abs(him.y - v.a) < 15) $('#d').value = k.toFixed(3);
+    else $('#s').value = Math.max(0.02, v.d + (k - v.d) * (v.b - v.a) / (him.y - v.a)).toFixed(3);
+  }
+  render();
+}
+
+function wheelHim(e) {
+  e.preventDefault();
+  const fac = e.deltaY < 0 ? 1.02 : 1 / 1.02;
+  applySize((mode === 'modern' ? (him.k ?? fieldAt(him.x, him.y)) : scalingAt(him.y)) * fac);
+}
+
+// Corner-handle resize, anchored at his feet: the new scale is the ratio of
+// the pointer's distance from the anchor to where the grab started.
+function dragScale(e, k0) {
+  e.preventDefault(); e.stopPropagation();
+  const st = $('#stage').getBoundingClientRect();
+  const ax = st.left + him.x * zoom, ay = st.top + him.y * zoom;
+  const d0 = Math.max(8, Math.hypot(e.clientX - ax, e.clientY - ay));
+  const move = ev => applySize(k0 * Math.hypot(ev.clientX - ax, ev.clientY - ay) / d0);
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+// Two pins make the plane exactly; more make it least-squares in y. The
+// engine's anchor lines stay put -- the fitted line is written as new values
+// AT scanline1 and scanline2, which is the same line in the engine's terms.
+function fitPins() {
+  markDirty();
+  if (pins.length >= 2) {
+    const n = pins.length;
+    let sy = 0, sk = 0, syy = 0, syk = 0;
+    for (const { y, k } of pins) { sy += y; sk += k; syy += y * y; syk += y * k; }
+    const den = n * syy - sy * sy;
+    if (Math.abs(den) > 1e-6) {
+      const al = (n * syk - sy * sk) / den, be = (sk - al * sy) / n;
+      const v = vals();
+      $('#d').value = Math.max(0.02, al * v.a + be).toFixed(3);
+      $('#s').value = Math.max(0.02, al * v.b + be).toFixed(3);
+    }
+  }
+  render();
+}
+
+// Least-squares plane k = px + qy + r over all pins -- the "size for each
+// position" the owner described. The engine consumes none of the x term; the
+// tilt and residual are for the remaster, and for judging whether the art's
+// floor is really a plane at all.
+function planeFit() {
+  if (pins.length < 3) return null;
+  let Sxx = 0, Sxy = 0, Sx = 0, Syy = 0, Sy = 0, Sxk = 0, Syk = 0, Sk = 0;
+  for (const { x, y, k } of pins) {
+    Sxx += x * x; Sxy += x * y; Sx += x; Syy += y * y; Sy += y;
+    Sxk += x * k; Syk += y * k; Sk += k;
+  }
+  const A = [[Sxx, Sxy, Sx], [Sxy, Syy, Sy], [Sx, Sy, pins.length]];
+  const det = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+               - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+               + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(A);
+  if (Math.abs(D) < 1e-3) return null;   // collinear pins: no plane yet
+  const B = [Sxk, Syk, Sk];
+  const [p, q, r] = [0, 1, 2].map(c =>
+    det(A.map((row, i) => row.map((cell, j) => j === c ? B[i] : cell))) / D);
+  const res = Math.sqrt(pins.reduce((a, pn) => a + (p * pn.x + q * pn.y + r - pn.k) ** 2, 0) / pins.length);
+  return { p, q, r, res };
+}
+
+// One scale for any position, whichever model is active. Classic reads the
+// engine's own y-ramp; Modern reads the thin-plate spline through the pins --
+// three pins are exactly the (possibly tilted) plane, and every further pin
+// bends the terrain locally through its judgement. Fewer than three pins has
+// no surface to speak of, so Modern falls back to the ramp.
+function fieldAt(x, y) {
+  if (mode === 'modern') {
+    const f = tps();
+    if (f) return Math.max(0.02, f(x, y));
+  }
+  return Math.max(0.02, scalingAt(y));
+}
+
+function tps() {
+  if (pins.length < 3) return null;
+  const sig = JSON.stringify(pins);
+  if (tpsCache && tpsCache.sig === sig) return tpsCache.f;
+  const n = pins.length;
+  const U = r2 => r2 > 0 ? 0.5 * r2 * Math.log(r2) : 0;   // r^2 ln r, via ln(r^2)
+  const A = [], B = [];
+  for (let i = 0; i < n; i++) {
+    A[i] = [];
+    for (let j = 0; j < n; j++) {
+      const dx = pins[i].x - pins[j].x, dy = pins[i].y - pins[j].y;
+      A[i][j] = U(dx * dx + dy * dy);
+    }
+    A[i][n] = 1; A[i][n + 1] = pins[i].x; A[i][n + 2] = pins[i].y;
+    B[i] = pins[i].k;
+  }
+  for (let r = 0; r < 3; r++) {
+    A[n + r] = [];
+    for (let j = 0; j < n; j++) A[n + r][j] = r === 0 ? 1 : r === 1 ? pins[j].x : pins[j].y;
+    for (let c = 0; c < 3; c++) A[n + r][n + c] = 0;
+    B[n + r] = 0;
+  }
+  const w = solve(A, B);
+  const f = w && ((x, y) => {
+    let s = w[n] + w[n + 1] * x + w[n + 2] * y;
+    for (let i = 0; i < n; i++) {
+      const dx = x - pins[i].x, dy = y - pins[i].y;
+      s += w[i] * U(dx * dx + dy * dy);
+    }
+    return s;
+  });
+  tpsCache = { sig, f };
+  return f;
+}
+
+// Gaussian elimination with partial pivoting; null on a singular system
+// (coincident pins -- prevented at pin time, but never trusted).
+function solve(A, B) {
+  const n = B.length, M = A.map((row, i) => [...row, B[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-10) return null;
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = M[r][c] / M[c][c];
+      for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+    }
+  }
+  return M.map((row, i) => row[n] / M[i][i]);
+}
+
+// The terrain carpet, replacing iso-contours which read as "the same straight
+// lines" on any near-planar field. Rows sit at equal GROUND depth: each is
+// marched up from the last by the LOCAL scale (28 screen px per step at 1.0x),
+// so rows bunch where the ground recedes and spread where it is near. Columns
+// are a ground-step apart along each row, marched outward from centre. On a
+// plane this reproduces the classic perspective grid; a pinned hill dents it.
+function carpetSvg() {
+  const W = cur.width, H = cur.height, G = 28;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'grid');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const line = (pts, op) => {
+    let d = '', pen = false;
+    for (const p of pts) {
+      // break the polyline where it leaves the frame -- TPS extrapolation far
+      // outside the pins can march rows wildly, and svg clipping alone still
+      // draws long clipped chords through the visible area
+      if (!p || !isFinite(p[1]) || p[1] < -G * 2 || p[1] > H + G * 2) { pen = false; continue; }
+      d += (pen ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+      pen = true;
+    }
+    if (!d) return;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', `rgba(106,169,255,${op})`);
+    svg.appendChild(path);
+  };
+  const XS = []; for (let x = 0; x <= W; x += 16) XS.push(x);
+  // The carpet covers the measured ground, not the sky: extrapolating the
+  // spline much beyond the farthest pin painted a dense sheet over the top of
+  // the frame. Stop a step beyond the farthest judgement.
+  const topLimit = pins.length >= 3 ? Math.max(0, Math.min(...pins.map(pn => pn.y)) - 80) : 0;
+  const rows = [XS.map(() => H)];
+  while (rows.length < 70) {
+    const prev = rows[rows.length - 1];
+    const next = prev.map((y, i) => {
+      if (!isFinite(y)) return NaN;
+      const step = G * fieldAt(XS[i], clamp(y, 0, H));
+      // a step under 3px is ground at the horizon -- stop marching there
+      return step < 3 || y - step < topLimit ? NaN : y - step;
+    });
+    if (next.every(y => !isFinite(y))) break;
+    rows.push(next);
+  }
+  const yAt = (row, x) => {
+    const i = clamp(Math.floor(x / 16), 0, XS.length - 2), t = (x - XS[i]) / 16;
+    return row[i] * (1 - t) + row[i + 1] * t;
+  };
+  for (let n = 0; n < rows.length; n++)
+    line(XS.map((x, i) => [x, rows[n][i]]), n ? .3 : .5);
+  // columns: tick j of each row connected across rows, both sides of centre
+  for (const dir of [1, -1]) {
+    const ticks = rows.map(row => {
+      const r = [];
+      let x = W / 2;
+      for (let j = 0; j < 45 && x >= -G && x <= W + G; j++) {
+        r.push([x, yAt(row, clamp(x, 0, W))]);
+        x += dir * G * fieldAt(clamp(x, 0, W), clamp(yAt(row, clamp(x, 0, W)), 0, H));
+      }
+      return r;
+    });
+    const most = Math.max(...ticks.map(t => t.length));
+    for (let j = dir === 1 ? 0 : 1; j < most; j++)
+      line(ticks.map(t => t[j]), .3);
+  }
+  return svg;
+}
+
+function dragHim(e) {
+  e.preventDefault();
+  const st = $('#stage').getBoundingClientRect();
+  const move = ev => {
+    markDirty();          // his spot is saved state: parked beside a reference
+    him.x = clamp((ev.clientX - st.left) / zoom, 0, cur.width);
+    him.y = clamp((ev.clientY - st.top) / zoom, 1, cur.height);
+    // Shift-drag keeps a pending size (resize, then place, then pin); a plain
+    // drag re-reads the field so he tracks the terrain in both modes. Keeping
+    // it unconditionally froze him in Modern -- the Magic Mouse fires phantom
+    // wheel ticks while grabbing, so a pending appeared without being asked
+    // for and he stopped scaling with the grid.
+    if (!ev.shiftKey) him.k = null;
+    render();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+
+function out() {
+  const v = vals();
+  const ramp = v.a === v.b ? 1 : Math.abs(v.d / v.s);
+  $('#out').textContent =
+    `<SimplePseudo3DTerrain name="${curT.name}" scene="${cur.name}" polygon="${curT.polygonName}"\n` +
+    `\tzmin="${curT.zmin}" zmax="${curT.zmax}" defaultscaling="${v.d}"\n` +
+    `\tscanline1="${v.a}" scanline2="${v.b}" scaling2="${v.s}"/>` +
+    `\n\n; front/back size ratio ${ramp.toFixed(3)}×` +
+    (metres ? `   ·   ${metres.pxPerM.toFixed(1)} px per metre at the front` : '') +
+    `\n; implied horizon ${(() => { const h = impliedHorizon();
+      return h === null ? 'NONE — flat, characters do not shrink with depth'
+           : `y=${Math.round(h)}${h < 0 ? ' (above the frame — ramp weaker than the art’s perspective?)' : ''}`; })()}` +
+    (mode === 'modern' ? `\n; mode: MODERN preview — terrain is the thin-plate spline through the pins;` +
+      ` the four numbers above stay the best linear fit the 1999 engine can drink` : '') +
+    (pins.length ? `\n; pins: ${pins.length}${pins.length >= 2 ? ' — the four numbers are the fit through them' : ''}` +
+      (() => { const pf = planeFit();
+        return pf ? `\n; full plane from pins: lateral tilt ${(pf.p * 100).toFixed(3)}× per 100px` +
+          ` · fit ±${pf.res.toFixed(3)} — the engine has no lateral term; this is for the remaster` : ''; })() +
+      // The samples themselves ride along with Copy GML: they are the
+      // measurement, the fit is derived. 20 points up a riverbank are the
+      // ground truth a spline or the remaster's terrain mesh gets fitted
+      // through later; the classic engine only drinks the linear fit.
+      pins.map(pn => `\n; pin x=${Math.round(pn.x)} y=${Math.round(pn.y)} scale=${pn.k.toFixed(3)}`).join('')
+      : '') +
+    (curT.scanline1 ? `\n; was: scanline1="${curT.scanline1}" scanline2="${curT.scanline2}" scaling2="${curT.scaling2}"`
+                    : `\n; was: UNCALIBRATED (constant ${curT.defaultscaling}×)`);
+}
+
+$('#wrap').addEventListener('click', e => {
+  if (!metrePts.pending) return;
+  const st = $('#stage').getBoundingClientRect();
+  metrePts.push([(e.clientX - st.left) / zoom, (e.clientY - st.top) / zoom]);
+  if (metrePts.length === 2) {
+    const m = parseFloat(prompt('How many metres between those two points?', '5'));
+    if (m > 0) {
+      const dy = Math.abs(metrePts[1][1] - metrePts[0][1]) || 1;
+      metres = { pxPerM: dy / m };
+    }
+    metrePts = []; metrePts.pending = false;
+    $('#hint').textContent = metres ? `Scale set: ${metres.pxPerM.toFixed(1)} px per metre. The faded figure is 5 m behind scanline1.` : '';
+    render();
+  }
+});
+$('#metre').onclick = () => {
+  metrePts = []; metrePts.pending = true;
+  $('#hint').textContent = 'Click two points on the ground, then give the distance in metres.';
+};
+// One interface, two models, same pins. Classic previews the engine's y-ramp;
+// Modern previews the TPS terrain the pins define. Classic numbers keep being
+// fitted either way -- one session yields both outputs.
+function setMode(m) {
+  mode = m;
+  $('#mClassic').classList.toggle('on', m === 'classic');
+  $('#mModern').classList.toggle('on', m === 'modern');
+  if (him) him.k = null;
+  $('#hint').textContent = m === 'modern'
+    ? 'Modern: the terrain is the thin-plate spline through the pins (3 make a plane, more bend it — 20 up a riverbank if you like). Corner handles or scroll set a PENDING size; shift-drag places him without losing it, double-click pins it, Esc or a plain drag drops it back onto the terrain. The four numbers keep tracking the best linear fit for Classic.'
+    : 'Classic: the engine’s y-ramp. Corner handles or scroll write the four numbers directly; pins fit them.';
+  render();
+}
+$('#mClassic').onclick = () => setMode('classic');
+$('#mModern').onclick = () => setMode('modern');
+
+// Zoom the stage to the space it actually has -- a laptop could not see the
+// whole room. Runs on every scene select; the zoom input still overrides.
+function fitZoom() {
+  if (!cur) return;
+  const w = $('#wrap');
+  const z = Math.min(1, (w.clientWidth - 28) / cur.width, (w.clientHeight - 28) / cur.height);
+  $('#z').value = Math.max(0.2, Math.floor(z * 100) / 100);
+}
+$('#fit').onclick = () => { fitZoom(); render(); };
+
+// Clear the pins but KEEP the fitted numbers -- unlike Reset, which returns
+// to the authored GML. For starting a fresh set of judgements over a fit you
+// want to keep testing.
+$('#clearPins').onclick = () => {
+  markDirty();
+  pins = []; tpsCache = null;
+  $('#hint').textContent = 'Pins cleared — the four numbers keep the last fit. Reset returns to the authored GML.';
+  render();
+};
+
+// Esc discards a pending (unpinned) size; he snaps back to the field.
+addEventListener('keydown', e => {
+  if (e.key === 'Escape' && him && him.k != null) { him.k = null; render(); }
+});
+
+$('#him').onclick = () => {
+  if (!cur || !playerSprite()) return;
+  // Start him between the two references -- mid-floor, not on scanline1,
+  // which can sit below the room.
+  const [[nearPt], [farPt]] = refPoints();
+  him = him ? null : { x: (nearPt[0] + farPt[0]) / 2, y: (nearPt[1] + farPt[1]) / 2 };
+  $('#him').textContent = him ? 'Hide him' : 'Show him';
+  $('#hint').textContent = him
+    ? 'Drag him anywhere — next to any reference in the art, walkable or not. Resize with the corner handles (or scroll), double-click to pin the judgement. Two pins make the plane; more make a fit, and expose the lateral tilt the engine cannot express. Click a pin to remove it.'
+    : '';
+  render();
+};
+
+for (const id of ['#d', '#a', '#b', '#s']) $(id).oninput = () => { markDirty(); render(); };
+$('#z').oninput = render;   // zoom is a view choice, not a judgement
+for (const id of ['#showRef', '#showPins', '#showGrid', '#showObjs', '#showPoly']) $(id).onchange = render;
+$('#reset').onclick = () => select(cur.name, true);
+$('#copy').onclick = () => navigator.clipboard.writeText(
+  $('#out').textContent.split('\n\n')[0] +
+  // The samples travel with the element, as legal XML: they are the
+  // measurement, the four numbers only the linear fit through them.
+  (pins.length ? `\n<!-- calibration pins (x,y,scale): ${
+    pins.map(pn => `${Math.round(pn.x)},${Math.round(pn.y)},${pn.k.toFixed(3)}`).join(' ')} -->` : ''));
+</script>
+</body>
+</html>

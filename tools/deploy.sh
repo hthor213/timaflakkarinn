@@ -8,23 +8,46 @@
 # executable copy, so nobody has to remember them at 2am.
 #
 # The shape:
-#   local gate  -> tree clean, on branch, tsc + tests pass
+#   local gate  -> resolve origin/<branch>, workspace clean and pushed if it is
+#                  sitting on that branch, tsc + tests pass
 #   transport   -> git fetch if the Forgejo credential works, verified git
 #                  bundle if it does not; fast-forward only, never a reset
-#   build       -> npm ci && npm run check && npm run build, ON THE SERVER
+#   build       -> npm ci && npm run check && npm run build, IN THE CHECKOUT
 #   publish     -> refresh assets/ index.html _headers video/ gml/ and NOTHING
 #                  else. GAME/ is a hardlink overlay and is never touched.
 #   verify      -> prove the new bytes are actually being served, because the
 #                  recurring failure mode here is *silently stale*, not
 #                  *loudly broken*
 #
-# Usage:  tools/deploy.sh [--dry-run | --verify-only] [--host H] [--branch B]
-#                         [--url U]
+# TWO ENVIRONMENTS. One directory each, holding its own checkout and its own
+# serving root, so dev can sit at a different commit than live -- which is the
+# whole point of a test environment and was impossible when both hostnames
+# shared a single root:
+#
+#   /srv/timaflakkarinn/dev/{repo,web}    branch dev   tt-dev.spliffdonk.com
+#   /srv/timaflakkarinn/prod/{repo,web}   branch main  tt.spliffdonk.com
+#
+# There is no default. Deploying to the wrong environment because a flag was
+# forgotten is exactly the mistake this file exists to prevent.
+#
+# Promoting to prod is deliberate and gated:
+#   - --promote is required. Nothing reaches the public by momentum.
+#   - if the range touches art, --art-approved "<who, when>" is required too,
+#     and what you pass is printed in the report. Erna signs off before the
+#     public sees new art; dev needs no sign-off at all.
+#
+# Usage:  tools/deploy.sh --env dev|prod [--dry-run | --verify-only]
+#                         [--promote] [--art-approved TEXT]
+#                         [--host H] [--branch B] [--url U]
 #
 #   --dry-run      show exactly what would happen; change nothing
 #   --verify-only  skip transport/build/publish and run only the verification
 #                  pass against whatever is live right now. Read-only. Use it
 #                  to answer "is the site still correct?" without deploying.
+#   --promote      required for --env prod. Ships origin/main to the public.
+#   --art-approved TEXT
+#                  records Erna's sign-off for a prod deploy whose range
+#                  touches art. Free text; it goes in the report.
 #
 set -euo pipefail
 
@@ -35,15 +58,22 @@ REPO_ROOT="$PWD"
 # Configuration
 # ---------------------------------------------------------------------------
 
-SSH_HOST="hjalti@homeserver"          # Tailscale MagicDNS. NOTE: `aidev ssh
-                                      # homeserver` mangles the remote command
-                                      # and drops stdin -- use plain ssh only.
-REMOTE_REPO="/home/hjalti/work/timaflakkarinn"
-WEB_ROOT="/srv/timaflakkarinn/web"
-BRANCH="feat/unify"
-BASE_URL="https://tt.spliffdonk.com"
+# The machine that holds both checkouts and both serving roots. When we ARE
+# that machine we must not ssh to ourselves: the loopback hop needs a host key
+# and an agent it has no reason to have, and it failed for exactly that reason.
+# Same script, same guards, no transport.
+DEPLOY_HOST="homeserver"
+SSH_HOST="hjalti@homeserver"          # used only when we are NOT the deploy host
+ENV=""
+REMOTE_REPO=""
+WEB_ROOT=""
+BRANCH=""
+BASE_URL=""
 DRY_RUN=0
 VERIFY_ONLY=0
+PROMOTE=0
+ART_APPROVED=""
+HOST_OVERRIDDEN=0
 
 usage() {
   sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//;$d'
@@ -52,9 +82,12 @@ usage() {
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --env)     ENV="$2"; shift ;;
     --dry-run) DRY_RUN=1 ;;
     --verify-only) VERIFY_ONLY=1 ;;
-    --host)    SSH_HOST="$2"; shift ;;
+    --promote) PROMOTE=1 ;;
+    --art-approved) ART_APPROVED="$2"; shift ;;
+    --host)    SSH_HOST="$2"; HOST_OVERRIDDEN=1; shift ;;
     --branch)  BRANCH="$2";   shift ;;
     --url)     BASE_URL="$2"; shift ;;
     -h|--help) usage 0 ;;
@@ -65,6 +98,46 @@ done
 
 [ "$DRY_RUN$VERIFY_ONLY" = "11" ] && {
   echo '--dry-run and --verify-only are mutually exclusive' >&2; exit 1; }
+
+# --- environment -----------------------------------------------------------
+case "$ENV" in
+  dev)
+    REMOTE_REPO="/srv/timaflakkarinn/dev/repo"
+    WEB_ROOT="/srv/timaflakkarinn/dev/web"
+    [ -n "$BRANCH" ]   || BRANCH="dev"
+    [ -n "$BASE_URL" ] || BASE_URL="https://tt-dev.spliffdonk.com"
+    ;;
+  prod)
+    REMOTE_REPO="/srv/timaflakkarinn/prod/repo"
+    WEB_ROOT="/srv/timaflakkarinn/prod/web"
+    [ -n "$BRANCH" ]   || BRANCH="main"
+    [ -n "$BASE_URL" ] || BASE_URL="https://tt.spliffdonk.com"
+    ;;
+  '')
+    printf 'missing --env dev|prod\n\n' >&2
+    printf '  --env dev   publishes branch dev to https://tt-dev.spliffdonk.com\n' >&2
+    printf '  --env prod  publishes branch main to https://tt.spliffdonk.com (needs --promote)\n\n' >&2
+    exit 1 ;;
+  *)
+    printf 'unknown --env "%s" (expected dev or prod)\n' "$ENV" >&2; exit 1 ;;
+esac
+
+# --- are we the deploy host? -----------------------------------------------
+# Three signals, any one suffices (mirrors ~/.claude/skills/homeserver/connect.sh):
+# short hostname matches, this box owns the server's LAN IP, or the machine
+# sentinel ~/.claude/.aidev-mode says so. --host always wins: an explicit host
+# means "go remote" even when we are standing on the server.
+DEPLOY_IP="${DEPLOY_IP:-192.168.1.100}"
+LOCAL_MODE=0
+if [ "$HOST_OVERRIDDEN" = 0 ]; then
+  if [ "$(hostname -s 2>/dev/null)" = "$DEPLOY_HOST" ]; then
+    LOCAL_MODE=1
+  elif hostname -I 2>/dev/null | tr ' ' '\n' | grep -qx "$DEPLOY_IP"; then
+    LOCAL_MODE=1
+  elif [ "$(cat "$HOME/.claude/.aidev-mode" 2>/dev/null | tr -d '[:space:]')" = "$DEPLOY_HOST" ]; then
+    LOCAL_MODE=1
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Output helpers
@@ -99,12 +172,30 @@ die() {
   exit 1
 }
 
-# Run a bash snippet on the server. The snippet goes over stdin so it needs no
-# quoting gymnastics; `-euo pipefail` means a remote failure is a real failure
-# and not a silently empty string we then treat as data.
+# Run a bash snippet on the machine that serves the site. The snippet goes over
+# stdin so it needs no quoting gymnastics; `-euo pipefail` means a failure is a
+# real failure and not a silently empty string we then treat as data.
+#
+# When we are already that machine, run it in a plain subshell. The snippets are
+# written to be transport-agnostic -- they cd to an absolute path and use no
+# local state -- so both paths execute the identical text and the guards below
+# keep their meaning either way.
 remote() {
-  ssh -o BatchMode=yes -o ConnectTimeout=20 "$SSH_HOST" \
-      'bash -euo pipefail -s' <<<"$1"
+  if [ "$LOCAL_MODE" = 1 ]; then
+    bash -euo pipefail -s <<<"$1"
+  else
+    ssh -o BatchMode=yes -o ConnectTimeout=20 "$SSH_HOST" \
+        'bash -euo pipefail -s' <<<"$1"
+  fi
+}
+
+# Put a local file on the serving machine. A copy when we are it, scp when not.
+send_file() {
+  if [ "$LOCAL_MODE" = 1 ]; then
+    cp "$1" "$2"
+  else
+    scp -q -o BatchMode=yes "$1" "$SSH_HOST:$2"
+  fi
 }
 
 # Mutating remote work: skipped, and described, under --dry-run.
@@ -121,74 +212,130 @@ remote_write() {
 
 step "Local gate"
 
-for cmd in git ssh scp curl; do
+NEEDED="git curl rsync"
+[ "$LOCAL_MODE" = 1 ] || NEEDED="$NEEDED ssh scp"
+for cmd in $NEEDED; do
   command -v "$cmd" >/dev/null || die "missing local command: $cmd"
 done
-
-# The server builds from git, not from your working copy. An uncommitted fix
-# looks deployed on your screen and is absent from the site -- this is exactly
-# how "the fix didn't work" bug reports get written about code that never left
-# the laptop.
-if [ -n "$(git status --porcelain)" ]; then
-  die "local tree is dirty." \
-      "The server builds from a commit, so uncommitted work does not ship." \
-      "Commit or stash first:" \
-      "$(git status --short | sed 's/^/          /')"
+if [ "$LOCAL_MODE" = 1 ]; then
+  ok "running ON $DEPLOY_HOST — no transport, no ssh"
+else
+  info "deploying to $SSH_HOST over ssh"
 fi
-ok "working tree clean"
 
-CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-[ "$CURRENT_BRANCH" = "$BRANCH" ] || die \
-  "on branch '$CURRENT_BRANCH' but deploying '$BRANCH'." \
-  "Check out $BRANCH, or pass --branch $CURRENT_BRANCH if that is what you mean."
-ok "on branch $BRANCH"
+info "env $ENV — branch $BRANCH, $REMOTE_REPO -> $WEB_ROOT, $BASE_URL"
 
-LOCAL_SHA="$(git rev-parse HEAD)"
-LOCAL_SUBJECT="$(git log -1 --format=%s)"
-info "HEAD $(git rev-parse --short HEAD) — $LOCAL_SUBJECT"
-
-# tsc + the whole test suite, locally, before we spend a minute on the wire.
-# The server runs `npm run check` again before it builds, so this gate is a
-# fast fail rather than the authority.
-step "Local check (tsc --noEmit && npm test)"
-if [ ! -d webapp/node_modules ]; then
-  info "webapp/node_modules missing — npm ci"
-  ( cd webapp && npm ci --silent )
+# --- the promote gate ------------------------------------------------------
+#
+# prod is the public site. Reaching it is a decision, never a default: the
+# owner promotes, and Erna signs off on art before the public sees it. dev has
+# no gate at all, which is the point -- testing must never wait on a sign-off.
+if [ "$ENV" = "prod" ] && [ "$VERIFY_ONLY" = 0 ] && [ "$DRY_RUN" = 0 ] && [ "$PROMOTE" = 0 ]; then
+  die "refusing to deploy to prod without --promote." \
+      "This publishes origin/main to $BASE_URL, where the public is." \
+      "" \
+      "  test it first:  tools/deploy.sh --env dev" \
+      "  see the plan:   tools/deploy.sh --env prod --dry-run" \
+      "  then promote:   tools/deploy.sh --env prod --promote"
 fi
-if ! ( cd webapp && npm run check >/tmp/tt-deploy-check.$$ 2>&1 ); then
-  tail -30 /tmp/tt-deploy-check.$$ >&2
-  rm -f /tmp/tt-deploy-check.$$
-  die "local check failed (see output above)."
+if [ "$ENV" = "dev" ] && [ "$PROMOTE" = 1 ]; then
+  warn "--promote is meaningless for --env dev and was ignored; dev has no gate"
 fi
-rm -f /tmp/tt-deploy-check.$$
-ok "tsc clean, tests pass"
+if [ "$ENV" = "prod" ] && [ "$PROMOTE" = 1 ]; then
+  ok "promote requested — prod deploy is authorised"
+fi
 
-# The .gml masters are ISO-8859-1 with CRLF and both are load-bearing: the
-# engine is fed them as application/xml;charset=ISO-8859-1, and the 1998 line
-# splitter counts on CRLF. An editor that "helpfully" normalised a master would
-# ship mojibake for every Icelandic character. Check the source, not the copy.
-step "GML master integrity (ISO-8859-1 + CRLF)"
-for f in web_import/gml/*.gml; do
-  LC_ALL=C grep -q $'\r' "$f" || die \
-    "$f has lost its CRLF line endings." \
-    "The masters are ISO 9660-era files; CRLF is load-bearing."
-  high="$(LC_ALL=C tr -d '\000-\177' < "$f" | wc -c | tr -d ' ')"
-  if [ "$high" -gt 0 ] && iconv -f UTF-8 -t UTF-8 "$f" >/dev/null 2>&1; then
-    die "$f has been converted to UTF-8." \
-        "It must stay ISO-8859-1 — Caddy serves /gml/* with that charset," \
-        "so UTF-8 bytes render as mojibake for every Icelandic character."
+# WHAT SHIPS IS origin/$BRANCH, not this working copy.
+#
+# That is a real change from the single-environment version, where the laptop's
+# HEAD was the deploy source. With two checkouts pulling from one Forgejo, the
+# hub is the only thing both of them agree on, and prod is routinely deployed
+# from a workspace that is sitting on dev. Ask origin.
+TARGET_SHA="$(git ls-remote origin "refs/heads/$BRANCH" 2>/dev/null | cut -f1)"
+[ -n "$TARGET_SHA" ] || die \
+  "origin has no branch '$BRANCH'." \
+  "dev publishes to tt-dev, main publishes to tt. Push the branch first."
+git cat-file -e "$TARGET_SHA^{commit}" 2>/dev/null || die \
+  "origin/$BRANCH is ${TARGET_SHA:0:7}, which this repo does not have." \
+  "Run: git fetch origin $BRANCH"
+TARGET_SUBJECT="$(git log -1 --format=%s "$TARGET_SHA")"
+ok "origin/$BRANCH is ${TARGET_SHA:0:7} — $TARGET_SUBJECT"
+
+# The workspace matters only when it is sitting on the branch being deployed.
+# Then a dirty or unpushed tree means the thing you are looking at is NOT the
+# thing that will ship -- which is exactly how "the fix didn't work" gets
+# reported about code that never left the machine. When the workspace is on a
+# different branch it is simply not part of this deploy, and saying so is
+# better than a confusing branch-mismatch refusal.
+WORKSPACE_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+WORKSPACE_IS_SOURCE=0
+if [ "$WORKSPACE_BRANCH" = "$BRANCH" ]; then
+  WORKSPACE_IS_SOURCE=1
+  if [ -n "$(git status --porcelain)" ]; then
+    die "this workspace is on '$BRANCH' and its tree is dirty." \
+        "What ships is origin/$BRANCH, so uncommitted work does not reach the site." \
+        "Commit and push first:" \
+        "$(git status --short | sed 's/^/          /')"
   fi
-done
-ok "$(ls web_import/gml/*.gml | wc -l | tr -d ' ') masters are CRLF, none UTF-8-converted"
+  ok "workspace tree clean"
+  WORKSPACE_SHA="$(git rev-parse HEAD)"
+  [ "$WORKSPACE_SHA" = "$TARGET_SHA" ] || die \
+    "this workspace is on '$BRANCH' at ${WORKSPACE_SHA:0:7} but origin/$BRANCH is ${TARGET_SHA:0:7}." \
+    "Deploying would ship something other than what you have in front of you." \
+    "$(if git merge-base --is-ancestor "$TARGET_SHA" "$WORKSPACE_SHA" 2>/dev/null; then
+         echo 'Your commits are not pushed yet:  git push origin '"$BRANCH"
+       else
+         echo 'origin is ahead of you:  git pull --ff-only'
+       fi)"
+  ok "workspace HEAD == origin/$BRANCH"
+else
+  info "workspace is on '$WORKSPACE_BRANCH', not '$BRANCH' — not part of this deploy"
+fi
+
+# tsc + the whole test suite in the workspace, as a fast fail before we spend
+# time building. The target checkout runs `npm run check` again against exactly
+# the tree it is about to publish, and THAT is the authority.
+#
+# Only meaningful when the workspace is at the commit being deployed. Running it
+# otherwise reports green for a different tree, which is worse than not running
+# it: it is a check that cannot fail for the thing it appears to be checking.
+step "Workspace check (tsc --noEmit && npm test)"
+if [ "$WORKSPACE_IS_SOURCE" = 0 ]; then
+  info "skipped — workspace is not at the deploy commit; the build-time check is authoritative"
+else
+  if [ ! -d webapp/node_modules ]; then
+    info "webapp/node_modules missing — npm ci"
+    ( cd webapp && npm ci --silent )
+  fi
+  if ! ( cd webapp && npm run check >/tmp/tt-deploy-check.$$ 2>&1 ); then
+    tail -30 /tmp/tt-deploy-check.$$ >&2
+    rm -f /tmp/tt-deploy-check.$$
+    die "workspace check failed (see output above)."
+  fi
+  rm -f /tmp/tt-deploy-check.$$
+  ok "tsc clean, tests pass"
+fi
+
+# NOTE: the .gml master integrity check used to live here, reading this
+# workspace. It now runs against the target checkout after transport -- that is
+# the tree whose masters actually get published, and when prod is deployed from
+# a workspace sitting on dev the two are different files.
 
 # ---------------------------------------------------------------------------
-# 2. Server pre-state
+# 2. Target checkout pre-state
 # ---------------------------------------------------------------------------
 
-step "Server pre-state ($SSH_HOST)"
+step "Checkout pre-state ($REMOTE_REPO)"
 
-remote 'echo up' >/dev/null || die "cannot reach $SSH_HOST over ssh."
-ok "ssh reachable"
+if [ "$LOCAL_MODE" = 1 ]; then
+  [ -d "$REMOTE_REPO/.git" ] || die \
+    "$REMOTE_REPO is not a git checkout." \
+    "Each environment has its own: dev/repo on branch dev, prod/repo on branch main."
+  ok "checkout present"
+else
+  remote 'echo up' >/dev/null || die "cannot reach $SSH_HOST over ssh."
+  ok "ssh reachable"
+fi
 
 REMOTE_DIRTY="$(remote "cd $REMOTE_REPO && git status --porcelain")"
 # Another agent editing directly on the server is a real scenario in this
@@ -208,16 +355,16 @@ info "server at ${REMOTE_SHA:0:7} on $REMOTE_BRANCH"
 
 if [ "$VERIFY_ONLY" = 1 ]; then
   info "verify-only: not comparing commits, checking whatever is live"
-elif [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
+elif [ "$REMOTE_SHA" = "$TARGET_SHA" ]; then
   info "server already at target commit — rebuilding and republishing anyway"
 else
   # Fast-forward only. A non-ff means the server has commits the laptop does
   # not, and rolling over them would delete work with no record of it.
-  git merge-base --is-ancestor "$REMOTE_SHA" "$LOCAL_SHA" 2>/dev/null || die \
-    "not a fast-forward: server ${REMOTE_SHA:0:7} is not an ancestor of local ${LOCAL_SHA:0:7}." \
-    "The server has commits this laptop does not have, or the histories diverged." \
+  git merge-base --is-ancestor "$REMOTE_SHA" "$TARGET_SHA" 2>/dev/null || die \
+    "not a fast-forward: deployed ${REMOTE_SHA:0:7} is not an ancestor of origin/$BRANCH ${TARGET_SHA:0:7}." \
+    "The checkout has commits origin does not, or the histories diverged." \
     "Resolve it by hand — this script will not force anything."
-  ok "fast-forward ${REMOTE_SHA:0:7} → ${LOCAL_SHA:0:7} ($(git rev-list --count "$REMOTE_SHA..$LOCAL_SHA") commit(s))"
+  ok "fast-forward ${REMOTE_SHA:0:7} → ${TARGET_SHA:0:7} ($(git rev-list --count "$REMOTE_SHA..$TARGET_SHA") commit(s))"
 fi
 
 # Fingerprint the hardlink overlay BEFORE we touch anything. Two jobs: refuse to
@@ -287,8 +434,8 @@ fi
 
 CHANGED_FILES=""
 LFS_CHANGED=""
-if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
-  CHANGED_FILES="$(git diff --name-only "$REMOTE_SHA" "$LOCAL_SHA")"
+if [ "$REMOTE_SHA" != "$TARGET_SHA" ]; then
+  CHANGED_FILES="$(git diff --name-only "$REMOTE_SHA" "$TARGET_SHA")"
   # A git bundle carries git objects. LFS-tracked files live in git as ~130-byte
   # pointers, and the real blobs come from the LFS endpoint behind the same dead
   # credential. Shipping one over a bundle checks out a text file where a PNG
@@ -309,9 +456,46 @@ if [ -n "$LFS_CHANGED" ] && [ "$TRANSPORT" = "bundle" ]; then
 fi
 [ -z "$CHANGED_FILES" ] || info "$(printf '%s\n' "$CHANGED_FILES" | wc -l | tr -d ' ') file(s) changed in this range"
 
+# ---------------------------------------------------------------------------
+# The art gate. Erna signs off before the public sees new art; dev never asks.
+# ---------------------------------------------------------------------------
+#
+# Two kinds of path count as art reaching the public:
+#
+#   web_import/GAME/**  the served masters. A regenerated background lands
+#                       here, and from here it is on screen.
+#   art/**              the pipeline tree proposed in specs/003, whose whole
+#                       point is the approved/ axis: art/<SCENE>/{master,
+#                       superres,generated,approved}/. Only approved/ has been
+#                       looked at by a human, so only approved/ passes freely.
+#
+# art/ does not exist yet, so today this rule bites only on web_import/GAME.
+# It is written now so the pipeline lands into a gate that already works
+# rather than one someone has to remember to add.
+ART_CHANGED=""
+if [ -n "$CHANGED_FILES" ]; then
+  ART_CHANGED="$(printf '%s\n' "$CHANGED_FILES" \
+    | grep -E '^(web_import/GAME/|art/)' \
+    | grep -vE '^art/[^/]+/approved/' || true)"
+fi
+
+if [ -n "$ART_CHANGED" ]; then
+  ART_COUNT="$(printf '%s\n' "$ART_CHANGED" | wc -l | tr -d ' ')"
+  if [ "$ENV" = "prod" ] && [ -z "$ART_APPROVED" ] && [ "$VERIFY_ONLY" = 0 ]; then
+    die "this range changes $ART_COUNT art file(s) and no sign-off was recorded." \
+        "Art reaches the public only after Erna has signed it off." \
+        "Re-run with:  --art-approved \"Erna, <date>\"" \
+        "Affected:" \
+        "$(printf '%s\n' "$ART_CHANGED" | head -10 | sed 's/^/          /')" \
+        "$([ "$ART_COUNT" -gt 10 ] && echo "          ... and $((ART_COUNT - 10)) more")"
+  fi
+  info "$ART_COUNT art file(s) in this range"
+  [ -n "$ART_APPROVED" ] && ok "art sign-off recorded: $ART_APPROVED"
+fi
+
 BUNDLE_LOCAL=""
-if [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
-  info "nothing to transfer — server already has ${LOCAL_SHA:0:7}"
+if [ "$REMOTE_SHA" = "$TARGET_SHA" ]; then
+  info "nothing to transfer — server already has ${TARGET_SHA:0:7}"
 elif [ "$TRANSPORT" = "fetch" ]; then
   remote_write "git fetch origin $BRANCH on the server" \
     "cd $REMOTE_REPO && GIT_TERMINAL_PROMPT=0 git fetch origin $BRANCH"
@@ -333,13 +517,13 @@ else
     || die "locally generated bundle failed verification."
   ok "bundle built and locally verified ($(wc -c <"$BUNDLE_LOCAL" | tr -d ' ') bytes, prereq ${REMOTE_SHA:0:7})"
 
-  BUNDLE_REMOTE="/tmp/tt-deploy-${LOCAL_SHA:0:12}.bundle"
+  BUNDLE_REMOTE="/tmp/tt-deploy-${TARGET_SHA:0:12}.bundle"
   if [ "$DRY_RUN" = 1 ]; then
-    plan "scp $BUNDLE_LOCAL -> $SSH_HOST:$BUNDLE_REMOTE"
+    plan "copy $BUNDLE_LOCAL -> $BUNDLE_REMOTE"
     plan "git bundle verify $BUNDLE_REMOTE on the server"
     plan "git fetch <bundle> $BRANCH && git merge --ff-only"
   else
-    scp -q -o BatchMode=yes "$BUNDLE_LOCAL" "$SSH_HOST:$BUNDLE_REMOTE"
+    send_file "$BUNDLE_LOCAL" "$BUNDLE_REMOTE"
     remote "cd $REMOTE_REPO && git bundle verify $BUNDLE_REMOTE" >/dev/null \
       || die "bundle failed verification ON THE SERVER — prerequisites missing or transfer corrupted."
     ok "bundle verified on the server"
@@ -351,10 +535,52 @@ fi
 
 if [ "$DRY_RUN" = 0 ]; then
   NOW_SHA="$(remote "cd $REMOTE_REPO && git rev-parse HEAD")"
-  [ "$NOW_SHA" = "$LOCAL_SHA" ] || die \
-    "server HEAD is ${NOW_SHA:0:7} but should be ${LOCAL_SHA:0:7} after transport." \
+  [ "$NOW_SHA" = "$TARGET_SHA" ] || die \
+    "server HEAD is ${NOW_SHA:0:7} but should be ${TARGET_SHA:0:7} after transport." \
     "Stopping before the build so nothing is published from the wrong commit."
-  ok "server HEAD == ${LOCAL_SHA:0:7}"
+  ok "server HEAD == ${TARGET_SHA:0:7}"
+
+  # The overlay is hardlinks into this checkout. git REPLACES a changed file
+  # rather than writing through it, so the new blob lands on a new inode and
+  # the serving root keeps pointing at the old one: new art in the repo, old
+  # pixels on screen, and not one error anywhere. This script never touches
+  # GAME/ by design, so the rebuild is a deliberate separate step.
+  #
+  # Checked here rather than before transport: only now does the checkout hold
+  # the new art for the overlay to be rebuilt FROM.
+  # The .gml masters are ISO-8859-1 with CRLF and both are load-bearing: the
+  # engine is fed them as application/xml;charset=ISO-8859-1, and the 1998 line
+  # splitter counts on CRLF. An editor that "helpfully" normalised a master
+  # would ship mojibake for every Icelandic character. Check the source in the
+  # tree about to be published, not a copy of it somewhere else.
+  GML_MASTERS="$(remote "
+    cd $REMOTE_REPO
+    fail=0
+    for f in web_import/gml/*.gml; do
+      if ! LC_ALL=C grep -q \$'\r' \"\$f\"; then echo \"NOCRLF \$f\"; fail=1; continue; fi
+      high=\$(LC_ALL=C tr -d '\000-\177' <\"\$f\" | wc -c | tr -d ' ')
+      if [ \"\$high\" -gt 0 ] && iconv -f UTF-8 -t UTF-8 \"\$f\" >/dev/null 2>&1; then
+        echo \"UTF8 \$f\"; fail=1; continue
+      fi
+      echo \"OK \$f\"
+    done
+    exit \$fail")" || die \
+      "a .gml master in $REMOTE_REPO has lost its encoding:" \
+      "$(printf '%s\n' "$GML_MASTERS" | grep -v '^OK ' | sed 's/^/          /')" \
+      "NOCRLF: the 1998 line splitter counts on CRLF." \
+      "UTF8:   Caddy serves /gml/* as ISO-8859-1, so UTF-8 bytes render as" \
+      "        mojibake for every Icelandic character."
+  ok "$(printf '%s\n' "$GML_MASTERS" | grep -c '^OK ') gml masters are CRLF, none UTF-8-converted"
+
+  if printf '%s\n' "$ART_CHANGED" | grep -q '^web_import/GAME/'; then
+    die "this range changed GAME masters, so $WEB_ROOT/GAME is now stale." \
+        "The checkout has been fast-forwarded to ${TARGET_SHA:0:7} and holds the new art;" \
+        "the serving root still hardlinks the old inodes and would keep serving them." \
+        "" \
+        "Rebuild the overlay, then re-run this deploy:" \
+        "  tools/make-overlay.sh $WEB_ROOT --force \\" \
+        "      --game-src $REMOTE_REPO/web_import/GAME"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -401,6 +627,8 @@ info "  index.html  <- webapp/dist/index.html"
 info "  _headers    <- webapp/dist/_headers"
 info "  video/      <- webapp/dist/video"
 info "  gml/        <- web_import/gml          (NOT dist/gml)"
+info "  version.json<- written here, records what this root is serving"
+[ "$ENV" = dev ] && info "  calibrate.html + scene-index.json  <- dev only, the calibration tool"
 info "  GAME/       <- untouched hardlink overlay"
 
 # RS: compare by checksum (-c) and do not propagate mtimes (--no-times).
@@ -423,6 +651,13 @@ $RS --delete webapp/dist/video/     $WEB_ROOT/video/
 # files that make a landed fix look broken. Source is web_import/gml, the
 # authoritative masters -- never webapp/dist/gml.
 $RS --delete web_import/gml/ $WEB_ROOT/gml/
+$(if [ "$ENV" = dev ]; then
+    # The calibration tool. DEV ONLY -- it is a tool, not the game, and has no
+    # business on the public site. Published here rather than left on localhost
+    # so it can be used from any machine. /calibrate is routed to it in Caddy.
+    printf '%s webapp/dist/calibrate.html %s/calibrate.html\n' "$RS" "$WEB_ROOT"
+    printf '%s webapp/dist/scene-index.json %s/scene-index.json\n' "$RS" "$WEB_ROOT"
+  fi)
 EOF
 )
 
@@ -464,6 +699,25 @@ if [ "$DRY_RUN" = 1 ]; then
 else
   remote "$PUBLISH_SCRIPT"
   ok "assets/, index.html, _headers, video/, gml/ refreshed"
+
+  # What is actually live here? Until now: unanswerable. Working it out meant
+  # correlating web-root mtimes against commit timestamps, and the session
+  # brief had drifted to naming the wrong commit as live because of it.
+  #
+  # Written at publish time rather than baked into the bundle, so it cannot go
+  # stale relative to what was published, and so a byte-identical rebuild still
+  # records a fresh deploy.
+  DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  remote "cat >$WEB_ROOT/version.json <<'JSON'
+{
+  \"env\":      \"$ENV\",
+  \"branch\":   \"$BRANCH\",
+  \"commit\":   \"$TARGET_SHA\",
+  \"subject\":  $(printf '%s' "$TARGET_SUBJECT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),
+  \"deployed\": \"$DEPLOYED_AT\"
+}
+JSON"
+  ok "version.json records $ENV at ${TARGET_SHA:0:7}"
 fi
 
 fi   # end of the transport/build/publish block skipped by --verify-only
@@ -599,6 +853,21 @@ EOF
   ok "/$SAMPLE_PNG 200, $sz bytes (not an LFS pointer)"
 
   # SPA fallback both ways: routes must resolve, assets must NOT be masked.
+  # The strongest single check available: the site itself states which commit
+  # it is serving, and we assert it is the one we just published. Everything
+  # else here proves a file moved; this proves WHICH VERSION moved.
+  if [ "$VERIFY_ONLY" = 0 ]; then
+    code="$(http "/version.json" "$TMPB" "$TMPH")"
+    [ "$code" = 200 ] || die "GET /version.json returned $code — the deploy stamp is not being served."
+    grep -q "\"commit\": *\"$TARGET_SHA\"" "$TMPB" || die \
+      "/version.json does not report ${TARGET_SHA:0:7}." \
+      "Served: $(tr -d '\n' <"$TMPB" | sed 's/  */ /g')"
+    grep -q "\"env\": *\"$ENV\"" "$TMPB" || die \
+      "/version.json at $BASE_URL reports a different environment than '$ENV'." \
+      "The two hostnames may still be sharing one serving root."
+    ok "/version.json reports env=$ENV commit=${TARGET_SHA:0:7}"
+  fi
+
   code="$(http "/chapter2" "$TMPB" "$TMPH")"
   [ "$code" = 200 ] || die "GET /chapter2 returned $code — try_files fallback is broken, chapters will 404."
   grep -q 'game-container' "$TMPB" || die "/chapter2 did not return the app HTML."
@@ -632,12 +901,18 @@ if   [ "$DRY_RUN"     = 1 ]; then MODE='DRY RUN — nothing changed'
 elif [ "$VERIFY_ONLY" = 1 ]; then MODE='VERIFY ONLY — nothing changed'
 else                              MODE='deployed'; fi
 printf '  mode       %s\n' "$MODE"
-printf '  host       %s\n' "$SSH_HOST"
+printf '  env        %s%s\n' "$ENV" \
+  "$([ "$ENV" = prod ] && echo '  (public)' || echo '  (test)')"
+printf '  host       %s\n' \
+  "$([ "$LOCAL_MODE" = 1 ] && echo "$DEPLOY_HOST (local, no ssh)" || echo "$SSH_HOST")"
 printf '  branch     %s\n' "$BRANCH"
+printf '  checkout   %s\n' "$REMOTE_REPO"
+printf '  web root   %s\n' "$WEB_ROOT"
+[ -z "$ART_APPROVED" ] || printf '  art signed %s\n' "$ART_APPROVED"
 if [ "$VERIFY_ONLY" = 1 ]; then
-  printf '  commit     server %s (laptop %s)\n' "${REMOTE_SHA:0:7}" "${LOCAL_SHA:0:7}"
+  printf '  commit     deployed %s (origin/%s %s)\n' "${REMOTE_SHA:0:7}" "$BRANCH" "${TARGET_SHA:0:7}"
 else
-  printf '  commit     %s -> %s  (%s)\n' "${REMOTE_SHA:0:7}" "${LOCAL_SHA:0:7}" "$LOCAL_SUBJECT"
+  printf '  commit     %s -> %s  (%s)\n' "${REMOTE_SHA:0:7}" "${TARGET_SHA:0:7}" "$TARGET_SUBJECT"
 fi
 printf '  transport  %s\n' "$TRANSPORT"
 [ "$DRY_RUN" = 1 ] || printf '  bundle     %s%s\n' \

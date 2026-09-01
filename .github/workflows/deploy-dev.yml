@@ -1,0 +1,41 @@
+# Merging a PR into dev publishes tt-dev.spliffdonk.com.
+#
+# Runs on the self-hosted runner ON the deploy host, where tools/deploy.sh
+# detects LOCAL mode and operates on /srv/timaflakkarinn/dev directly — every
+# guard the script has (fast-forward-only transport, build-in-checkout,
+# serve-verification) applies unchanged. The checkout here only provides the
+# script and the local gate's view of origin; the authoritative build happens
+# in the deploy checkout.
+#
+# Fork safety: this fires on push to dev only — a branch protected behind PR
+# review — never on pull_request, so fork code never reaches the runner.
+name: deploy-dev
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, homeserver]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: fetch PNG masters (LFS)
+        # deploy.sh's workspace fast-fail runs the full suite here, and the
+        # suite reads the PNG masters — pointer stubs fail it (proved by the
+        # first run of this workflow). Forgejo is on the same box; this is
+        # cheap. The target checkout smudges its own LFS during transport.
+        run: git lfs pull --include="*.PNG,*.png"
+      - name: deploy to tt-dev.spliffdonk.com
+        run: tools/deploy.sh --env dev
+      - name: mirror dev to Forgejo
+        # Forgejo is the LFS host and backup; keeping its refs current keeps
+        # the LFS objects referenced. Fast-forward only — a diverged Forgejo
+        # should fail loudly, never be overwritten.
+        run: git push https://git.spliffdonk.com/hjalti/timaflakkarinn.git dev:dev

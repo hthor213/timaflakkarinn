@@ -1,0 +1,49 @@
+# Merging the promotion PR (dev -> main) publishes tt.spliffdonk.com.
+#
+# The push-triggered run passes --promote and nothing else. deploy.sh owns the
+# art gate: if the deployed range touches art it dies asking for
+# --art-approved, exactly as it does when run by hand — nothing reaches the
+# public by momentum. For those ranges, re-run via workflow_dispatch with the
+# sign-off text (who approved, when); it is passed through verbatim and lands
+# in the deploy report.
+#
+# Fork safety: fires on push to the protected main branch and on manual
+# dispatch only — never on pull_request.
+name: deploy-prod
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      art_approved:
+        description: "Art sign-off, e.g. 'Erna, 2026-09-01' — required only when the range touches art"
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, homeserver]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: fetch PNG masters (LFS)
+        # Same reason as deploy-dev: the workspace fast-fail reads sprites.
+        run: git lfs pull --include="*.PNG,*.png"
+      - name: deploy to tt.spliffdonk.com
+        env:
+          ART_APPROVED: ${{ inputs.art_approved }}
+        run: |
+          if [ -n "$ART_APPROVED" ]; then
+            tools/deploy.sh --env prod --promote --art-approved "$ART_APPROVED"
+          else
+            tools/deploy.sh --env prod --promote
+          fi
+      - name: mirror main to Forgejo
+        run: git push https://git.spliffdonk.com/hjalti/timaflakkarinn.git main:main

@@ -230,6 +230,63 @@ Every alternative stack considered (Godot, Unity, Rust/WASM) loses on the same
 point — it forces a rewrite of the interpreter, which is the asset, while
 improving nothing that matters.
 
+**D8 — Two editions ship: Classic and Modern.** Decided 2026-08-08. This
+supersedes the part of D6 that implied presentation was the *only* axis of
+difference. It is not: Modern may also carry content and behaviour the 1999
+engine could not do.
+
+*Classic* is **the 1999 game as the team meant it to be** — not the disc as it
+shipped, and not a modernisation. Every defect they knew about is fixed, every
+piece of content the port is missing is restored, and everything they intended
+and lost to the schedule is finished. It runs on the 2D presentation.
+
+*Modern* is Classic plus everything the 1999 engine could not do: 3D toon
+characters (D1), super-resolved backgrounds on proxy geometry (D2), cinematic
+camera (D3), 16:9 framing (D4), and any behaviour in that same category.
+
+**The test that sorts every change is one question: could the 1999 engine have
+done it?** If yes and they wanted it, it is Classic (and therefore also Modern).
+If it needed an engine they did not have, it is Modern only. The tag taxonomy in
+`docs/known-issues.md` is the executable form of this: four tags mean both
+editions, `modern-only` means one.
+
+The archetype is already recorded two sections below: **turn transitions were
+attempted in 1999** — `STOP2LEA` on 8 characters, `STOP2RIA` on 7, `STOP2BAA` on
+4. *"The original team reached for continuous turning and could only afford
+discrete cells."* They wanted it; the engine and the budget could not. That is
+`modern-only` exactly, and D1 is its resolution.
+
+Why two editions rather than one remaster: the 1999 game is worth shipping on
+its own terms, the IP owners can evaluate quality by comparison rather than by
+description, and every Modern feature stays individually reversible — the same
+property `ActorFace` gives per character, applied to content.
+
+**Why this does not mean two repositories.** Both editions share the
+interpreter, the simulation, the asset pipeline, the deploy tooling and the
+overwhelming majority of content. They differ by a set of flagged features and a
+render backend. Four of the five issue tags apply to *both* editions, and that is
+where the volume is — so a second repository would mean diagnosing once and
+applying twice, forever, to avoid a divergence confined to a minority of the
+code. One repository, two build variants.
+
+**Mechanism: variant attributes inline in the GML.** Owner's decision, taken
+over an overlay-patch alternative. One tree, one source of truth, diffable in
+place; a reader can see both editions at once instead of reconstructing Modern
+from a base plus a patch.
+
+The cost is explicit and must be paid: **it edits files that are also an
+archive.** The masters are already not pristine — 43 insertions and 11 deletions
+across four chapters since import, all authored-defect fixes — and there is no
+untouched 1999 copy in the repo. So the guarantee changes shape. It is no longer
+*"the masters never change"*; it is:
+
+> **Every divergence from the 1999 content is attributable to a numbered issue.**
+
+That is the stronger claim and the checkable one. It requires a committed
+pristine `web_import/gml-1999/` snapshot and a test asserting every difference
+maps to a `docs/known-issues.md` or `docs/unfinished-1998.md` entry. **Not built
+yet — it is the precondition for editing a master in a variant-bearing way.**
+
 ## Why this is incremental, not a rewrite
 
 `ActorFace` (`webapp/src/engine/ActorFace.ts:7`) is a genuine interface with four
@@ -375,6 +432,98 @@ Two things make it cheaper still:
 
 Output must be GML the existing parser already accepts — the tool emits content,
 not a new format. Runs locally against `web_import/GAME`; no network, no service.
+
+**Status 2026-08-13: the scaling half is built and live** at
+`tt-dev.spliffdonk.com/calibrate` (dev only; `webapp/public/calibrate.html`,
+scene index derived by `tools/pipeline/scene-index.py` as an npm prebuild).
+It outgrew the proposal in one direction: a draggable reference figure with
+Photoshop-style corner handles, sized against anything in the art, and
+**pins** — (x, y, scale) judgements that are the primary artifact. Two pins
+fit the engine's four numbers exactly; Copy GML emits the element plus the
+pins as an XML comment, so the parser contract holds. A Classic/Modern
+toggle previews, from the same pins, either the 1999 y-ramp or a thin-plate
+spline terrain (Modern-only by the D8 test: `getScaling` is `a*y + b`,
+verified in `Terrain.ts:50` and the decompiled Java — no lateral term, so
+tilted or curved ground is beyond the 1999 engine by construction). Two
+constraints discovered: the ramp's zero IS the vanishing line, so the four
+numbers have always encoded a pinhole camera and a horizon drag can derive
+`scaling2`; and 1998 authored some scanlines and polygons beyond the room
+(`t_HjaVolvul` scanline2=800 in a 600px room, `p_HjaVolvu` to x=1201 in an
+800px room), so in-frame clamping is part of any honest overlay. **The
+ordering half — sorting layers, seeding from z + an AI depth pass — is not
+started**, and none of the ~60 calibrations have been authored yet: the tool
+exists, the hour of authoring has not happened.
+
+**REVISED 2026-08-14 — save and publish are part of the tool.** The proposal
+above says "no network, no service", and the built tool inherited that
+faithfully: Copy GML is its only output and the clipboard was the whole write
+path. That undersold what authoring is actually like. Calibrating a scene is
+judgement work spread across sittings — ten minutes today, ten tomorrow,
+together completing one scene — so the tool needs two buttons the proposal
+never asked for:
+
+- **Save** persists work-in-progress per terrain: the pins (the primary
+  artifact), the Classic/Modern choice, and any pending unpinned size, so
+  reloading `/calibrate` resumes exactly where the last sitting ended. WIP
+  lives in git-tracked sidecar files (e.g. `web_import/calib/<terrain>.json`),
+  never in the masters — a half-formed judgement must not churn shipped GML.
+- **Publish** writes the finished calibration into the `.gml` master — the
+  four numbers as attributes, the pins as the XML comment — and deploys it to
+  tt-dev. That is tt-dev's purpose: it is the dev server, and
+  author → publish → judge in-game is one loop. The in-place master writer
+  already exists as `tools/pipeline/calibration.py` (encoding-safe:
+  ISO-8859-1 + CRLF read and asserted), currently untracked and unwired.
+- Both need a write path from a served page back into the working repo: a
+  small dev-only service with auth behind Caddy. Its exact shape is decided
+  when built; what is decided now is that it exists, revising the "no
+  service" line above.
+
+**Status 2026-08-14: built and live.** `tools/calibrate_server.py` (stdlib,
+loopback, bearer token from `.calib.env`, no default) behind Caddy at
+`/calibrate/api/*` on the tt-dev block only, run by
+`timaflakkarinn-calib.service`. Save/resume verified on the live page by
+Playwright probe (`~/tools/browser/save_probe.mjs`): judgement → `Save •` →
+saved → cold reload → sitting restored. Publish verified end-to-end through
+the service (`5848cde`): master patched in place (a values-identical publish
+correctly writes nothing), sidecar committed, pushed to Forgejo, deploy.sh
+ran green and tt-dev's version.json confirmed the commit. The scene list
+marks saved-but-unpublished terrains ●; Reset deliberately does not resume
+the sidecar. Found on the way: `webapp/public/gml` is a symlink into
+`web_import/gml`, so the master is the only tracked copy and publish
+commits it alone. The Classic residual prints in the publish confirm.
+
+**Open: how a publish permeates to prod (tt.spliffdonk.com).** Proposal,
+not yet confirmed by the owner: it doesn't, directly. Prod serves `main` and
+moves only by `deploy.sh --promote`, so a published calibration rides the
+ordinary dev→main promote like any other content change. Classic consumes
+the four linear numbers; the TPS pins ride as comments only the remaster
+engine will read. Publishing Modern work to dev therefore never changes prod
+until promoted — and even then Classic sees only the linear part.
+
+**Open — and now ASKED (2026-08-14): where Classic's line is.** The
+question went to Gummi and Georg on Messenger, the two who can answer it,
+framed as: Classic = 1999 plus bug fixes and unfinished polish (stray green
+pixels; "Erna" input becoming case-insensitive and trailing-space-tolerant
+was the owner's added example) — intent decides; Modern = no restrictions
+except identical gameplay. The two questions as sent: (1) was y-only
+scaling a design call or the deadline — with one more month, would floors
+have gotten sideways tilt? (2) were the 47 rampless scenes deliberately
+flat or unfinished? Their answers draw the line; the rule below stands as
+the working proposal until they do. Note their answer to (2) also decides
+whether authoring numbers for a given flat scene is "finishing" or
+"changing" — small deliberately-flat rooms may exist.
+
+**Open: a fix authored in Modern that the original engine could express —
+what migrates, and how?** Proposed rule: nothing migrates by hand. The pins
+are the edition-neutral judgement; each edition consumes its own derivative —
+Classic the best linear fit (the tool already computes it live), Modern the
+thin-plate spline. Publish should therefore print the Classic residual
+("linear fit within 4% of your pins"), giving every scene an explicit
+verdict: either the fix lands in both editions for free, or the residual is
+the measured, recorded price Classic pays — lateral tilt and curvature are
+beyond `a*y + b` by construction (D8's own test). Authored once, derived per
+edition, translated never — so the editions cannot drift apart. This is the
+same shape as D8's one-tree-two-editions rule, applied to depth.
 
 ## Open
 

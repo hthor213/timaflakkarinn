@@ -1,0 +1,98 @@
+import type { StateController } from './StateController';
+
+/**
+ * Dialogue options as tappable rows, under the picture, on touch only.
+ *
+ * The canvas is a fixed 800x600 scaled to the width of a handset, so a 22px
+ * line of dialogue arrives at roughly ten physical pixels, and its hit box is
+ * that line's own measured width -- a target a couple of millimetres tall that
+ * you aim at with a thumb. The conversation is most of this game. This makes
+ * the same options readable and hittable without touching the 1998 frame.
+ *
+ * A view, like VerbBar. It renders whatever getVisibleSentences() reports and
+ * choosing a row calls actorClicked with the real actor, which is the identical
+ * path a click on the canvas takes -- the same sequence runs, in the same
+ * order, and no conversation logic exists twice.
+ *
+ * The in-canvas lines are deliberately left alone rather than hidden: they are
+ * the 1998 presentation, they carry the speaker's colour, and on a tablet in
+ * landscape they are perfectly usable. This is an addition, not a replacement.
+ *
+ * Refreshed by polling rather than by notification. Options appear and vanish
+ * through a Quantum calling SentenceContainer.showAll/hideAll, which changes no
+ * state anybody observes, so there is nothing to subscribe to without threading
+ * a signal through the quantum system for one platform's chrome. The poll runs
+ * on the frame clock and only touches the DOM when the set of lines actually
+ * changes.
+ */
+export class SentenceList {
+  private root: HTMLElement;
+  private sc: StateController | null = null;
+  // A sentinel, not ''. No conversation can produce it, so the first sync
+  // always runs — with '' the "no options" case matched the initial value,
+  // returned early, and never applied .empty, leaving a bare padded strip
+  // under the picture before anyone had spoken.
+  private static readonly UNSYNCED = '<unsynced>';
+  private signature = SentenceList.UNSYNCED;
+  private frame = 0;
+
+  constructor(container: HTMLElement = document.body, anchor?: HTMLElement) {
+    this.root = document.createElement('div');
+    this.root.id = 'sentence-list';
+    this.root.setAttribute('role', 'group');
+    this.root.setAttribute('aria-label', 'Samtalsvalkostir');
+    // Above the verb bar when there is one, so the reading order down the
+    // screen is picture, then what you can say, then how you can act.
+    container.insertBefore(this.root, anchor ?? null);
+
+    const tick = () => {
+      this.sync();
+      this.frame = requestAnimationFrame(tick);
+    };
+    this.frame = requestAnimationFrame(tick);
+  }
+
+  attach(sc: StateController): void {
+    this.sc = sc;
+    this.signature = SentenceList.UNSYNCED;   // force a rebuild for the new chapter
+    this.sync();
+  }
+
+  private sync(): void {
+    const lines = this.sc?.getVisibleSentences() ?? [];
+    const signature = lines.map(l => l.text).join('\n');
+    if (signature === this.signature) return;
+    this.signature = signature;
+
+    this.root.replaceChildren();
+    this.root.classList.toggle('empty', lines.length === 0);
+
+    for (const { actor, text } of lines) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sentence';
+      b.textContent = text;
+      b.style.touchAction = 'none';
+      // pointerdown for the same reason as the verb bar: `click` on touch waits
+      // to rule out a double-tap, and that wait reads as a dead button.
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        // Clear immediately. The chosen line usually starts a sequence that
+        // hides the container, but not always on the same frame, and a row that
+        // stays lit under a thumb invites a second tap into a conversation that
+        // has already moved on.
+        this.signature = '<pending>';
+        this.root.replaceChildren();
+        this.root.classList.add('empty');   // collapse, not a bare padded strip
+        this.sc?.actorClicked(actor, 0);
+      });
+      this.root.appendChild(b);
+    }
+  }
+
+  destroy(): void {
+    cancelAnimationFrame(this.frame);
+    this.root.remove();
+    this.sc = null;
+  }
+}

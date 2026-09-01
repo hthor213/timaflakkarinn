@@ -22,7 +22,7 @@ Three things follow, and they are the reason this plan is shaped the way it is:
 
 | Layer | Contents | Disposition |
 |---|---|---|
-| **Content** | 6 GML chapters, 1 211 assets | **Sacred.** Edited only to fix authored defects (e.g. terrain calibration), never restructured |
+| **Content** | 6 GML chapters, 1 211 assets | **Traceable.** Edited to fix authored defects, to finish intended-but-cut work, and to carry Modern-only variants. Every divergence from 1999 must map to a numbered issue — see D8 |
 | **Interpretation** | `GMLParser` → object graph | Keep. Extend for new element types only |
 | **Simulation** | `World`, `Pulser`, `Sequence`/`Quantum`, `StateController`, `Terrain`, `Inventory`, save/load | Keep. Fix known defects. **This plus Content is the game** — it is what every alternative stack would have forced us to rewrite |
 | **Presentation** | Renderer, animation, audio spatialisation, camera | **Swappable.** Classic and remastered implementations coexist |
@@ -38,9 +38,32 @@ Four interfaces carry the whole plan. One exists; three are new.
 | `RenderBackend` | `Canvas2D` (classic) · `WebGL` (remaster) | New. Keeps the renderer swap from being a stop-the-world rewrite |
 | `AssetSource` | `Bundled` · `OnDemandPack` | New. Web lazy-load, iOS ODR and Play Asset Delivery are one abstraction |
 | `SaveBackend` | `IndexedDB` · `iCloud` · `PlayGames` | New. Cheap now, expensive to retrofit |
+| `Edition` | `Classic` · `Modern` | New, and now the load-bearing one — see D8 |
 
-`ActorFace` is the important one: it turns a 46-character remaster into 46
-independent, reversible, individually shippable increments.
+`ActorFace` is the important one for art: it turns a 46-character remaster into
+46 independent, reversible, individually shippable increments.
+
+`Edition` is the one that decides what a build *is*. It resolves in two places
+and nowhere else:
+
+1. **Content** — `GMLParser` reads variant attributes and keeps or drops an
+   element by edition. This is new parser work and it is the only change the
+   Interpretation layer needs.
+2. **Presentation** — which `ActorFace` and `RenderBackend` implementations are
+   registered.
+
+Everything between those two — `World`, `Pulser`, `Sequence`/`Quantum`,
+`StateController`, `Terrain`, `Inventory`, save/load — is **edition-blind and
+must stay so.** That is the invariant worth defending: roughly 4 000 of the
+6 457 lines of the codebase, the part that encodes the reverse-engineered 1999
+semantics, never learns which edition it is running. If a change to the
+simulation layer needs to ask, the seam was drawn in the wrong place.
+
+Corollary for tests: the 106 cases encode 1999 behaviour and therefore describe
+**Classic**. Modern-only behaviour needs its own cases, and the most valuable
+test available is the cross-edition one — *does Modern still produce the same
+walk quanta as Classic for `s_Kot`?* That test is only writable because both
+editions live in one build.
 
 ## Asset pipeline
 
@@ -73,21 +96,72 @@ shipped. Any stage that emits derived files must uppercase the extension.
 
 ## Deployment
 
-Live since 2026-08-07.
+Live since 2026-08-07. **Two real environments since 2026-08-08.** Since
+2026-09-01 deploys are triggered by merging PRs on GitHub — see
+`specs/004-open-source-and-pipeline.md`; `tools/deploy.sh` remains the single
+deploy authority and everything below still holds.
 
-| Host | Mode |
-|---|---|
-| `tt.spliffdonk.com` | play |
-| `tt-dev.spliffdonk.com` | debug |
+| Host | Env | Branch | Directory | Gate |
+|---|---|---|---|---|
+| `tt.spliffdonk.com` | prod | `main` | `/srv/timaflakkarinn/prod/{repo,web}` | `--promote`, plus Erna on art |
+| `tt-dev.spliffdonk.com` | dev | `dev` | `/srv/timaflakkarinn/dev/{repo,web}` | none, deliberately |
 
-One build artifact for both; the mode is chosen client-side from the hostname.
+Until 2026-08-08 these were **one Caddy block over one serving root**. "Dev" was
+a client-side debug flag reading the hostname, so both URLs served byte-identical
+files from the same directory — there was no test environment, and nothing could
+be tried anywhere before the public saw it. They are now two of everything:
+own checkout, own serving root, own branch, able to sit at different commits.
+
+The Caddy handlers live in a **shared snippet** imported by both site blocks, so
+there is exactly one copy of the cache and charset rules. Every one of them is
+load-bearing; two hand-maintained copies would drift, and silently.
+
 Cloudflare A records are **DNS-only (grey cloud)**, matching every other record
 in the zone — Caddy needs HTTP-01 to reach the origin for Let's Encrypt.
 
-Serving root `/srv/timaflakkarinn/web` is a **hardlink overlay**: images from
-`web_import/GAME`, audio from `web_import/GAME_M4A`, WAVs excluded. 57 MiB
-apparent for ~1.3 MiB of real disk, and it is what actually realises the
-169 → 33 MiB audio win. Masters are read-only inputs and were verified untouched.
+Each serving root's `GAME/` is a **hardlink overlay**: images from that
+environment's own `web_import/GAME`, audio from `web_import/GAME_M4A`, WAVs
+excluded. It is what actually realises the 169 → 33 MiB audio win. Built by
+`tools/make-overlay.sh`, which until 2026-08-08 did not exist — the overlay was
+made by hand and existed only on the machine that made it, which is precisely
+why a second serving root could not be created. The whole dev root costs 21 MB:
+the audio is shared inodes with prod, only the PNGs are distinct, because each
+root's art links into its own checkout so it tracks its own branch.
+
+**`web_import/GAME_M4A` is gitignored and is NOT in a fresh clone.** It is
+derived from the WAV masters, so it is build output and correctly uncommitted —
+but that means it exists in exactly one directory on one machine, and an overlay
+cannot be built anywhere that lacks it. See known-issues #22.
+
+### What ships, and how you know
+
+The deploy source is **`origin/<branch>`**, not anyone's working copy. Two
+checkouts pull from one Forgejo, so the hub is the only thing they agree on, and
+prod is normally deployed from a workspace sitting on `dev`. The workspace is
+checked only when it happens to be on the branch being deployed — then it must
+be clean *and* pushed, or what you are looking at is not what will ship.
+
+Each deploy writes **`/version.json`** into its own serving root: env, branch,
+commit, subject, deploy time. Before this, "what commit is live?" had no answer —
+working it out meant correlating web-root mtimes against commit timestamps, and
+this document's own session brief had drifted to naming the wrong commit as live
+because of it. Caddy serves it from an explicit handler with `no-store`; it must
+not fall into the SPA catch-all, or a root without the file answers `200` with
+`index.html` and anything asking "what is deployed?" reads a web page as an
+answer. That was observed on `tt.spliffdonk.com` before the handler existed.
+
+### The promote gate
+
+`prod` is the public site, and reaching it is a decision rather than a default:
+
+- **`--promote` is required.** Nothing gets there by momentum.
+- **A range touching art needs `--art-approved "<who, when>"`**, and the text is
+  printed in the deploy report. Art paths are `web_import/GAME/**` and `art/**`
+  outside `art/<scene>/approved/` — the approved/ axis from specs/003 is the
+  whole point, so only what a human has looked at passes freely. `art/` does not
+  exist yet, so today the rule bites only on `web_import/GAME`.
+- **`dev` has no gate at all**, deliberately. Testing must never wait on a
+  sign-off.
 
 Caddy handles `/GAME/*`, `/gml/*`, `/video/*` and `/assets/*` **before** the SPA
 fallback, so a missing asset returns a real 404 instead of being masked by
@@ -115,13 +189,33 @@ convention and Caddy never reads it. Every live cache and charset rule comes fro
 revision of this document said the gml charset was set "per `_headers`", which
 was wrong.
 
-**A git bundle cannot carry LFS blobs.** While the server's Forgejo credential is dead,
-transport falls back to a bundle — which carries git objects, but LFS content
-lives behind the same dead endpoint. So no commit touching an LFS-tracked path
-can be deployed until the credential is renewed; `tools/deploy.sh` refuses rather
-than checking out 130-byte pointers where art belongs. Text-only commits are
-fine. This becomes blocking the moment `tools/pipeline/` starts emitting derived
-art.
+**Changing a GAME master makes the serving root stale, silently.** The overlay is
+hardlinks *into* the checkout, and git **replaces** a changed file rather than
+writing through it — so new art lands on a new inode while the serving root
+keeps pointing at the old one. New art in the repo, old pixels on screen, and
+not one error anywhere. `tools/deploy.sh` refuses when the range touched
+`web_import/GAME/` and names the `make-overlay.sh` command to fix it. It checks
+this *after* transport, since only then does the checkout hold the art to
+rebuild from.
+
+**A git bundle cannot carry LFS blobs.** This mattered while the server's Forgejo
+credential was dead: a bundle carries git objects, but LFS content lives behind
+the same endpoint, so a commit touching an LFS-tracked path would check out a
+130-byte pointer where art belongs. `tools/deploy.sh` refuses rather than doing
+that. **Resolved 2026-08-07** — the token had been deleted, not expired
+(known-issues #20); transport is `fetch` again and all 1,215 LFS files resolve as
+real blobs. The bundle path remains as a fallback and for a genuine remote
+deploy; it is no longer the normal case.
+
+**Do not ssh to yourself.** `deploy.sh` shipped with `SSH_HOST=hjalti@homeserver`
+and `REMOTE_REPO=/home/hjalti/work/timaflakkarinn` — the very working copy it ran
+from. Every `remote()` was a loopback ssh that died on host key verification, and
+the "server has commits the laptop does not" guard compared a directory to
+itself. The script now asks whether it *is* the deploy host — short hostname
+`homeserver`, or `hostname -I` owning `192.168.1.100`, or `~/.claude/.aidev-mode`
+reading `homeserver`, the same three signals as `connect.sh`; `--host` overrides
+all three — and runs the same snippets in a subshell when it is. The ssh path is
+unchanged for a real laptop-to-server run.
 
 **Cache headers must match how a file is named.** `/assets/*` is content-hashed,
 so `immutable` is correct. `/gml/*` is **not** hashed, so it revalidates
@@ -224,6 +318,8 @@ generates the rest of `docs/known-issues.md` — those requirements cannot be
 gathered without a playable build.
 
 - [ ] Depth authoring tool (see 000) → 60 terrain calibrations + depth ordering
+      — scaling half of the tool live at `/calibrate` on tt-dev (2026-08-13);
+      ordering half not started; 0 of ~60 calibrations authored yet
 - [ ] Contact shadows — highest perceptual win per unit effort
 - [ ] `GuessQuantum`: dialog, `trim()`, `erna`, plus the Irna response
 - [ ] Recover the five hardcoded PNGs from Halldór
@@ -299,12 +395,14 @@ SPA fallback serves the app on a deep link, so `/chapter1..4` resolve rather
 than 404:
 
 - [x] `curl -sf https://tt.spliffdonk.com/chapter2 | grep -q game-canvas`
-- [ ] `python3 tools/lint_gml.py web_import` — currently **5 issues**, all
+- [ ] `python3 tools/lint_gml.py web_import` — currently **6 issues**, all
       pre-existing 1998/1999 content gaps, none introduced by the rebuild:
-      3 voice lines absent from the archival master (need the CD ISO),
-      1 typo'd quantum reference in `s_bless1`, 1 reference to a cut scene.
-      Deliberately left red rather than relaxed — the gaps are real and two of
-      them need Halldór's confirmation before anyone edits content
+      4 voice lines absent from the archival master (need the CD ISO;
+      `m_ErnaEkkiIrna` joined the list when the Irna near-miss response was
+      wired, 2026-08-08), 1 typo'd quantum reference in `s_bless1`,
+      1 reference to a cut scene. Deliberately left red rather than relaxed —
+      the gaps are real and two of them need the original team's confirmation
+      (not Halldór's — he was never on the team) before anyone edits content
 - [ ] The game runs on a phone by touch — **no longer blocked**: Pointer Events
       landed 2026-08-07 with 10 regression cases, and the engine no longer has a
       mouse-only path. Unchecked because nobody has held an actual phone; it is a

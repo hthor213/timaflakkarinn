@@ -5,6 +5,7 @@ import { ScrollingScene } from '../engine/Scene';
 import type { Sequence } from '../engine/Sequence';
 import type { World } from '../engine/World';
 import { TextActorFace } from '../engine/ActorFace';
+import { SentenceContainer } from './SentenceContainer';
 import type { Inventory } from './Inventory';
 
 export const MOVING = 0;
@@ -50,6 +51,14 @@ export class StateController {
   performSequence: (name: string, wait: boolean) => void = () => {};
   // Callback to game for cursor changes
   setCursorFace: (n: number) => void = () => {};
+  /**
+   * Fired whenever the verb or the inventory changes. The touch verb bar is a
+   * view of this controller and must follow it, not just drive it: FREEZE
+   * during a cut-scene, CONVERSATING during dialogue, USING when an item is
+   * picked up, and the inventory opening are all state changes the player did
+   * not make from the bar.
+   */
+  onStateChanged: () => void = () => {};
 
   constructor(world: World, stateActor: Actor, inventoryActor: Actor, textActor: Actor) {
     this.world = world;
@@ -75,6 +84,7 @@ export class StateController {
       console.log(`[SC] setState: ${names[this.state]} → ${names[n]}`);
       this.state = n;
       this.updateState();
+      this.onStateChanged();
     }
   }
 
@@ -148,6 +158,91 @@ export class StateController {
     if (key === ' ') {
       this.doRightButton();
     }
+  }
+
+  /** The four verbs a player can choose, in the order doRightButton cycles them. */
+  static readonly VERBS = [MOVING, TAKING, LOOKING, TALKING];
+
+  isInventoryOn(): boolean {
+    return this.inventoryOn;
+  }
+
+  /**
+   * The dialogue options on screen right now, in the order they are stacked.
+   *
+   * On a phone these are the least usable thing in the game: the canvas is
+   * 800x600 scaled to the width of a handset, so a 22px line of dialogue lands
+   * at roughly ten physical pixels, and each option's hit box is that line's
+   * own measured width -- a target a few millimetres tall. This lets the touch
+   * layout re-present the same options as real rows underneath the picture.
+   *
+   * A query, not a second copy of the conversation: the returned actors are the
+   * actors, and choosing one goes back through actorClicked exactly as a click
+   * on the canvas does.
+   *
+   * Visibility is read off position because that is how the game hides them --
+   * SentenceContainer.hideAll parks every line at y = -3000 rather than
+   * detaching it, so a container can hold options that are not currently
+   * offered.
+   */
+  getVisibleSentences(): { actor: Actor; text: string }[] {
+    if (this.state !== CONVERSATING) return [];
+    const scene = this.world.currentScene;
+    if (!scene) return [];
+
+    const out: { actor: Actor; text: string }[] = [];
+    for (const terrain of scene.terrains) {
+      if (!(terrain instanceof SentenceContainer)) continue;
+      for (const actor of terrain.actors) {
+        const face = actor.currentFace;
+        if (!(face instanceof TextActorFace)) continue;
+        if (actor.location.y < 0) continue;      // parked by hideAll
+        const text = face.text.trim();
+        if (text) out.push({ actor, text });
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Can this verb be chosen right now? Drives both the tap and the button's
+   * enabled state, so a verb bar never offers something that would be ignored.
+   *
+   * These are exactly doRightButton's rules, read off it rather than re-derived:
+   *
+   *  - FREEZE and CONVERSATING do not change verb at all. A cut-scene or a
+   *    dialogue owns the controller; letting a tap change the verb underneath
+   *    it is how a player ends up holding LOOKING in a conversation.
+   *  - With the inventory open only TAKING and LOOKING mean anything — the
+   *    same pair doRightButton toggles between there.
+   *  - MOVING is refused when the player has no face for its current movement
+   *    state. doRightButton skips MOVING for the same reason, and it is why a
+   *    boxless actor cannot walk (known-issues #17).
+   */
+  canSetVerb(n: number): boolean {
+    if (!StateController.VERBS.includes(n)) return false;
+    if (this.state === FREEZE || this.state === CONVERSATING) return false;
+    if (this.inventoryOn) return n === TAKING || n === LOOKING;
+    if (n === MOVING && this.mainActor
+        && !this.mainActor.states.has(this.mainActor.currentStateName)) return false;
+    return true;
+  }
+
+  /**
+   * Choose a verb directly. doRightButton cycles; this picks. Same rules.
+   *
+   * Choosing a verb while holding an item puts the item back, because
+   * doRightButton does: an item taken for USING has been removed from its
+   * terrain, and leaving USING without returning it strands it attached to
+   * nothing and out of the inventory.
+   */
+  setVerb(n: number): void {
+    if (!this.canSetVerb(n)) return;
+    if (this.state === USING && this.usedActor && this.inventoryTerrain) {
+      this.usedActor.setTerrain(this.inventoryTerrain);
+      this.inventoryTerrain.updatePositions();
+    }
+    this.setState(n);
   }
 
   doRightButton(): void {
@@ -225,6 +320,10 @@ export class StateController {
           this.setState(MOVING);
         }
       }
+      // Both branches above can return without calling setState -- opening with
+      // the state already TAKING, closing while USING. inventoryOn still
+      // changed, and it decides which verbs are offered, so say so explicitly.
+      this.onStateChanged();
       return;
     }
 

@@ -1,0 +1,82 @@
+import { getCurrentSubtitleState } from '../engine/ActorMouth';
+
+/**
+ * The spoken line, repeated as readable text under the picture, on touch only.
+ *
+ * The words are not new. 1998 wrote a subtitle for every voiced line and the
+ * port already plays them back on the audio's own clock -- 1,315 timed
+ * <Sentence> elements across the four chapters, which is the whole script. They
+ * are painted into the canvas at 22px, which is fine on a laptop and lands at
+ * roughly ten physical pixels on a phone. Unreadable is the same as absent when
+ * the reason you want subtitles is that the sound is off.
+ *
+ * So this adds no content and changes no timing. It mirrors what the canvas is
+ * already showing, at a size a phone can read, in the strip that portrait has
+ * spare. The canvas line stays: it carries the speaker's colour and sits over
+ * the character who is talking, which is information this strip does not have.
+ *
+ * Polled on the frame clock, like the other touch views: the subtitle advances
+ * from inside a Pulser tick and notifies nobody. Only touches the DOM when the
+ * line actually changes.
+ */
+export class Subtitles {
+  private root: HTMLElement;
+  // A sentinel, not '' -- an empty line is a real state (nobody is speaking)
+  // and must still trigger the first sync.
+  private shown = '<none>';
+  private words: HTMLSpanElement[] = [];
+  private lit = -1;
+  private frame = 0;
+
+  constructor(container: HTMLElement = document.body, anchor?: HTMLElement) {
+    this.root = document.createElement('div');
+    this.root.id = 'subtitle';
+    this.root.setAttribute('role', 'status');
+    this.root.setAttribute('aria-live', 'polite');
+    container.insertBefore(this.root, anchor ?? null);
+
+    const tick = () => {
+      this.sync();
+      this.frame = requestAnimationFrame(tick);
+    };
+    this.frame = requestAnimationFrame(tick);
+  }
+
+  private sync(): void {
+    const state = getCurrentSubtitleState();
+    const line = state?.text ?? '';
+    const word = state?.word ?? -1;
+
+    // Rebuild only when the LINE changes; moving the highlight is a class swap
+    // on existing spans, which is what makes a per-frame poll cheap enough.
+    if (line !== this.shown) {
+      this.shown = line;
+      this.root.classList.toggle('empty', line === '');
+      this.root.replaceChildren();
+      this.words = [];
+      if (line) {
+        const parts = line.split(/\s+/);
+        parts.forEach((w, i) => {
+          const span = document.createElement('span');
+          span.className = 'w';
+          span.textContent = w;
+          this.root.appendChild(span);
+          if (i < parts.length - 1) this.root.appendChild(document.createTextNode(' '));
+          this.words.push(span);
+        });
+      }
+      this.lit = -1;
+    }
+
+    if (word !== this.lit) {
+      if (this.lit >= 0) this.words[this.lit]?.classList.remove('now');
+      if (word >= 0) this.words[word]?.classList.add('now');
+      this.lit = word;
+    }
+  }
+
+  destroy(): void {
+    cancelAnimationFrame(this.frame);
+    this.root.remove();
+  }
+}

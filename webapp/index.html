@@ -63,6 +63,216 @@
       image-rendering: pixelated;
       cursor: none;
     }
+
+    /* ---------------------------------------------------------------------
+       Touch layout. Portrait only, and deliberately "usable" rather than
+       optimised: the 4:3 frame keeps the whole width, and everything portrait
+       has left over goes to the verb bar.
+
+       These rules come last and are written to outrank the debug rules above,
+       because the phone this is played on points at tt-dev — where the debug
+       layout reserves 280px for a side panel that is wider than a third of the
+       screen and a fixed panel that sits on top of the bar.
+       --------------------------------------------------------------------- */
+    html[data-input="touch"] body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100vw;
+      height: 100dvh;   /* dvh, not vh: vh includes the mobile URL bar, so the
+                           bar would sit under it until the browser settled */
+    }
+    html[data-input="touch"] #game-container,
+    html[data-mode="debug"][data-input="touch"] #game-container {
+      width: 100vw;
+      height: calc(100vw * 3 / 4);
+      max-width: 100vw;
+      max-height: calc(100vw * 3 / 4);
+      flex: 0 0 auto;
+      aspect-ratio: auto;
+      /* Anchored near the top, NOT centred.
+         Centring (margin: auto 0) meant the picture was positioned by however
+         much space was left over — so the moment dialogue options appeared the
+         frame lifted by ~350px mid-conversation. A fixed top margin pins it;
+         the auto BOTTOM margin then eats all the slack, which keeps the
+         dialogue rows and the verbs together at the bottom where the thumb is.
+         Top offset only has to clear the status bar. */
+      margin: calc(env(safe-area-inset-top, 0px) + 10px) auto auto;
+    }
+    html[data-input="touch"] #game-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    /* Unusable at this size and it overlaps the bar. ?touch=0 brings it back. */
+    html[data-input="touch"] #debug-panel,
+    html[data-input="touch"] #dbg-logbar {
+      display: none !important;
+    }
+
+    /* Dialogue options as rows, between the picture and the verbs. Serif and
+       parchment on dark wood, echoing the in-canvas dialogue rather than the
+       verb bar's UI sans — these are the characters' words, not chrome. 17px
+       clears the ~10px the same line lands at inside the scaled canvas. */
+    #sentence-list { display: none; }
+    html[data-input="touch"] #sentence-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100vw;
+      /* `flex: 0 0 auto` deliberately, NOT `1 1 auto` with min-height: 0.
+         Shrinkable, the list collapses to nothing the moment the viewport
+         maths comes out tighter than expected — which is exactly what happened
+         and took the dialogue options off the screen entirely. Sized by its
+         content, capped, and scrolling inside the cap: it cannot vanish. */
+      flex: 0 0 auto;
+      max-height: 42vh;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    html[data-input="touch"] #sentence-list.empty { display: none; }
+
+    #sentence-list .sentence,
+    #menu-list .sentence {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 14px;
+      text-align: left;
+      border: 1px solid #5a4526;
+      border-radius: 3px;
+      background: #2b2116;
+      color: #f2e6c8;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+      line-height: 1.25;
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+    }
+    #sentence-list .sentence:active,
+    #menu-list .sentence:active {
+      background: #c8a040;
+      color: #14100c;
+      border-color: #c8a040;
+    }
+
+    /* The spoken line, mirrored from the canvas at a size a phone can read.
+       Same parchment serif as the dialogue rows, but flat — it is not a
+       control and must not look tappable. */
+    #subtitle { display: none; }
+    html[data-input="touch"] #subtitle {
+      display: block;
+      width: 100vw;
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      color: #f2e6c8;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      line-height: 1.3;
+      text-align: center;
+      text-wrap: balance;
+    }
+    html[data-input="touch"] #subtitle.empty { display: none; }
+    /* Word being spoken. The timing is ESTIMATED from sentence timings — 1998
+       timed per sentence, not per word — so this is a reading aid, not a claim
+       about the recording. Kept gentle for that reason: a hard karaoke fill
+       would assert a precision the data does not have. */
+    #subtitle .w { transition: color 90ms linear; }
+    #subtitle .w.now { color: #ffd479; }
+
+    /* The save/load menu, same rows as the dialogue list. */
+    #menu-list { display: none; }
+    html[data-input="touch"] #menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100vw;
+      flex: 0 0 auto;
+      max-height: 52vh;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    html[data-input="touch"] #menu-list.empty { display: none; }
+    #menu-list .menu-prompt {
+      color: #c8a040;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 16px;
+      padding: 2px 4px 4px;
+    }
+    #menu-list .menu-input {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 14px;
+      border: 1px solid #c8a040;
+      border-radius: 3px;
+      background: #14100c;
+      color: #f2e6c8;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+    }
+    #verb-bar { display: none; }
+    html[data-input="touch"] #verb-bar {
+      display: flex;
+      width: 100vw;
+      /* Fixed and compact. `flex: 1 1 auto` here is what made the bar eat the
+         screen. It needs a thumb-sized row and not one pixel more. */
+      flex: 0 0 auto;
+      height: 78px;
+      /* No auto margin here: the picture's auto bottom margin already holds
+         everything below it at the bottom. Two competing auto margins would
+         split the slack and leave a gap between the options and the verbs. */
+      background: #14100c;
+      border-top: 1px solid #3a3025;
+      /* Clear of the home indicator, so the bottom row is not half under it. */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      box-sizing: content-box;
+    }
+    /* Dimming the whole bar to 0.45 during a conversation made already-dark
+       labels unreadable. Say "busy" without hiding what the buttons are. */
+    html[data-input="touch"] #verb-bar.idle { opacity: 0.8; }
+
+    #verb-bar .verb {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+      padding: 6px 2px;
+      border: 0;
+      border-right: 1px solid #2a231b;
+      background: transparent;
+      color: #f0c86a;
+      /* Not the game's serif. These are UI chrome at 15px on a dark ground,
+         where serif strokes go thin and grey out; the label has to be read at
+         a glance mid-game. */
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      /* The tap target is the whole cell — a quarter of the width by 78px, so
+         comfortably past 44px in both directions. */
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+    }
+    #verb-bar .verb:last-child { border-right: 0; }
+    #verb-bar .verb svg {
+      /* Smaller than the first cut: the label carries the meaning, the icon
+         only has to make the row scannable. */
+      width: 24px;
+      height: 24px;
+    }
+    #verb-bar .verb.active {
+      background: #c8a040;
+      color: #14100c;
+    }
+    #verb-bar .verb:disabled {
+      /* Legible, plainly inactive. #5a4c38 under a 0.45 bar was invisible. */
+      color: #8d7a55;
+      cursor: default;
+    }
     #loading {
       position: absolute;
       top: 50%;

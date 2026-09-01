@@ -12,23 +12,80 @@ there is a playable build: recall is triggered by playing, not by remembering.
 ## Tags
 
 Every entry carries an origin tag. The distinguishing question is **factual, not
-aesthetic**: *did the 1998 team consider this wrong at the time?*
+aesthetic**: *why is this not right in the 1999 build?*
 
-| Tag | Meaning | What happens |
+Since 2026-08-08 the tag also decides **which edition a change lands in.** There
+are two products — see `specs/000` D8. The rule is one line: **four tags go to
+both editions, one goes to Modern only.**
+
+| Tag | Meaning | Edition |
 |---|---|---|
-| `1998-bug` | Wrong against the original team's own intent — a shipped defect, **or** something they meant to do and never got to | **Fix it.** No preserve-or-fix debate: the authors already agreed it was wrong, so preserving it would preserve a mistake, not fidelity |
-| `port-bug` | Introduced by the reverse-engineering | Fix. The 1999 engine is the specification and the recreation is simply wrong |
-| `missing` | Content the port does not have | Add |
-| `design-improvement` | Worked exactly as intended in 1998; we want better now | Genuinely optional. This is what the remaster is *for* |
+| `1998-bug` | A defect. Wrong against the original team's own intent, and they knew it | **both** |
+| `port-bug` | Introduced by the reverse-engineering | **both** |
+| `missing` | Content the port does not have but the disc does | **both** |
+| `cut-for-time` | Intended, achievable on the 1999 engine, lost to the schedule | **both** |
+| `modern-only` | Cannot or should not be in Classic — the archetype is *"we wanted this and wished we had a better engine"* | **Modern** |
 
-Two notes on using this well.
+Two further tags exist and sit **outside** the edition axis entirely, because
+they are about the project rather than the game: `infrastructure` (tooling,
+servers, credentials) and `provenance` (what the artefacts are and where they
+came from). Neither ships.
 
-**`1998-bug` covers unfinished intent, not just defects.** That is the dominant
-signature of this codebase — three voice lines cut for a pressing deadline, 61 of
-84 terrains never given their scaling calibration, `SetSpeedQuantum` built and
-wired and never once used, a sequence literally named `s_UnDecided6`. None of
-that is sloppiness; it is a six-month schedule, still visible in the archive.
-It needs *finishing*, not deciding.
+Three notes on using this well.
+
+**`cut-for-time` is not a defect, and it still goes in Classic.** This is the
+dominant signature of the codebase — three voice lines cut for a pressing
+deadline, 61 of 84 terrains never given their scaling calibration,
+`SetSpeedQuantum` built and wired and never once used, a sequence literally
+named `s_UnDecided6`. None of it is sloppiness; it is a six-month schedule,
+still visible in the archive. It was intended and it was *achievable* — the
+engine could have done it — so finishing it is completing the 1999 game, not
+modernising it. It needs *finishing*, not deciding.
+
+**`modern-only` is a disposition, not a provenance.** Every other tag states a
+fact about the past. This one states where the change ships. It therefore holds
+two things that feel different but behave identically: what the team wanted and
+the engine could not do, and what nobody in 1998 thought of at all. Both are
+Modern-only, both are optional, and neither belongs in Classic. The engine-wish
+cases are the more valuable half — they are recoverable only from the people who
+were there.
+
+**The line between `cut-for-time` and `modern-only` is the whole taxonomy.**
+Both sound like "we wanted it and didn't ship it". The question that separates
+them is: *could the 1999 engine have done it?* If yes, it is `cut-for-time` and
+Classic gets it. If it needed an engine they did not have, it is `modern-only`.
+When the answer is not known, it is a question for the original team and for
+nobody else.
+
+### Re-tagging still owed — needs Hjalti
+
+`cut-for-time` was split out of `1998-bug` on 2026-08-08 and no existing entry
+has been moved, because the distinction is *"did we get it wrong"* versus *"did
+we run out of time"* and only the people who were there know which. Both still
+ship to both editions, so nothing is blocked by this — but the two are different
+facts and the record should say the right one.
+
+The six entries currently tagged `1998-bug`, and how they look from here:
+
+| # | Entry | Reads as |
+|---|---|---|
+| 0 | Three lines displayed but never spoken | **`cut-for-time`** — its own text says cut for a pressing deadline |
+| 1 | Walking away looks like climbing a wall | unclear; also carries `modern-only` |
+| 4 | Green speckles from palette drift | `1998-bug` — invisible on correct hardware, so never a decision |
+| 11 | Hand on yourself inconsistent across chapters | `1998-bug` — inconsistency, not an unfinished plan |
+| 12 | Moonwalking | `1998-bug` — owner confirms it annoyed the team at the time |
+| 13 | Sword can't be picked up; hotspot on empty grass | unclear — abandoned plan, or defect? |
+
+Also `docs/unfinished-1998.md` §4 "Built and never aimed" is `cut-for-time` by
+construction — a mechanism wired in 1998 and never pointed at anything is the
+definition of the tag.
+
+**And the question that actually matters more than the re-tagging:** the
+`modern-only` list is currently one entry long. That list is where *"we wanted
+this and wished we had a better engine"* lives, and it is recoverable from
+nobody but the original team. `STOP2LEA`/`STOP2RIA`/`STOP2BAA` — reaching for
+continuous turning and affording only discrete cells — was found in the content
+rather than reported, which suggests there are more.
 
 **The only entries that need a decision from the owner are the ones where we
 cannot tell whether something was intended.** Karli's subtitles being coloured
@@ -116,7 +173,7 @@ recording: the new line is carried entirely by its subtitle.
 
 ---
 
-## 1 — `1998-bug` + `design-improvement` · Walking away looks like climbing a wall
+## 1 — `1998-bug` + `modern-only` · Walking away looks like climbing a wall
 
 **Reported by:** Hjalti, 2026-08-06 — "when Hjalti is walking up the river there
 is no perspective and he doesn't get smaller … it looks like he's climbing a
@@ -1303,3 +1360,226 @@ provenance; not a different version.
 the decompiled Java. Worth opening if any question about original engine
 behaviour becomes load-bearing.
 
+
+---
+
+## 22 — `infrastructure` · The transcoded audio exists in exactly one directory, on one machine
+
+Found 2026-08-08 while building the second serving root.
+
+`web_import/GAME_M4A` — the 668 AAC files that are the entire 169 → 33 MiB audio
+win — is **gitignored**, and correctly so: it is derived from the WAV masters and
+is build output, not source. But the consequence had never been stated. Two fresh
+clones made that day contained **zero** `.m4a` files, while the workspace had all
+668. Both serving roots hardlink their audio from that one workspace directory.
+
+So today:
+
+- Every `.M4A` byte the public hears traces to
+  `/home/hjalti/work/timaflakkarinn/web_import/GAME_M4A` on `homeserver`.
+- A `GAME/` overlay **cannot be built on any machine that lacks it**.
+  `tools/make-overlay.sh` refuses with that reason rather than producing a
+  silent, audio-less tree.
+- Losing that directory does not break the running site — the serving roots hold
+  their own hardlinks to the same inodes, so the data survives as long as *any*
+  link does. It breaks the ability to rebuild.
+
+Not urgent, and deliberately not "fixed" by committing it: 35 MB of derived
+output in LFS is the wrong answer, and the owner's standing rule is that build
+output is never `git add`ed.
+
+**The real fix is to make it reproducible**: the WAV → AAC transcode is not in
+`tools/` at all. It was run once, by hand, and the exact `ffmpeg` invocation
+survives only in `specs/000` prose (`libfdk_aac`, and an open question about a
+40 kbps re-run). Until that is a script, the audio pipeline is a step that
+happened rather than a step that can happen again.
+
+Related: `specs/001` "Deployment" and the `--m4a-src` flag on
+`tools/make-overlay.sh`.
+
+---
+
+## 23 — `port-bug` · FIXED · A missing `/version.json` answered 200 with the app HTML
+
+Found and fixed 2026-08-08, immediately on introducing the deploy stamp.
+
+`/version.json` is written into each serving root at publish time and records
+which commit that environment is running. On first test, `tt.spliffdonk.com`
+(which had no such file yet) returned **`200` with `index.html`** rather than
+`404`: the path fell into the SPA catch-all, `try_files {path} /index.html`.
+
+That is the same class of failure the `/assets/*` handler already existed to
+prevent — a missing thing answering cheerfully — but `/assets/*` was the only
+path protected. Anything asking "what is deployed here?" would have received a
+web page and could have parsed it as an answer; a monitor checking for HTTP 200
+would have called an unstamped root healthy.
+
+Fixed with an explicit Caddy handler ahead of the catch-all, serving the file
+with `no-store` (not `no-cache`: this endpoint answers *right now*, never from a
+cache). Verified after the change: dev `200` with its stamp, prod `404` because
+it has not been promoted yet — which is the honest answer.
+
+---
+
+## 24 — `port-bug` · FIXED · The subtitle was destroyed at the moment the sound started
+
+Found 2026-08-08, while adding a readable subtitle strip for the phone.
+
+**The script exists.** Every voiced line in the game has its words and its
+timing in the GML, as `<Sentence text="…" time="…">` children of a
+`SpeechActorMouth`:
+
+| | speech mouths | timed sentences | carrying `acc=` |
+|---|---|---|---|
+| Landnám | 138 | 209 | 138 |
+| Kristnitaka | 193 | 410 | 193 |
+| Siðaskipti | 204 | 442 | 204 |
+| Tyrkjaránið | 173 | 254 | 173 |
+| **total** | **708** | **1,315** | **708 (all)** |
+
+**And it is wired.** All 708 mouths name a text accumulator — `acc="a_Vifill_acc"`
+and so on — every accumulator is declared before the mouth that references it,
+`GMLParser` builds each `<Text>` into an Actor with a `TextActorFace`, and
+`SpeechActorMouth` steps the sentences on the audio's clock and moves the
+accumulator to `textMiddle` (400, 2030, z 2000) on `start()`.
+
+**None of it shows.** Driven in a real browser against the deployed dev site:
+talk to Vífill on the ship, take the first option, watch for 20s. The
+conversation demonstrably advanced — four options became three, so the reaction
+ran and `m_hvaderum` was performed — and no subtitle appeared, on the canvas or
+in the new DOM strip that mirrors it.
+
+Two accumulators are *deliberately* invisible and are not this: `a_Karli_acc`
+and `a_Halldora_acc` are chroma green, so they drew as nothing in 1999 and are
+painted transparent here on purpose (see the note in `GMLParser` `case 'Text'`).
+Vífill's is `color="white"`, and Vífill is who was tested.
+
+**Diagnosed and fixed, same day.** None of the three candidates was it; all
+three were measured and cleared. `t_Corners` is `zmin="900" zmax="2000"` and
+`contains()` is inclusive, so z=2000 passes; `getPhysicalY` is `y - z`, putting
+the line at screen y=30, top centre, where the hover label demonstrably renders.
+`Actor.addState` does set `face.owner`, so the actor resolves and is positioned.
+
+The cause was ordering. `SimpleActorMouth.start()` returns EARLY the first time a
+line plays — it kicks off an async `prepare()` and defers `playNow()` to the
+promise — and `playNow()` begins with `this.stop()`, which for a speech mouth
+unregisters the pulser and calls `textFace.setText('')`. The old code set the
+text and registered the timeline in `start()`, before that stop:
+
+    start()      -> subtitle appears
+    ...load...
+    playNow()    -> stop() wipes the text and unregisters the timeline
+    audio plays  -> nothing re-establishes either
+
+So the subtitle was destroyed at the exact moment the sound began. A line with no
+recording returns from `playNow()` *before* that stop, which is why the three
+silent lines of #0 always displayed and everything else looked like it had no
+subtitles at all. Only a replayed line — already prepared, so `playNow` runs
+synchronously inside `start()` — would have shown one.
+
+Fixed by anchoring the timeline in a `playNow()` override, so it starts when the
+audio starts. That also fixes a desync nobody had reported: the sentence clock
+used to start when the load was *requested*, so lines ran ahead of the voice by
+however long the fetch took.
+
+**Verified** in a browser against the dev build: talk to Vífill on the ship, take
+the first option, and six lines appear in order — "Heyrðu Karli!", "Hvað!",
+"Hvað er um að vera?", "Þú ert allt of spenntur Vífill!", "Það hefur ekkert
+markvert gerst hér ...", "... síðan við lögðum af stað frá Noregi í síðasta
+mánuði." Before the fix the same run produced zero.
+
+**Why it matters beyond a bug.** The owner asked whether subtitles were possible
+so the game could be played with the sound off — and they were written in 1998,
+for every line. If this has never displayed, then 1,315 authored lines have been
+invisible since the port began, and the subtitle feature is not a feature to
+build but a defect to fix.
+
+Still true and separate: `a_Karli_acc` and `a_Halldora_acc` are chroma green and
+therefore deliberately invisible, so Karli's and Halldóra's lines remain
+unsubtitled by 1998's own choice. Whether to keep that is a `modern-only`
+question, not a defect.
+
+## 25 — `provenance` · A full original-team playthrough passes, and the Þjórsá "bug" never existed
+
+**Reported by:** Georg, 2026-08-13, on Messenger — played the game **start to
+finish on his iPhone in one evening**. Tagged `provenance` because both halves
+are evidence about the project rather than defects in the game: the strongest
+fidelity verification the port has had, from someone who helped make the
+original, and a phantom report closed by the only kind of authority that can
+close one.
+
+> "Ég gat spilað leikinn til enda á símanum mínum í gærkvöldi - þannig að allt
+> virkar frá upphafi til enda og fáir böggar eftir … þetta virkar allt bara 99%
+> nákvæmlega eins og þetta var"
+
+(*"I could play the game to the end on my phone last night — so everything
+works start to finish and few bugs remain … it all works 99% exactly as it
+was."*)
+
+**The Þjórsá crossing was never broken.** The long-suspected bug — that the
+axe-tied-to-rope throw across the river doesn't work — was Georg forgetting
+the puzzle's own prerequisite:
+
+> "maður þarf að höggva tréið manns megin við bakkann áður en maður reynir að
+> kasta öxi-bundinni-við-reipi yfir ána - það virkar ekki að kasta fyrr en
+> búið er að höggva tréið fyrst"
+
+(*chop the tree on your own side of the bank first; the throw refuses until
+the tree is down.*) That refusal is the 1999 design working as intended. No
+entry ever existed for this and none should be opened; this note exists so
+nobody chases the ghost.
+
+**Caveat on everything Georg saw:** prod (`tt.spliffdonk.com`) serves
+`ff1ebec` (2026-08-07) — a week behind dev, before the save menu (`8fc4479`)
+and the subtitle fixes (#24). Which URL he played is not known. If it was
+prod, parts of his list below are reports against already-fixed code. **Ask
+him which URL** before spending diagnosis time on #27.
+
+## 26 — `port-bug` · FIXED · Touch targets are finger-hostile on a phone
+
+**Reported by:** Georg, 2026-08-13, from the same playthrough:
+
+> "sumt [er] svo smátt á iphone að það er erfitt að sjá það eða taka það
+> (t.d. tappi í tunnu í Tyrkjaráni og Þórshamarshálsfesti í Kristnitöku) og ég
+> þurfti að reyna oft … velja nákvæmlega réttan punkt til að taka virkaði"
+
+(*Some things are so small on iPhone they are hard to see or take — the tap
+in the barrel in Tyrkjarán, the Thor's-hammer necklace in Kristnitaka — many
+tries, and only the exactly right pixel works.*)
+
+`port-bug` by the same reasoning as #6 and #9: the 1999 hotspots were sized
+for a mouse cursor on a desktop CRT and are right for that world; the port
+brought them to a platform where the pointer is a fingertip. Wants a
+finger-sized pick tolerance on touch input (a radius around the tap, nearest
+eligible hotspot wins), not enlarged hotspots — the authored geometry stays
+1999's. His two examples are the test cases.
+
+**Fixed 2026-08-14** (`21c5eba`), exactly as proposed. Touch taps carry a
+22-CSS-px slop (half of Apple's 44pt minimum target), scaled through the
+canvas fit into logical space; mouse and pen stay exact, so slop 0 remains
+the byte-for-byte 1999 hit test. Only faces small enough for a fingertip to
+miss (twice the slop per side) attract; an exact hit always wins; nearest
+wins among candidates; nothing below the exact hit in z can be picked, so a
+covering face keeps covering. Measured against his examples: the barrel tap
+is a 16x19 sprite and the Thor's hammer 23x20 — both about ten CSS pixels on
+an iPhone, both now magnetic within a fingertip. 8 tests in
+`webapp/test/touchslop.test.mjs`; logic verified there and against the real
+sprite dimensions. On-device confirmation still owed — ideally by the
+reporter.
+
+## 27 — `port-bug`? · UNVERIFIED · Dialogue text sometimes unreadable, and old text lingers
+
+**Reported by:** Georg, 2026-08-13, from the same playthrough:
+
+> "Svo eru e-r glitch í að textinn sjáist þegar verið er að tala - og stundum
+> lúrir gamall texti á skjánum"
+
+(*Some glitches in the text showing while someone is talking — and sometimes
+old text lurks on the screen.*)
+
+UNVERIFIED because of the #25 caveat: the subtitle pipeline was rebuilt in
+#24 *after* the commit prod serves, and "text not showing during speech" is
+exactly what #24 fixed. The lingering-text half may be the pre-fix sentence
+clock running ahead of the audio (also #24), or may be a real, still-live
+staleness bug in the accumulator teardown. Reproduce on current dev first;
+if it survives there, this becomes a real entry with its own diagnosis.

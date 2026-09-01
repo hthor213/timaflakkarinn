@@ -152,6 +152,16 @@ export class Timaflakkarinn {
 
   // State controller (created during GML parsing)
   private stateController: StateController | null = null;
+  /** Fired with each chapter's StateController as it is parsed. See below. */
+  onStateControllerReady: (sc: StateController) => void = () => {};
+
+  /**
+   * Unlock audio. Must be called synchronously from inside a user gesture —
+   * see AssetLoader.unlockAudio and the call in main.ts.
+   */
+  unlockAudio(): void {
+    this.loader.unlockAudio();
+  }
 
   /** Declared by <BeginningScene>. Recorded for reference; never auto-displayed. */
   private beginningScene: Scene | null = null;
@@ -218,6 +228,11 @@ export class Timaflakkarinn {
 
     this.parser.stateControllerSetup = (_name, sc) => {
       this.stateController = sc;
+      // Every chapter's GML declares its own StateController, so anything that
+      // observes one has to be re-bound here. Binding once at startup would
+      // leave the touch verb bar driving chapter 1's controller for the rest of
+      // the game -- taps would do nothing, silently, from chapter 2 on.
+      this.onStateControllerReady(sc);
       sc.performSequence = (name, wait) => {
         if (wait) {
           this.performSequence(name);
@@ -714,6 +729,9 @@ export class Timaflakkarinn {
   private createDebugPanel(): void {
     // Side panel (controls, flow tree, active sequences)
     const panel = document.createElement('div');
+    // id so the touch stylesheet can hide it: 280px fixed is wider than a third
+    // of a phone and sits on top of the verb bar.
+    panel.id = 'debug-panel';
     panel.style.cssText = 'position:fixed;right:0;top:0;width:280px;bottom:180px;background:#1a1a2e;color:#aaa;font:11px monospace;z-index:200;border-left:1px solid #333;overflow-y:auto;padding:8px;';
 
     panel.innerHTML = `
@@ -733,6 +751,7 @@ export class Timaflakkarinn {
 
     // Bottom log bar (full width)
     const logBar = document.createElement('div');
+    logBar.id = 'dbg-logbar';
     // Collapsed by default. Expanded it eats 180px, and with the canvas at a
     // fixed 800x600 that clips the top of the game — you lose actors walking in
     // along the skyline, which is exactly when you want to be watching.

@@ -58,16 +58,11 @@ topology with A's operational cost.
 
 ## Done When
 
-- [ ] `git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | grep -q .`
-      (the repo is public: anonymous ls-remote succeeds)
-- [ ] `curl -sf -o /dev/null https://git.spliffdonk.com/hjalti/timaflakkarinn`
-      (Forgejo repo is public-read for anonymous LFS)
-- [ ] `git config --get lfs.url | grep -q git.spliffdonk.com && grep -q git.spliffdonk.com .lfsconfig`
-      (LFS decoupled from origin, for this clone and every fresh one)
-- [ ] `gh run list --workflow check.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx success`
-      (CI green on the integration branch)
-- [ ] `gh api repos/hthor213/timaflakkarinn/actions/runners --jq '.runners[] | select(.name=="homeserver") | .status' | grep -qx online`
-      (the deploy runner is listening)
+- [ ] `git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | grep -q .` — the repo is public: anonymous ls-remote succeeds
+- [ ] `curl -sf -o /dev/null https://git.spliffdonk.com/hjalti/timaflakkarinn` — Forgejo repo is public-read for anonymous LFS
+- [ ] `git config --get lfs.url | grep -q git.spliffdonk.com && grep -q git.spliffdonk.com .lfsconfig` — LFS decoupled from origin, for this clone and every fresh one
+- [ ] `gh run list --workflow check.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx success` — CI green on the integration branch
+- [ ] `gh api repos/hthor213/timaflakkarinn/actions/runners --jq '.runners[] | select(.name=="homeserver") | .status' | grep -qx online` — the deploy runner is listening
 - [ ] Judgment: a PR merged into `dev` appears on tt-dev.spliffdonk.com with no
       manual deploy step; a merged promotion PR appears on tt.spliffdonk.com.
       Verified by watching the Actions run end in `deploy.sh`'s own 16-check

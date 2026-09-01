@@ -96,7 +96,10 @@ shipped. Any stage that emits derived files must uppercase the extension.
 
 ## Deployment
 
-Live since 2026-08-07. **Two real environments since 2026-08-08.**
+Live since 2026-08-07. **Two real environments since 2026-08-08.** Since
+2026-09-01 deploys are triggered by merging PRs on GitHub — see
+`specs/004-open-source-and-pipeline.md`; `tools/deploy.sh` remains the single
+deploy authority and everything below still holds.
 
 | Host | Env | Branch | Directory | Gate |
 |---|---|---|---|---|

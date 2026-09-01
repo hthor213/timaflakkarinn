@@ -1,7 +1,13 @@
 # Tímaflakkarinn — Git hosting decision
 
 **Date:** 2026-07-13
-**Status:** Decided — Option A
+**Status:** Superseded 2026-09-01 by `specs/004-open-source-and-pipeline.md` —
+open-sourcing moved the repo to GitHub-canonical with Forgejo re-roled as
+public-read LFS host and mirror (Option B's topology at Option A's operational
+cost, since Forgejo — not a standalone LFS server — carries the assets). The
+analysis below was written for the private phase and its weights were right at
+the time.
+**Original status:** Decided — Option A
 **Problem:** The recreation project is a few hundred MB (images, recordings, renderings) and growing. GitHub caps single files at 100 MB and recommends repos stay under ~1 GB, so plain GitHub is out. Every viable option therefore involves Git LFS (Large File Storage: the repo stores small pointer files; the real binaries live in an LFS store). The question is *where the git repo and the LFS store each live*.
 
 ## The options

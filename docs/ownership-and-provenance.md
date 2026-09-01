@@ -35,6 +35,14 @@ therefore what stands between here and there.
 That decision rests with the original IP owners, and nothing beyond it is
 needed to make the flip.
 
+**Flipped 2026-09-01.** Hjalti called it: the repository is public at
+`github.com/hthor213/timaflakkarinn` (canonical), with the Forgejo instance
+re-roled as public-read LFS host and mirror. The license split: the code (the
+port, tools, docs) is MIT; the game content — art, audio, dialogue, GML, the
+original program — remains all-rights-reserved with the owners listed below.
+See `specs/004-open-source-and-pipeline.md` for the shape and
+LICENSE/README for the statements.
+
 ## Who owns the original
 
 Dímon was founded in **May 1998** and shipped Tímaflakkarinn in **November

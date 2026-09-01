@@ -1,6 +1,6 @@
 # 004 — Open source and the deployment pipeline
 
-Status: active. Decided with Hjalti 2026-09-01.
+Status: done — decided, executed, and every Done When verified 2026-09-01.
 
 Closes two questions that had been standing open: the repo-shape question from
 the 2026-08-07 brief (trunk = `main`, integration = `dev`), and "CI running
@@ -81,6 +81,7 @@ and the pulled `BENDILL1.PNG` hashed identical to the local master.
   "base branch policy prohibits the merge" even when the required `check` is
   green on the head SHA — merge with the UI's admin bypass or
   `gh pr merge --admin`. Owner-only friction; contributors never promote.
+  Hjalti approved the admin-bypass flow 2026-09-01.
 - The pre-2026-09 Forgejo→GitHub push-mirror (created 2026-08-12, the origin of
   the private GitHub copy) was **deleted** — it would have force-pushed stale
   refs over canonical GitHub. Mirroring now flows the other way, from the

@@ -1,110 +1,115 @@
-# Last session — 2026-08-13 (the calibration tool grew up)
+# Last session — 2026-09-01
 
-## What was accomplished
+## The milestone
 
-One file did almost all of it: `webapp/public/calibrate.html`, eight commits
-(`0d31d3f..fa71daf`), each deployed to tt-dev and browser-verified on the live
-URL after deploy. The tool went from "two scanlines and a figure" to a full
-depth-authoring instrument:
+**Tímaflakkarinn is open source.** Public at
+https://github.com/hthor213/timaflakkarinn (canonical), with a working
+PR-driven deploy pipeline, both paths proven end-to-end the same day:
 
-- **Vanishing point** (`0d31d3f`). The engine's ramp is linear in y and so is a
-  pinhole camera over a flat floor — the lerp's zero IS the horizon. Drawn as a
-  derived draggable line; dragging it keeps the front anchor and derives
-  `scaling2`. Grid rails converge on a VP handle; depth lines at equal ground
-  steps (1/(y−yh) is arithmetic — no focal length needed).
-- **Him, everywhere** (`218d26b`, `efe96a3`). The draggable check figure goes
-  anywhere (reference objects live in the art, not the floor); scenes without
-  their own player sprite borrow one. The blue "him in game" pair stands at the
-  walkable polygon's nearest/farthest points — placed by scanline-span
-  intersection clipped to the frame *before* the midpoint, after three rounds
-  of point-in-polygon-verified fixes (integer-vertex parity, off-canvas
-  polygons: `p_HjaVolvu` runs to x=1201 in an 800px room).
-- **Sizing writes back** (`5625fe4`): scroll over him = "this big, here" — on
-  scanline1 it sets `defaultscaling`, elsewhere it solves `scaling2` through
-  the front anchor.
-- **Pins** (`753837e`). Owner's model, his words: *the resize is the
-  interaction, the plane is the output.* Double-click pins a (x, y, scale)
-  judgement; pins are the primary artifact, fits are derivatives. Two pins
-  write the four numbers exactly; Copy GML appends all pins as a legal XML
-  comment so 20 river points survive into the masters.
-- **Classic/Modern toggle** (`68d7b56`). Same pins, two models. Classic = the
-  1999 y-ramp (verified at source: `Terrain.ts:50` is `a*y + b`, mirroring the
-  Java — no lateral term). Modern = thin-plate spline through the pins; 3 pins
-  are the tilted plane, more bend it. In Modern the wheel sets a PENDING size
-  and only pinning writes. The four numbers keep tracking the best linear fit
-  either way — one session yields both editions' truth.
-- **Laptop layout** (`387d129`): controls moved to a right-hand panel (the top
-  row cut off after Reset on a laptop). All 15 controls verified visible at
-  1280×800.
-- **Corner-handle resize + terrain carpet** (`fa71daf`). Photoshop-style
-  bounding box anchored at his feet (Magic Mouse scroll too twitchy);
-  proportions locked by construction. Modern's iso-contours replaced by a
-  carpet — rows at equal ground depth marched by local scale, columns a
-  ground-step apart — bounded 80px beyond the farthest pin so TPS
-  extrapolation stops painting sheets over the sky.
+- PR merged into `dev` (default branch) ⇒ GitHub Actions on the homeserver
+  runner runs `tools/deploy.sh --env dev` ⇒ **tt-dev.spliffdonk.com**. Proven
+  by PR #2.
+- Promotion PR `dev` → `main` merged ⇒ `--env prod --promote` ⇒
+  **tt.spliffdonk.com**. Proven by PR #3 — **the first prod promotion ever**
+  (prod had sat pre-promote at `ff1ebec`): it shipped the Aug 13–21 work
+  (calibration tool, touch-picking finger allowance, machine-boundary
+  deploy.sh), the open-source shape, and the pipeline itself to the public
+  site.
 
-**Test harness:** `~/tools/browser/vanish.mjs` (outside the repo) drives the
-whole tool in Playwright — horizon math, pin fits to rounding digit, TPS
-node-interpolation, PIP containment on three scenes, wheel discipline, box
-handles — and was run against tt-dev after every deploy. Two probe deceptions
-were unmasked, not tool bugs: a dblclick landing within 8px of an old pin
-correctly *updates* it, and `pkill -f vite` matches your own shell.
+The whole shape is recorded in `specs/004-open-source-and-pipeline.md`
+(status: done, every Done When verified on flip day). License split: MIT for
+code, game content all-rights-reserved with the owners — LICENSE, README,
+`web_import/README.md`.
 
-## The version question — settled by reference, not new text
+## What happened
 
-Owner asked how much time "1.2" deserves (bugs + the ten cut things, between
-faithful-port and remaster). Answer, agreed: **none as a project** — D8 already
-defines Classic as "the game as the team meant it", the disc-as-shipped state
-is a derivable build filter over one tree (five tags), and the ten cut things
-split by what they need: pure-GML confirmed intent lands opportunistically
-during bug-testing; anything needing new audio/art waits for the remaster
-production pipeline; original-team questions stay gated in "Needs a human".
-No new spec text was written — the owner confirmed D8 had settled it.
+- **GitHub canonical, Forgejo re-roled.** Forgejo (`git.spliffdonk.com`) is
+  now the public-read LFS host (~210 MB of 1998 masters — GitHub free LFS
+  bandwidth was a non-starter), mirror-target, and backup. `.lfsconfig`
+  committed so every fresh clone fetches LFS from Forgejo anonymously.
+  Verified with a truly anonymous clone (git config nulled): LFS pull OK,
+  `npm run check` green, `BENDILL1.PNG` byte-identical to the local master.
+- **Branches settled** — the question open since Aug 7: trunk = `main`
+  (public site), integration = `dev` (default, PRs land here). `feat/unify`
+  deleted (was identical to `main`); `import/web-mirror` kept on Forgejo
+  only. Both deploy branches protected behind the `check` CI gate.
+- **Pre-publish hygiene**: gitleaks clean over all 100 commits; no credential
+  files ever committed; known-issues #20 carries no token text.
+- **Homeserver work** (via agent): Actions runner `homeserver` installed as a
+  systemd service (registered to this repo only); `/srv` deploy checkouts
+  switched to GitHub https transport — credential-free, retiring the
+  known-issues #20 bundle-fallback fragility; Forgejo flipped public with
+  anonymous LFS verified end-to-end.
 
-## Spec drift fixed this checkpoint
+## Surprises the plan didn't know
 
-- `specs/001` lint count 5 → **6** (`m_ErnaEkkiIrna`'s WAV joined the missing
-  list when the Irna response was wired), and "need Halldór's confirmation"
-  corrected to the original team — Halldór was never on the team.
-- `specs/000` depth-tool section: recorded what exists (scaling half live at
-  `/calibrate`, pins format, Classic/Modern, the two discovered constraints)
-  and what does not (ordering half not started, **0 of ~60 calibrations
-  authored**).
+1. **A Forgejo→GitHub push-mirror existed** (created Aug 12 — it's what made
+   the private GitHub copy that was found already sitting there).
+   Sync-on-commit + force-push semantics would have clobbered canonical
+   GitHub after the first merged PR. Deleted, along with its stale deploy key
+   on GitHub. Mirroring now flows GitHub → Forgejo, from the deploy
+   workflows, fast-forward only.
+2. **The test suite reads binaries** — `chromakey` surveys every PNG under
+   `GAME/`, `collisionbox` reads frame-strip headers. Both CI and the first
+   deploy refused correctly on LFS pointer stubs; all workflows now
+   `git lfs pull --include PNGs` (~40 MB; nothing reads the WAVs).
+3. **The `/srv` checkouts' credential helper answered every host** with the
+   Forgejo token — GitHub 401s a bad credential even on public repos, so
+   fetch would have stayed broken after the flip. Scoped to
+   `git.spliffdonk.com` only (repo-local, plus global for the runner's
+   mirror push).
+4. **Promotion merges need the admin bypass** (`gh pr merge --admin` or the
+   UI button) even with the required check green on the head SHA. Hjalti
+   approved this flow 2026-09-01. Owner-only friction; contributors never
+   promote.
+
+## Files changed
+
+- New: `.lfsconfig`, `LICENSE`, `README.md`, `CONTRIBUTING.md`,
+  `web_import/README.md`, `.github/workflows/{check,deploy-dev,deploy-prod}.yml`,
+  `specs/004-open-source-and-pipeline.md`
+- Updated: `specs/001` (Deployment points at 004),
+  `docs/ownership-and-provenance.md` (flip recorded),
+  `docs/git-hosting-decision.md` (superseded, with reasoning)
 
 ## Start next session with
 
-The tool is done enough; **the point of it has not happened yet**. Two candidate
-tracks, owner's pick:
+Three candidate tracks, owner's pick — all now flow through PRs to `dev`
+(merge = live on tt-dev):
 
-1. **Author the calibrations.** Open `tt-dev.spliffdonk.com/calibrate`, work
-   through the 47 rampless terrains and the 2 suspect ones (`t_HjaVolvul`
-   1.031×, `t_Skipingolfsl` 1.053×), Copy GML into `web_import/gml/*`, deploy
-   to tt-dev, and judge in-game. First calibration landing in GML will exercise
-   the pins-as-XML-comment path through the real parser — verify the parser
-   ignores comments inside element runs (it should; check the first commit).
-2. **Bug-test track (a)** as before: play on tt-dev, fixes per taxonomy.
+1. **Author the calibrations** (from the Aug 13 brief, still untouched): open
+   `tt-dev.spliffdonk.com/calibrate`, work through the 47 rampless terrains
+   and the 2 suspect ones (`t_HjaVolvul` 1.031×, `t_Skipingolfsl` 1.053×),
+   Copy GML into `web_import/gml/*`, PR, judge in-game. First calibration
+   landing in GML exercises the pins-as-XML-comment path through the real
+   parser — verify the parser ignores comments inside element runs.
+2. **Bug-test.** Hjalti plays through and reports; fixes per taxonomy.
+3. **Graphics — still blocked on D2** (vector direction decided 2026-08-07;
+   the surfaces-not-composition proposal still needs Erna). `art/` still does
+   not exist; the 128 MB of prototype output still lives outside the repo.
 
-Ship commands unchanged (`tools/deploy.sh --env dev`; prod still pre-promote at
-`ff1ebec`, first `--promote` still pending, still safe).
+## Needs a human
 
-## Open questions needing a human
-
-- All prior "Needs a human" items stand (PSDs, original-team confirmations,
-  first promote, WAV→AAC script, IP owners).
-- **Modern terrain format**: pins ride in XML comments today. When the remaster
-  engine wants to consume them, decide whether they graduate to a real GML
-  attribute/element (D8 variant-attribute mechanism) — spec before building.
-- Erna + D2 unchanged: the owner's surfaces-not-composition proposal still
-  needs her, and the D2 decision remains open.
+- **Tell the co-owners it's live** — Gummi, Georg, Erna, Hallgrimur. The
+  ownership doc frames open-sourcing as a joint decision; Hjalti called the
+  flip, a one-line heads-up closes the loop.
+- **The PSDs remain the highest-value unknown**; original-team confirmations
+  on the two GML content defects still pending (Aug 7 brief).
+- **Modern terrain format** (Aug 13): pins ride in XML comments today —
+  decide whether they graduate to a real GML attribute before the remaster
+  engine consumes them. Spec before building.
+- WAV→AAC script item stands (known-issues #22: `GAME_M4A` exists on one
+  machine only).
+- Contributors can't push LFS assets (Forgejo write needs an account) —
+  CONTRIBUTING says maintainers land assets from PR attachments. Fine until
+  the first real outside art contribution; revisit then.
 
 ## Check status
 
-`aidev` is not on PATH — the harness check did not run; this is my reading.
-`npm run check`: typecheck + **141 cases, green** (run at session start;
-engine untouched since — the session's only product changes are
-`calibrate.html`, a dev-only page outside the game bundle).
-`lint_gml.py web_import`: **red, 6 issues, deliberately** — all 1998/1999
-content gaps, now correctly counted in `specs/001`.
-tt-dev serves `5f4e1ed` (verified via live probe) — three post-checkpoint UX
-fixes from laptop use: pending size survives placement (Esc discards), pins
-hideable + Clear-pins-keep-fit, and auto-fit zoom so the whole room shows.
+`aidev check`: same single deliberate red as before — `lint_gml.py`, 6
+issues, all pre-existing 1998/1999 content gaps (counted correctly in
+`specs/001` since Aug 13). Spec 004 green — its network-dependent Done When
+items are judgment-class by design and were all verified by hand on flip
+day. `npm run check` green locally, in CI, on the runner, and in the
+anonymous clone. tt and tt-dev both verified serving by `deploy.sh`'s own
+16-check pass in their Actions runs.

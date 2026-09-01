@@ -26,6 +26,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: fetch PNG masters (LFS)
+        # deploy.sh's workspace fast-fail runs the full suite here, and the
+        # suite reads the PNG masters — pointer stubs fail it (proved by the
+        # first run of this workflow). Forgejo is on the same box; this is
+        # cheap. The target checkout smudges its own LFS during transport.
+        run: git lfs pull --include="*.PNG,*.png"
       - name: deploy to tt-dev.spliffdonk.com
         run: tools/deploy.sh --env dev
       - name: mirror dev to Forgejo

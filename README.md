@@ -42,7 +42,8 @@ npm run dev         # local dev server
 The LFS objects are hosted on the project's own server (`git.spliffdonk.com`,
 wired via `.lfsconfig`) rather than GitHub — the clone above fetches them
 anonymously, no account needed. The GML chapter scripts are plain text in git,
-so the test suite passes even without `git lfs pull`.
+but the test suite also reads the PNG masters, so run `git lfs pull` before
+`npm run check` (PNGs alone are enough: `git lfs pull --include="*.PNG,*.png"`).
 
 Note: the GML and chapter files are **ISO-8859-1**, not UTF-8 — configure your
 editor accordingly, and use `grep -a` when searching them.

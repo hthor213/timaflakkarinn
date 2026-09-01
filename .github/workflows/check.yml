@@ -1,7 +1,9 @@
 # CI gate: typecheck + full test suite, on every PR and on the two deploy
-# branches. Runs on GitHub-hosted runners (free for public repos) with NO LFS
-# smudge — the GML chapter scripts are plain text in git, so the suite passes
-# on pointer stubs; nothing here may depend on the binary masters.
+# branches. Runs on GitHub-hosted runners (free for public repos). The GML
+# chapter scripts are plain text in git, but the suite reads the PNG masters
+# too (chromakey surveys every sprite; collisionbox reads frame-strip
+# dimensions), so those are pulled from the Forgejo LFS host — PNGs only,
+# the WAV masters are the bulk of the store and nothing here reads them.
 name: check
 
 on:
@@ -14,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: fetch PNG masters (LFS, anonymous from Forgejo)
+        run: git lfs pull --include="*.PNG,*.png"
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -26,7 +30,7 @@ jobs:
         working-directory: webapp
         run: npm run check
 
-  # Content lint. 5 findings are pre-existing 1998/1999 content gaps, kept
+  # Content lint. The findings are pre-existing 1998/1999 content gaps, kept
   # deliberately red in the spec (specs/001, Done When) — so this job informs
   # but does not block. When the gaps are resolved, drop continue-on-error.
   lint-gml:

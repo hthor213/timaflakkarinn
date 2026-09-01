@@ -1,0 +1,6 @@
+; LFS objects live on Forgejo, not on the git origin.
+; GitHub is the canonical git host, but GitHub-free LFS bandwidth (1 GB/month)
+; cannot serve a public repo's clones; the 210 MB of 1998 masters stay on
+; git.spliffdonk.com, which serves them anonymously (public repo).
+[lfs]
+	url = https://git.spliffdonk.com/hjalti/timaflakkarinn.git/info/lfs

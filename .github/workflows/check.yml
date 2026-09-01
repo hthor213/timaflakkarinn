@@ -1,0 +1,38 @@
+# CI gate: typecheck + full test suite, on every PR and on the two deploy
+# branches. Runs on GitHub-hosted runners (free for public repos) with NO LFS
+# smudge — the GML chapter scripts are plain text in git, so the suite passes
+# on pointer stubs; nothing here may depend on the binary masters.
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - name: npm ci
+        working-directory: webapp
+        run: npm ci
+      - name: typecheck + tests
+        working-directory: webapp
+        run: npm run check
+
+  # Content lint. 5 findings are pre-existing 1998/1999 content gaps, kept
+  # deliberately red in the spec (specs/001, Done When) — so this job informs
+  # but does not block. When the gaps are resolved, drop continue-on-error.
+  lint-gml:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: lint GML
+        run: python3 tools/lint_gml.py web_import

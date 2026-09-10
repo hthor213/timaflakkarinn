@@ -1,8 +1,8 @@
 # Project intent and ownership
 
-Recorded 2026-07-26. This repository is the **seed of a project that will become
-open source**. This file records the intent and the ownership behind it, because
-neither is derivable from the code or the git history.
+Originally recorded 2026-07-26; licensing clarified 2026-09-10. The rebuild is
+developed publicly, with MIT-licensed code and separately licensed game
+content. This file records the intent and the ownership behind it.
 
 ## Phase 1 — today
 
@@ -24,22 +24,26 @@ Everything in the repository today serves that goal, and nothing in it is
 settled. The engine, the asset pipeline and the chapter format may all be
 re-architected as the rebuild matures.
 
-## The path to open source
+## Public development and content permissions
 
-The original IP owners are **in alignment that this becomes open source**.
+Development and contributions are open before v1. Code is MIT-licensed;
+game content is available under the
+[Game Content License — Pre-v1](../LICENSE-CONTENT.md), permitting local
+play, development, contribution forks, and review. Independent public game
+releases and public playable instances using the content require written
+permission from the relevant owners. Contributors retain ownership of their
+contributions and grant the official project the rights stated in the license.
 
-The trigger is quality: once the owners are satisfied that the rebuild matches
-the original in quality and performance, the project opens up. Phase 1 is
-therefore what stands between here and there.
-
-That decision rests with the original IP owners, and nothing beyond it is
-needed to make the flip.
+When the rebuilt game reaches v1, the team will evaluate whether a more
+permissive content license should apply. That review does not automatically
+change the license or promise a particular outcome.
 
 **Flipped 2026-09-01.** Hjalti called it: the repository is public at
 `github.com/hthor213/timaflakkarinn` (canonical), with the Forgejo instance
 re-roled as public-read LFS host and mirror. The license split: the code (the
 port, tools, docs) is MIT; the game content — art, audio, dialogue, GML, the
-original program — remains all-rights-reserved with the owners listed below.
+original program — remained reserved to the owners listed below. The explicit
+content permissions above were added on 2026-09-10.
 See `specs/004-open-source-and-pipeline.md` for the shape and
 LICENSE/README for the statements.
 

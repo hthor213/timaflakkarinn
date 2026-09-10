@@ -24,7 +24,11 @@ SOFTWARE.
 
 Scope note: this MIT grant covers the source code in this repository — the
 TypeScript engine port (webapp/), the tools (tools/), and the project
-documentation (specs/, docs/). It does NOT cover the game content — the art,
-audio, dialogue, GML chapter scripts, and the original 1998/1999 program —
-which remains © 1998–1999 the owners of Dímon Software's Tímaflakkarinn, all
-rights reserved. See README.md ("License") for the full statement.
+documentation (specs/, docs/). It does NOT cover game content: art, audio,
+dialogue, GML chapter scripts, authored calibration data, project-supplied
+remastered assets, or the original 1998/1999 program and its reference code.
+That content is governed by LICENSE-CONTENT.md, which grants permission for
+local play, development, contribution forks, and review while reserving
+independent public game releases and content redistribution for written
+permission from the relevant rights holders. These content terms do not
+restrict the MIT permissions granted in the separate code above.

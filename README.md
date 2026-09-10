@@ -12,7 +12,8 @@ browser, on its way to a full remaster (see `specs/000-timaflakkarinn-vision.md`
 **Play it now:**
 
 - **https://tt.spliffdonk.com** — the game
-- **https://tt-dev.spliffdonk.com** — the development build, with debug tooling
+- **https://tt-dev.spliffdonk.com** — the development build; play mode by default,
+  with an **Allows for debug** button for optional tools
 
 ## What's in here
 
@@ -52,7 +53,8 @@ editor accordingly, and use `grep -a` when searching them.
 
 Pull requests target the `dev` branch and deploy automatically to
 tt-dev.spliffdonk.com when merged; promotion to the public site is a reviewed
-`dev` → `main` PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow,
+`dev` → `main` PR followed by a separate manual **deploy-prod** workflow run.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow,
 the bug taxonomy, and what makes this codebase unusual (it is, pleasantly).
 
 ## License

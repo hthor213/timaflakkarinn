@@ -1,5 +1,5 @@
 import { Timaflakkarinn } from './game/Timaflakkarinn';
-import { resolveMode, resolveInput, resolveCanvasSubtitles } from './config';
+import { resolveMode, resolveInput, resolveCanvasSubtitles, hasDebugControl } from './config';
 import { VerbBar } from './game/VerbBar';
 import { SentenceList } from './game/SentenceList';
 import { MenuList } from './game/MenuList';
@@ -18,8 +18,8 @@ async function main() {
     return;
   }
 
-  // play | debug — from hostname, overridable with ?debug=1 / ?debug=0
-  const mode = resolveMode();
+  // Play by default; debug is an explicit query parameter or development switch.
+  let mode = resolveMode();
   document.documentElement.dataset.mode = mode;
 
   // pointer | touch — from the media queries, overridable with ?touch=1 / 0.
@@ -47,6 +47,27 @@ async function main() {
   const gmlPath = '/gml';
 
   const game = new Timaflakkarinn(canvas, resourcePath, gmlPath, mode === 'debug');
+
+  if (hasDebugControl()) {
+    const debugButton = document.createElement('button');
+    debugButton.id = 'debug-toggle';
+    const updateDebugButton = () => {
+      debugButton.textContent = mode === 'debug' ? 'Close debug' : 'Allows for debug';
+      debugButton.setAttribute('aria-pressed', String(mode === 'debug'));
+    };
+    updateDebugButton();
+    debugButton.onkeydown = (event) => {
+      if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
+    };
+    debugButton.onclick = (event) => {
+      event.stopPropagation(); // Opening the tools is not the game's start gesture.
+      mode = mode === 'debug' ? 'play' : 'debug';
+      document.documentElement.dataset.mode = mode;
+      game.setDebug(mode === 'debug');
+      updateDebugButton();
+    };
+    document.body.appendChild(debugButton);
+  }
 
   // Touch has no right button and no hover, so the verb can never be cycled and
   // the 404 authored verb reactions are unreachable. The bar replaces the cycle

@@ -726,6 +726,21 @@ export class Timaflakkarinn {
 
   // === Debug Panel ===
 
+  /** Toggle tools without restarting the game or losing the current scene. */
+  setDebug(enabled: boolean): void {
+    this.debug = enabled;
+    this.loader.warnOnMissing = enabled;
+    if (enabled && !this.debugPanel) this.createDebugPanel();
+    if (!enabled) {
+      Scene.debugOverlay = false;
+      const overlayButton = this.debugPanel?.querySelector<HTMLButtonElement>('#dbg-overlay');
+      if (overlayButton) overlayButton.style.background = '#333';
+    } else {
+      this.updateDebugPanel();
+      this.renderLog();
+    }
+  }
+
   private createDebugPanel(): void {
     // Side panel (controls, flow tree, active sequences)
     const panel = document.createElement('div');
@@ -818,7 +833,7 @@ export class Timaflakkarinn {
   }
 
   private renderLog(): void {
-    if (!this.debugLogDiv) return;
+    if (!this.debug || !this.debugLogDiv) return;
     const entries = getLogEntries();
     const wasAtBottom = this.debugLogDiv.scrollTop + this.debugLogDiv.clientHeight >= this.debugLogDiv.scrollHeight - 20;
 
@@ -844,7 +859,7 @@ export class Timaflakkarinn {
   }
 
   private updateDebugPanel(): void {
-    if (!this.debugSeqList) return;
+    if (!this.debug || !this.debugSeqList) return;
 
     // Clock
     const timeStr = formatTime(this.world.pulser.elapsed);

@@ -1,19 +1,17 @@
-# Merging the promotion PR (dev -> main) publishes tt.spliffdonk.com.
+# Production is a separate, manual action after a reviewed dev -> main merge.
+# In Actions, run deploy-prod on main when the tested release is approved.
 #
-# The push-triggered run passes --promote and nothing else. deploy.sh owns the
+# The manual run passes --promote. deploy.sh owns the
 # art gate: if the deployed range touches art it dies asking for
 # --art-approved, exactly as it does when run by hand — nothing reaches the
-# public by momentum. For those ranges, re-run via workflow_dispatch with the
+# public by momentum. For those ranges, run workflow_dispatch with the
 # sign-off text (who approved, when); it is passed through verbatim and lands
 # in the deploy report.
 #
-# Fork safety: fires on push to the protected main branch and on manual
-# dispatch only — never on pull_request.
+# Fork safety: manual dispatch only, always checking out protected main.
 name: deploy-prod
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       art_approved:

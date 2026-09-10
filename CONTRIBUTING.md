@@ -4,8 +4,10 @@
 
 - **PRs target `dev`** (the default branch). Merging to `dev` auto-deploys
   https://tt-dev.spliffdonk.com.
-- **`main` is the public site.** Promotion is a reviewed `dev` → `main` PR;
-  merging it deploys https://tt.spliffdonk.com.
+- **Production is a separate manual action.** After testing on tt-dev, merge
+  a reviewed `dev` → `main` PR, then explicitly run **Actions → deploy-prod →
+  Run workflow**, selecting `main`, to publish https://tt.spliffdonk.com.
+  Merging or pushing to `main` does not deploy it.
 - CI runs `npm run check` (typecheck + the full test suite) on every PR. It
   must be green.
 

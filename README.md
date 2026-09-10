@@ -52,7 +52,8 @@ editor accordingly, and use `grep -a` when searching them.
 
 Pull requests target the `dev` branch and deploy automatically to
 tt-dev.spliffdonk.com when merged; promotion to the public site is a reviewed
-`dev` → `main` PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow,
+`dev` → `main` PR followed by a separate manual **deploy-prod** workflow run.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow,
 the bug taxonomy, and what makes this codebase unusual (it is, pleasantly).
 
 ## License

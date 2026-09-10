@@ -27,22 +27,24 @@ all-rights-reserved with the original owners — stated in LICENSE, README, and
 the owners judge faithfulness; the license split is what lets the code open
 without the content question blocking it.
 
-**D4 — Merging a PR is the deploy action.**
+**D4 — Automatic deployment stops at dev; production is manual.** Revised by
+the owner on 2026-09-10 after the deployment round-trip verification.
 - PR → `dev`, merged ⇒ `deploy-dev.yml` runs `tools/deploy.sh --env dev` on the
   self-hosted runner ⇒ https://tt-dev.spliffdonk.com.
-- Promotion is a reviewed `dev` → `main` PR, merged ⇒ `deploy-prod.yml` runs
-  `tools/deploy.sh --env prod --promote` ⇒ https://tt.spliffdonk.com.
+- After testing on tt-dev, promotion is a reviewed `dev` → `main` PR followed
+  by a separate, explicit **Actions → deploy-prod → Run workflow** on `main`.
+  That manual run invokes `tools/deploy.sh --env prod --promote` ⇒
+  https://tt.spliffdonk.com. Pushes and merges to `main` do not deploy.
 - `deploy.sh` remains the single deploy authority. The art gate is untouched:
-  a push-triggered prod run passes no `--art-approved`, so an art-touching
-  range dies on the script's own gate and is re-run via `workflow_dispatch`
-  with the sign-off text.
+  an art-touching range requires sign-off text in the manual workflow's
+  `art_approved` input; without it the script refuses to publish.
 
 ## The mechanism
 
 | Piece | Where | Notes |
 |---|---|---|
 | `check.yml` | GitHub-hosted runners | tsc + full suite on every PR and deploy-branch push. Pulls PNG masters only from Forgejo LFS (the suite reads sprites; nothing reads the WAVs). `lint_gml.py` rides non-blocking while the pre-existing 1998 content gaps stand. |
-| `deploy-dev.yml` / `deploy-prod.yml` | self-hosted runner `homeserver` | Fire on push to `dev`/`main` only, never `pull_request` — fork code never reaches the runner. `deploy.sh` detects LOCAL mode on the box and all its guards apply unchanged. |
+| `deploy-dev.yml` / `deploy-prod.yml` | self-hosted runner `homeserver` | Dev fires on push to `dev`; prod is manual dispatch only and checks out `main`. Neither fires on `pull_request`. `deploy.sh` detects LOCAL mode and all its guards apply unchanged. |
 | Runner | systemd service on the deploy host | Registered to this repo only, label `homeserver`. |
 | Deploy checkouts | `/srv/timaflakkarinn/{dev,prod}/repo` | `origin` → GitHub over public https (credential-free transport; retires the bundle-fallback fragility of known-issues #20), `lfs.url` → Forgejo. |
 
@@ -64,13 +66,14 @@ topology with A's operational cost.
 - [x] `gh run list --workflow check.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx success` — CI green on the integration branch
 - [x] `gh api repos/hthor213/timaflakkarinn/actions/runners --jq '.runners[] | select(.name=="homeserver") | .status' | grep -qx online` — the deploy runner is listening
 - [x] Judgment: a PR merged into `dev` appears on tt-dev.spliffdonk.com with no
-      manual deploy step; a merged promotion PR appears on tt.spliffdonk.com.
-      Verified by watching the Actions run end in `deploy.sh`'s own 16-check
-      verification pass.
+      manual deploy step. The September 1 automatic production promotion was
+      reverified on September 10 before being superseded by manual promotion.
+- [ ] Judgment: merging to `main` triggers no production deployment; a later
+      owner-requested manual workflow run publishes the approved release.
 - [x] Judgment: a fresh anonymous clone from GitHub + `git lfs pull` +
       `npm run check` is green on a machine with no credentials.
 
-All boxes verified 2026-09-01, the day the repo went public: PR #2 → tt-dev
+The original acceptance checks were verified 2026-09-01, the day the repo went public: PR #2 → tt-dev
 and promotion PR #3 → tt both deployed by their Actions runs; the anonymous
 clone was tested with global/system git config nulled and prompts disabled,
 and the pulled `BENDILL1.PNG` hashed identical to the local master.

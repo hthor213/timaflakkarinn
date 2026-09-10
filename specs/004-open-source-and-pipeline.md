@@ -60,7 +60,7 @@ topology with A's operational cost.
 
 - [x] `git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | grep -q .` — the repo is public: anonymous ls-remote succeeds
 - [x] `curl -sf -o /dev/null https://git.spliffdonk.com/hjalti/timaflakkarinn` — Forgejo repo is public-read for anonymous LFS
-- [x] `git config --get lfs.url | grep -q git.spliffdonk.com && grep -q git.spliffdonk.com .lfsconfig` — LFS decoupled from origin, for this clone and every fresh one
+- [x] `git lfs env | grep -q '^Endpoint=https://git.spliffdonk.com/' && grep -q git.spliffdonk.com .lfsconfig` — effective LFS endpoint decoupled from origin, including fresh clones that inherit `.lfsconfig`
 - [x] `gh run list --workflow check.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx success` — CI green on the integration branch
 - [x] `gh api repos/hthor213/timaflakkarinn/actions/runners --jq '.runners[] | select(.name=="homeserver") | .status' | grep -qx online` — the deploy runner is listening
 - [x] Judgment: a PR merged into `dev` appears on tt-dev.spliffdonk.com with no
@@ -77,11 +77,15 @@ and the pulled `BENDILL1.PNG` hashed identical to the local master.
 
 ## Operational notes
 
-- **Promotion merges need admin.** GitHub blocks the `dev` → `main` merge with
-  "base branch policy prohibits the merge" even when the required `check` is
-  green on the head SHA — merge with the UI's admin bypass or
-  `gh pr merge --admin`. Owner-only friction; contributors never promote.
-  Hjalti approved the admin-bypass flow 2026-09-01.
+- **Use a normal promotion merge after required checks pass.** This worked
+  for `dev` → `main` PR #5 on 2026-09-10. The first promotion on 2026-09-01
+  required an owner-approved admin bypass despite green checks; that is a
+  historical workaround, not a required step in the current flow.
+- **Working checkout on homeserver:** `~/code/timaflakkarinn`, freshly cloned
+  from `git@github.com:hthor213/timaflakkarinn.git` on 2026-09-10, with GitHub
+  as its only remote (`origin`). All 1,215 LFS assets materialized from Forgejo
+  during the clone. The older `~/work/timaflakkarinn` checkout remains in place
+  for the calibration service; it also has GitHub as `origin`.
 - The pre-2026-09 Forgejo→GitHub push-mirror (created 2026-08-12, the origin of
   the private GitHub copy) was **deleted** — it would have force-pushed stale
   refs over canonical GitHub. Mirroring now flows the other way, from the

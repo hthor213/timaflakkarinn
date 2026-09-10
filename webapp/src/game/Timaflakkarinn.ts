@@ -324,7 +324,7 @@ export class Timaflakkarinn {
 
     // Parse and play intro (with skip button)
     const skipBtn = document.createElement('button');
-    skipBtn.textContent = 'Sleppa intro';
+    skipBtn.textContent = 'Hop over intro';
     skipBtn.style.cssText = 'position:absolute;top:10px;right:10px;z-index:100;padding:8px 16px;font:14px serif;cursor:pointer;background:#333;color:#ccc;border:1px solid #666;border-radius:4px;';
     document.getElementById('game-container')?.appendChild(skipBtn);
 

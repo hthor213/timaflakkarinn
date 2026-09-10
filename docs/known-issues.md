@@ -1583,3 +1583,22 @@ exactly what #24 fixed. The lingering-text half may be the pre-fix sentence
 clock running ahead of the audio (also #24), or may be a real, still-live
 staleness bug in the accumulator teardown. Reproduce on current dev first;
 if it survives there, this becomes a real entry with its own diagnosis.
+
+## 28 — `missing` · FEATURE · Calibration backend is outside the GitHub deployment workflow
+
+**Verified by inspection 2026-09-10.** The calibration page and scene index
+are published to tt-dev by `tools/deploy.sh`, but the Save/Publish service
+runs from `~/work/timaflakkarinn` via `timaflakkarinn-calib.service`. The
+Actions workflow neither updates that checkout nor restarts the service,
+so merging backend changes does not activate them.
+
+`tools/calibrate_server.py::do_publish` also still commits and pushes
+directly to `origin/dev`, then invokes a local deploy. That path has not
+been adapted to the required-check GitHub PR workflow. Its health endpoint
+responded successfully; no authenticated Save or Publish was exercised in
+this documentation change.
+
+Follow-up: bring backend updates and calibration publication into the
+reviewed GitHub deployment path, preserving saved work and keeping all
+publication confined to tt-dev. Until then, contributors can use Copy GML
+and submit the result through a PR. Production promotion stays manual.

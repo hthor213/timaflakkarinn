@@ -22,12 +22,22 @@ is roughly five public clones. Every deploy fast-forward-mirrors the deployed
 ref back to Forgejo; a diverged Forgejo fails the push loudly rather than being
 overwritten.
 
-**D3 — License split.** Code (webapp/, tools/, specs/, docs/) is MIT. Game
-content (art, audio, dialogue, GML, the 1998/1999 program) remains
-all-rights-reserved with the original owners — stated in LICENSE, README, and
-`web_import/README.md`. The classic/remastered toggle (spec 000) is what lets
-the owners judge faithfulness; the license split is what lets the code open
-without the content question blocking it.
+**D3 — Open code, explicit pre-v1 content permissions.** Revised by the owner
+2026-09-10. Code (the TypeScript port, tools, and project documentation)
+remains MIT under `LICENSE`. Game content, including remastered assets and
+authored calibration data, is separately governed by `LICENSE-CONTENT.md`.
+It permits local play, development, contribution forks, PRs, and review.
+Independent public playable releases, public game instances, and content
+redistribution or reuse require written permission except for the stated
+collaboration permissions. Contributors retain ownership and grant the
+official project the publication rights described in the content license.
+
+Development is public before v1. At the rebuilt game's v1, the team will
+evaluate a more permissive content license; no automatic change is promised.
+README, CONTRIBUTING, and `web_import/README.md` point to the operative terms.
+The planned original/remastered editions (spec 000) share a codebase; the
+playable build currently uses the original renderer. The calibration page's
+Classic/Modern previews do not imply that the remastered edition is finished.
 
 **D4 — Automatic deployment stops at dev; production is manual.** Revised by
 the owner on 2026-09-10 after the deployment round-trip verification.

@@ -11,6 +11,25 @@
 - CI runs `npm run check` (typecheck + the full test suite) on every PR. It
   must be green.
 
+## Code and content permissions
+
+Development is public and contributions are welcome before v1. Code changes,
+including improvements to the game engine and calibration tools, are covered
+by [MIT](LICENSE).
+
+Game content has separate permissions in the
+[Game Content License — Pre-v1](LICENSE-CONTENT.md). You may build and play
+locally, develop and test changes, maintain contribution forks, and submit
+PRs, assets, and review material. Keep the applicable notices and identify
+contribution forks as unofficial. An independent public playable release or
+public game instance using the content requires the owners' written
+permission. Submitting content grants the official project the contribution
+permissions described in that license; you retain ownership and must identify
+third-party material and its terms. Acceptance is decided through review.
+
+At the rebuilt game's v1, the team will evaluate whether a more permissive
+content license should apply; there is no automatic license change.
+
 ## Before you file a bug
 
 Play at https://tt-dev.spliffdonk.com and check

@@ -97,7 +97,8 @@ shipped. Any stage that emits derived files must uppercase the extension.
 ## Deployment
 
 Live since 2026-08-07. **Two real environments since 2026-08-08.** Since
-2026-09-01 deploys are triggered by merging PRs on GitHub — see
+2026-09-01 dev deploys are triggered by merging PRs on GitHub; since
+2026-09-10 production requires a separate manual workflow run — see
 `specs/004-open-source-and-pipeline.md`; `tools/deploy.sh` remains the single
 deploy authority and everything below still holds.
 
@@ -245,10 +246,16 @@ Unblocks everything. No new capability; existing capability made correct.
 - [x] **`getScaling` fallback** — restore Java's `a == 0 → defaultScaling`.
       Characters render visibly too large on the 18 flat terrains authored at
       `defaultscaling` 0.6–0.9
-- [x] **Play/debug deployments + chapter routing** — `tt.spliffdonk.com` (play)
-      and `tt-dev.spliffdonk.com` (debug) from one artifact; `/chapter1..4`,
+- [x] **Play/debug modes + chapter routing** — both `tt.spliffdonk.com` and
+      `tt-dev.spliffdonk.com` start in play mode. On dev, **Allows for debug**
+      opens the tools and **Close debug** returns to play without reloading or
+      losing the current scene. Debug is opt-in locally too; `?debug=1` remains
+      an explicit override on any host. The public site has no debug button.
+      One artifact supports `/chapter1..4`,
       `/intro`, `/extro`, Icelandic aliases. Play mode scales the canvas to the
-      viewport. 21 tests, the project's first
+      viewport. Updated 2026-09-10: dev is the release candidate environment,
+      not a permanently open debugger. On touch, the tools open as a compact
+      panel while the normal game layout remains available when closed.
 - [x] **Chapter container scoping** — closed, and **narrower than this spec
       originally claimed**. The collision is real but the earlier figure was
       wrong: **111** container keys are shared by all four main chapters, not

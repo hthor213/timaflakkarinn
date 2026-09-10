@@ -15,8 +15,8 @@
       height: 100vh;
       overflow: hidden;
     }
-    /* Debug deployment (tt-dev.*) reserves room for the 280px side panel and
-       180px log strip. Play deployment gets the whole viewport. main.ts stamps
+    /* Opt-in debug mode reserves room for the 280px side panel and
+       180px log strip. Play mode gets the whole viewport. main.ts stamps
        data-mode on <html>. */
     /* 280px for the side panel; the bottom strip is only 24px while the log is
        collapsed, which is the default. Expanding it takes 180px and the canvas
@@ -63,6 +63,22 @@
       image-rendering: pixelated;
       cursor: none;
     }
+    #debug-toggle {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 8px);
+      left: calc(env(safe-area-inset-left, 0px) + 8px);
+      z-index: 300;
+      padding: 6px 10px;
+      font: 12px serif;
+      color: #ccc;
+      background: #222;
+      border: 1px solid #666;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #debug-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    html[data-mode="play"] #debug-panel,
+    html[data-mode="play"] #dbg-logbar { display: none !important; }
 
     /* ---------------------------------------------------------------------
        Touch layout. Portrait only, and deliberately "usable" rather than
@@ -104,8 +120,15 @@
       width: 100%;
       height: 100%;
     }
-    /* Unusable at this size and it overlaps the bar. ?touch=0 brings it back. */
-    html[data-input="touch"] #debug-panel,
+    /* On a phone, explicitly opened tools use a compact panel below the
+       toggle. The desktop log strip stays hidden. */
+    html[data-mode="debug"][data-input="touch"] #debug-panel {
+      top: calc(env(safe-area-inset-top, 0px) + 48px) !important;
+      right: 8px !important;
+      bottom: auto !important;
+      width: min(280px, calc(100vw - 16px)) !important;
+      max-height: 45dvh;
+    }
     html[data-input="touch"] #dbg-logbar {
       display: none !important;
     }

@@ -12,7 +12,8 @@ browser, on its way to a full remaster (see `specs/000-timaflakkarinn-vision.md`
 **Play it now:**
 
 - **https://tt.spliffdonk.com** — the game
-- **https://tt-dev.spliffdonk.com** — the development build, with debug tooling
+- **https://tt-dev.spliffdonk.com** — the development build; play mode by default,
+  with an **Allows for debug** button for optional tools
 
 ## What's in here
 

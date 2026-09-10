@@ -1,6 +1,8 @@
 # 004 — Open source and the deployment pipeline
 
-Status: done — decided, executed, and every Done When verified 2026-09-01.
+Status: active — GitHub canonical and automatic dev deployment verified;
+manual production policy adopted 2026-09-10. Its first manual release remains
+to be verified when the owner requests a production promotion.
 
 Closes two questions that had been standing open: the repo-shape question from
 the 2026-08-07 brief (trunk = `main`, integration = `dev`), and "CI running
@@ -68,8 +70,10 @@ topology with A's operational cost.
 - [x] Judgment: a PR merged into `dev` appears on tt-dev.spliffdonk.com with no
       manual deploy step. The September 1 automatic production promotion was
       reverified on September 10 before being superseded by manual promotion.
-- [ ] Judgment: merging to `main` triggers no production deployment; a later
-      owner-requested manual workflow run publishes the approved release.
+- [x] Judgment: merging to `main` triggers no production deployment. Verified
+      by PR #8: only CI ran, and production stayed at `c40f818`.
+- [ ] Judgment: a later owner-requested manual workflow run publishes the
+      approved release. Do not deploy production just to close this check.
 - [x] Judgment: a fresh anonymous clone from GitHub + `git lfs pull` +
       `npm run check` is green on a machine with no credentials.
 

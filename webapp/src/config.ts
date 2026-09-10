@@ -3,29 +3,27 @@
  *
  * Two deployments, one build artifact:
  *   tt.spliffdonk.com      -> play   (no debug panel, game fills the viewport)
- *   tt-dev.spliffdonk.com  -> debug  (sequence list, log, manual controls)
+ *   tt-dev.spliffdonk.com  -> play   (debug tools are opt-in)
  *
  * Resolution order, highest priority first:
  *   1. explicit ?debug=1 / ?debug=0     — lets you debug production, or preview
  *                                         play mode locally, without a rebuild
- *   2. hostname                          — tt-dev.* / localhost / 127.0.0.1
- *   3. play
+ *   2. play
  */
 
 export type AppMode = 'play' | 'debug';
 
-const DEBUG_HOST_PREFIXES = ['tt-dev.', 'dev.'];
-const DEBUG_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+/** Show the debug switch on development environments, not the public site. */
+export function hasDebugControl(loc: Location | URL = window.location): boolean {
+  return loc.hostname.startsWith('tt-dev.') || loc.hostname.startsWith('dev.')
+    || ['localhost', '127.0.0.1', '[::1]'].includes(loc.hostname);
+}
 
 export function resolveMode(loc: Location | URL = window.location): AppMode {
   const params = new URLSearchParams(loc.search);
   const explicit = params.get('debug');
   if (explicit === '1' || explicit === 'true') return 'debug';
   if (explicit === '0' || explicit === 'false') return 'play';
-
-  const host = loc.hostname;
-  if (DEBUG_HOSTS.includes(host)) return 'debug';
-  if (DEBUG_HOST_PREFIXES.some(p => host.startsWith(p))) return 'debug';
 
   return 'play';
 }

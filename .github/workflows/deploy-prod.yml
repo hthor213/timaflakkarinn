@@ -43,5 +43,3 @@ jobs:
           else
             tools/deploy.sh --env prod --promote
           fi
-      - name: mirror main to Forgejo
-        run: git push https://git.spliffdonk.com/hjalti/timaflakkarinn.git main:main

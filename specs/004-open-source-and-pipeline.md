@@ -18,9 +18,16 @@ there and are seen on tt-dev before anything reaches the public.
 **D2 — Forgejo is the LFS host, mirror-target, and backup.** The 1998 masters
 (~210 MB, 1,215 files) stay on `git.spliffdonk.com`, public-read, wired by the
 committed `.lfsconfig`. GitHub free LFS was ruled out on bandwidth: 1 GB/month
-is roughly five public clones. Every deploy fast-forward-mirrors the deployed
-ref back to Forgejo; a diverged Forgejo fails the push loudly rather than being
-overwritten.
+is roughly five public clones. Forgejo is a copy, not a place to push: every
+push to `dev` or `main` on GitHub fast-forward-mirrors that branch to Forgejo
+(`mirror.yml`, independent of deploys since 2026-09-13 — prod deploys are
+manual, the mirror is not). A diverged Forgejo fails the push loudly rather
+than being overwritten; the fix is to fast-forward Forgejo to GitHub by hand.
+The Forgejo repo has no collaborators and registration is off, so the owner's
+account is the only one that can write there. Owner decision 2026-09-13: no
+branch protection on Forgejo — no clone uses it as a remote, and a stray push
+there does no lasting harm: roll Forgejo back to GitHub's ref, push the change
+to GitHub, and the mirror carries it over.
 
 **D3 — Open code, explicit pre-v1 content permissions.** Revised by the owner
 2026-09-10. Code (the TypeScript port, tools, and project documentation)
@@ -72,6 +79,7 @@ release action; the explicit manual production workflow above still applies.
 |---|---|---|
 | `check.yml` | GitHub-hosted runners | tsc + full suite on every PR and deploy-branch push. Pulls PNG masters only from Forgejo LFS (the suite reads sprites; nothing reads the WAVs). `lint_gml.py` rides non-blocking while the pre-existing 1998 content gaps stand. |
 | `deploy-dev.yml` / `deploy-prod.yml` | self-hosted runner `homeserver` | Dev fires on push to `dev`; prod is manual dispatch only and checks out `main`. Neither fires on `pull_request`. `deploy.sh` detects LOCAL mode and all its guards apply unchanged. |
+| `mirror.yml` | self-hosted runner `homeserver` | Fires on push to `dev` or `main`; fast-forwards that branch to Forgejo with the owner's token. Fails on divergence, never force-pushes. |
 | Runner | systemd service on the deploy host | Registered to this repo only, label `homeserver`. |
 | Deploy checkouts | `/srv/timaflakkarinn/{dev,prod}/repo` | `origin` → GitHub over public https (credential-free transport; retires the bundle-fallback fragility of known-issues #20), `lfs.url` → Forgejo. |
 
@@ -99,6 +107,7 @@ topology with A's operational cost.
       by PR #8: only CI ran, and production stayed at `c40f818`.
 - [ ] Judgment: a later owner-requested manual workflow run publishes the
       approved release. Do not deploy production just to close this check.
+- [ ] `test "$(git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/main | cut -f1)" = "$(git ls-remote https://git.spliffdonk.com/hjalti/timaflakkarinn.git refs/heads/main | cut -f1)" && test "$(git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | cut -f1)" = "$(git ls-remote https://git.spliffdonk.com/hjalti/timaflakkarinn.git refs/heads/dev | cut -f1)"` — Forgejo `dev` and `main` equal GitHub's after `mirror.yml` has run
 - [x] Judgment: a fresh anonymous clone from GitHub + `git lfs pull` +
       `npm run check` is green on a machine with no credentials.
 
@@ -120,5 +129,6 @@ and the pulled `BENDILL1.PNG` hashed identical to the local master.
   for the calibration service; it also has GitHub as `origin`.
 - The pre-2026-09 Forgejo→GitHub push-mirror (created 2026-08-12, the origin of
   the private GitHub copy) was **deleted** — it would have force-pushed stale
-  refs over canonical GitHub. Mirroring now flows the other way, from the
-  deploy workflows.
+  refs over canonical GitHub. Mirroring now flows the other way, from
+  `mirror.yml` on every deploy-branch push (originally a step inside the deploy
+  workflows, which left Forgejo `main` stale once prod deploys became manual).

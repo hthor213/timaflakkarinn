@@ -1,0 +1,30 @@
+# Forgejo (git.spliffdonk.com) is a copy of GitHub: the LFS host and the
+# backup, never a place to push. Every push to a deploy branch on GitHub is
+# fast-forwarded to the same branch on Forgejo, so the copy is current
+# whether or not a deploy ran (prod deploys are manual; the mirror is not).
+#
+# Fast-forward only, deliberately: a diverged Forgejo means someone pushed
+# there directly, and that must fail loudly here rather than be overwritten
+# or silently accepted. Fix it by fast-forwarding Forgejo to GitHub by hand.
+#
+# Runs on the self-hosted runner because that is where the Forgejo push
+# credential (the owner's token, scoped to git.spliffdonk.com) lives.
+name: mirror
+
+on:
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: mirror-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: [self-hosted, homeserver]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: fast-forward ${{ github.ref_name }} to Forgejo
+        run: git push https://git.spliffdonk.com/hjalti/timaflakkarinn.git "${GITHUB_SHA}:refs/heads/${GITHUB_REF_NAME}"

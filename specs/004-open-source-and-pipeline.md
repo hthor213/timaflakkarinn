@@ -51,6 +51,21 @@ the owner on 2026-09-10 after the deployment round-trip verification.
   an art-touching range requires sign-off text in the manual workflow's
   `art_approved` input; without it the script refuses to publish.
 
+**Telegram PR review contract.** Implementation and activation evidence for
+the maintainer's phone interface live in home-platform spec 031. Initial PR cards offer
+approve-and-deploy-to-dev, agent review with optional instructions, and a
+reminder. A review returns findings and one recommendation; rejection or
+change-request actions appear only after review and preview their exact
+comments. Follow-up questions resume the PR's homeserver CLI session using
+the owner's ChatGPT subscription. Agent fixes require another decision.
+
+Telegram approval merges the expected PR head into `dev` after checking CI
+and review status; the existing `deploy-dev` workflow remains responsible
+for deployment. The service follows that workflow and verifies the served
+`/version.json` before reporting success. Updated head/base commits invalidate
+old reviews and action cards. Telegram offers no merge-to-main or production
+release action; the explicit manual production workflow above still applies.
+
 ## The mechanism
 
 | Piece | Where | Notes |

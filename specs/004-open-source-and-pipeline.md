@@ -51,8 +51,8 @@ the owner on 2026-09-10 after the deployment round-trip verification.
   an art-touching range requires sign-off text in the manual workflow's
   `art_approved` input; without it the script refuses to publish.
 
-**Telegram PR review.** The shared home-platform Telegram service owns the
-maintainer's phone interface (home-platform spec 031). Initial PR cards offer
+**Telegram PR review contract.** Implementation and activation evidence for
+the maintainer's phone interface live in home-platform spec 031. Initial PR cards offer
 approve-and-deploy-to-dev, agent review with optional instructions, and a
 reminder. A review returns findings and one recommendation; rejection or
 change-request actions appear only after review and preview their exact

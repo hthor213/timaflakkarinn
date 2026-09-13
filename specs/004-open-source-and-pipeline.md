@@ -24,8 +24,10 @@ push to `dev` or `main` on GitHub fast-forward-mirrors that branch to Forgejo
 manual, the mirror is not). A diverged Forgejo fails the push loudly rather
 than being overwritten; the fix is to fast-forward Forgejo to GitHub by hand.
 The Forgejo repo has no collaborators and registration is off, so the owner's
-account is the only one that can write there (Done When below covers the
-default branch and branch protections).
+account is the only one that can write there. Owner decision 2026-09-13: no
+branch protection on Forgejo — no clone uses it as a remote, and a stray push
+there does no lasting harm: roll Forgejo back to GitHub's ref, push the change
+to GitHub, and the mirror carries it over.
 
 **D3 — Open code, explicit pre-v1 content permissions.** Revised by the owner
 2026-09-10. Code (the TypeScript port, tools, and project documentation)
@@ -106,8 +108,6 @@ topology with A's operational cost.
 - [ ] Judgment: a later owner-requested manual workflow run publishes the
       approved release. Do not deploy production just to close this check.
 - [ ] `test "$(git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/main | cut -f1)" = "$(git ls-remote https://git.spliffdonk.com/hjalti/timaflakkarinn.git refs/heads/main | cut -f1)" && test "$(git ls-remote https://github.com/hthor213/timaflakkarinn.git refs/heads/dev | cut -f1)" = "$(git ls-remote https://git.spliffdonk.com/hjalti/timaflakkarinn.git refs/heads/dev | cut -f1)"` — Forgejo `dev` and `main` equal GitHub's after `mirror.yml` has run
-- [ ] `curl -sf https://git.spliffdonk.com/api/v1/repos/hjalti/timaflakkarinn | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d["default_branch"]=="dev"'` — Forgejo default branch is `dev`, as on GitHub
-- [ ] `curl -sf https://git.spliffdonk.com/api/v1/repos/hjalti/timaflakkarinn/branches | python3 -c 'import sys,json;b={x["name"]:x["protected"] for x in json.load(sys.stdin)};assert b["dev"] and b["main"]'` — Forgejo `dev` and `main` are protected: push-disabled except for the owner (the mirror pushes as the owner)
 - [x] Judgment: a fresh anonymous clone from GitHub + `git lfs pull` +
       `npm run check` is green on a machine with no credentials.
 

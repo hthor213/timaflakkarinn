@@ -34,8 +34,3 @@ jobs:
         run: git lfs pull --include="*.PNG,*.png"
       - name: deploy to tt-dev.spliffdonk.com
         run: tools/deploy.sh --env dev
-      - name: mirror dev to Forgejo
-        # Forgejo is the LFS host and backup; keeping its refs current keeps
-        # the LFS objects referenced. Fast-forward only — a diverged Forgejo
-        # should fail loudly, never be overwritten.
-        run: git push https://git.spliffdonk.com/hjalti/timaflakkarinn.git dev:dev
